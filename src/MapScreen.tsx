@@ -7,7 +7,11 @@ import MapPin from './components/MapPin'
 import DetailDrawer, { featuredMemory } from './components/DetailDrawer'
 import MobileDrawer, { MOBILE_DRAWER_EXAMPLE } from './components/MobileDrawer'
 import { useMediaQuery } from './useMediaQuery'
-import placeholder from './assets/photo-placeholder.svg'
+import helsinkiPhoto from './assets/pins/helsinki.jpg'
+import londonPhoto from './assets/pins/london.jpg'
+import berlinPhoto from './assets/pins/berlin.jpg'
+import romePhoto from './assets/pins/rome.jpg'
+import parisPhoto from './assets/pins/paris.jpg'
 import './MapScreen.css'
 
 /**
@@ -18,21 +22,22 @@ interface PinnedMemory {
   id: string
   city: string
   at: [number, number]
+  photo: string
   countLabel?: string
 }
 
 /**
  * The five markers the design places on Europe, including Paris as the one
- * cluster. Their coordinates are the real city centres so the layout is
- * plausible, but the photos are placeholders — see the note in README about
- * the design's own images not being available yet.
+ * cluster. Coordinates are the real city centres. The photographs stand in for
+ * the design's own, which Figma never exported — see CREDITS.md for each one's
+ * author and licence.
  */
 const PINNED: PinnedMemory[] = [
-  { id: 'paris', city: 'Paris', at: [48.8566, 2.3522], countLabel: '50+ Photos' },
-  { id: 'london', city: 'London', at: [51.5072, -0.1276] },
-  { id: 'berlin', city: 'Berlin', at: [52.52, 13.405] },
-  { id: 'rome', city: 'Rome', at: [41.9028, 12.4964] },
-  { id: 'helsinki', city: 'Helsinki', at: [60.1699, 24.9384] },
+  { id: 'paris', city: 'Paris', at: [48.8566, 2.3522], photo: parisPhoto, countLabel: '50+ Photos' },
+  { id: 'london', city: 'London', at: [51.5072, -0.1276], photo: londonPhoto },
+  { id: 'berlin', city: 'Berlin', at: [52.52, 13.405], photo: berlinPhoto },
+  { id: 'rome', city: 'Rome', at: [41.9028, 12.4964], photo: romePhoto },
+  { id: 'helsinki', city: 'Helsinki', at: [60.1699, 24.9384], photo: helsinkiPhoto },
 ]
 
 /**
@@ -75,7 +80,7 @@ function PinMarker({ memory }: { memory: PinnedMemory }) {
       <Marker position={memory.at} icon={icon} eventHandlers={{ add: attach }} />
       {host
         ? createPortal(
-            <MapPin city={memory.city} photo={placeholder} countLabel={memory.countLabel} />,
+            <MapPin city={memory.city} photo={memory.photo} countLabel={memory.countLabel} />,
             host,
           )
         : null}

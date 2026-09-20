@@ -55,23 +55,38 @@ throw away panning and zooming.
 Nothing is tied to OSM beyond the single tile-layer URL in `src/MapScreen.tsx`,
 so swapping in MapBox later remains an open option.
 
-### What is NOT faithful yet
+### Icons
 
-The Figma file is on a Starter plan and its MCP tool-call quota was exhausted part
-way through this build. Two consequences, both still open:
+Every icon comes from `lucide-react`, not from a file. The design's set is Lucide:
+an exported `chevron-right` is `M6 12L10 8L6 4` on a 16 viewBox, which is Lucide's
+`m9 18 6-6-6-6` on a 24 viewBox scaled by exactly 16/24, and `plus` matches the
+same way. Using the components rather than SVG files also means icon colour flows
+from the CSS tokens through `currentColor`.
 
-1. **The icons are stand-ins.** Every SVG under `src/assets/` was hand-authored in
-   Lucide's style, not exported from Figma, because the asset manifest could never
-   be fetched. Shapes and stroke weights are approximations.
-2. **The design's photographs are missing.** Every image slot falls back to
-   `src/assets/photo-placeholder.svg`. The carousel, the avatars, the map teaser,
-   the city chips and the pinboard all render as grey placeholder blocks.
+Lucide expresses `strokeWidth` in its own 24 viewBox, so a 2px rendered stroke —
+what the design specifies — needs `strokeWidth = 48 / size`. Every call site
+follows that rule, and icon sizes come from the design nodes rather than from
+whatever size an exported file happened to be.
 
-Layout, structure, copy and the token values in `src/tokens.css` come from real
-design data. Individual paddings and font sizes inside components that were built
-after the quota ran out are pixel estimates and are marked in this file's history
-rather than asserted as correct. Re-running the build once the quota resets (or on
-a paid Figma plan) is what closes the gap.
+### Images
+
+Two different provenances, both deliberate:
+
+- The memory carousel photograph and the two shared-with avatars are the design's
+  own, recovered from the one Figma asset manifest that was issued before the
+  file's MCP quota ran out.
+- The five landmark photographs behind the map pins, the city chips, the pinboard
+  and the journey hero are **stand-ins**. Figma never issued asset URLs for those
+  nodes, so they are freely licensed photographs from Wikimedia Commons. Each is
+  credited with its author and licence in [CREDITS.md](CREDITS.md) — the licences
+  require it and this repository is public. Replace them with the design's own
+  photographs when the Figma quota allows, and delete the matching rows there.
+
+The map teaser card in the profile sidebar still has no image; its node's asset was
+never issued either, so it renders as a flat tinted card.
+
+Individual paddings and font sizes inside components built while the Figma quota was
+exhausted are pixel estimates rather than measurements.
 
 ## Docker
 
