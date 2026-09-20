@@ -1,52 +1,44 @@
-import { Icon } from 'leaflet'
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
-import markerIconUrl from 'leaflet/dist/images/marker-icon.png'
-import markerIconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png'
-import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png'
+import { useState } from 'react'
+import MapScreen from './MapScreen'
+import ProfileScreen from './ProfileScreen'
 
 /**
- * Leaflet resolves its default marker images relative to the stylesheet URL,
- * which Vite inlines — so the icons must be wired to bundled asset URLs or the
- * marker renders as a broken image.
+ * The two screens the Figma mock-up contains. Kept as a plain union with local
+ * state rather than a router: two screens do not justify a routing dependency,
+ * and no URL-addressable routes have been specified yet.
  */
-const markerIcon = new Icon({
-  iconUrl: markerIconUrl,
-  iconRetinaUrl: markerIconRetinaUrl,
-  shadowUrl: markerShadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-})
+type Screen = 'map' | 'profile'
 
 /**
- * Helsinki city centre, used as the initial map view until real memory pins
- * (whose coordinates come from photo EXIF data) are loaded from the backend.
- */
-const HELSINKI: [number, number] = [60.1699, 24.9384]
-
-/**
- * Root screen of UniMap: a full-viewport OpenStreetMap-tiled Leaflet map.
- *
- * This is the skeleton of the map-based main UI. It renders one hard-coded
- * placeholder pin so the map, tiles, markers and popups are all provably
- * working before any backend, search or grouping features are built on top.
- *
- * The height must come from the `map` class rather than Leaflet's own
- * `leaflet-container` class: Leaflet adds that class while initialising and
- * measures the element first, so it would read a zero height and lay out the
- * tiles for a zero-size viewport.
+ * Application shell: the mock-up's white top bar (brand, screen switcher and
+ * the dark "Interactive Map" action) above whichever screen is selected.
  */
 export default function App() {
+  const [screen, setScreen] = useState<Screen>('map')
+
   return (
-    <MapContainer className="map" center={HELSINKI} zoom={12}>
-      <TileLayer
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-      />
-      <Marker position={HELSINKI} icon={markerIcon}>
-        <Popup>Placeholder memory pin</Popup>
-      </Marker>
-    </MapContainer>
+    <div className="shell">
+      <header className="topbar">
+        <div className="brand">
+          <strong>MapMory</strong>
+          <span className="eyebrow">Memory Platform</span>
+        </div>
+
+        <nav className="nav">
+          <button type="button" aria-current={screen === 'map'} onClick={() => setScreen('map')}>
+            Map
+          </button>
+          <button type="button" aria-current={screen === 'profile'} onClick={() => setScreen('profile')}>
+            Profile
+          </button>
+        </nav>
+
+        <button type="button" className="pill" onClick={() => setScreen('map')}>
+          Interactive Map
+        </button>
+      </header>
+
+      <main className="screen">{screen === 'map' ? <MapScreen /> : <ProfileScreen />}</main>
+    </div>
   )
 }

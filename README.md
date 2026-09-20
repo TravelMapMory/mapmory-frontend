@@ -1,6 +1,6 @@
-# UniMap (frontend)
+# MapMory (frontend)
 
-UniMap is a photo-first travel-memory app. You upload the photos you took on a
+MapMory is a photo-first travel-memory app. You upload the photos you took on a
 trip and the backend reads their EXIF metadata to recover where and when each
 one was taken, so your memories place themselves on a map instead of being
 filed by hand. The map is the main UI: a search bar filters what is already
@@ -40,8 +40,8 @@ single tile-layer URL in `src/App.tsx`.
 The image builds the app and serves the static bundle with nginx:
 
 ```bash
-docker build -t unimap-frontend .
-docker run --rm -p 8080:8080 unimap-frontend
+docker build -t mapmory-frontend .
+docker run --rm -p 8080:8080 mapmory-frontend
 ```
 
 Then open http://localhost:8080. Client-side routes are served `index.html`, so
@@ -51,7 +51,7 @@ The listen port comes from the `PORT` environment variable (default `8080`),
 which is what Cloud Run injects:
 
 ```bash
-docker run --rm -e PORT=9090 -p 9090:9090 unimap-frontend
+docker run --rm -e PORT=9090 -p 9090:9090 mapmory-frontend
 ```
 
 ## Open decisions
@@ -64,3 +64,24 @@ any of them:
 - **Photo blob storage** — not yet discussed.
 
 Deployment is expected to target Google Cloud via GitHub Actions.
+
+## UI skeleton
+
+Two screens, switched by local state in `src/App.tsx` (two screens do not
+justify a routing dependency yet):
+
+- **Map** (`src/MapScreen.tsx`) — Leaflet map with OSM tiles and placeholder
+  pins, a list of memory cards beside it, and a row of counters underneath.
+- **Profile** (`src/ProfileScreen.tsx`) — identity card, a featured memory, and
+  a photo gallery.
+
+All pins, counters, names and dates are fabricated placeholders. Photos render
+as labelled grey blocks rather than committed stand-in images.
+
+### Figma fidelity
+
+The layout follows the team's mock-up (`w3-services-design-template`), but the
+file is shared view-only: Figma's inspect panel and the Figma MCP tools both
+require edit access, so exact colours, spacing and type scales could not be
+read. Every token in `src/index.css` is an approximation. To replace them with
+the real values, share the Figma file with edit access.
