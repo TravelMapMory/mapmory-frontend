@@ -6,6 +6,7 @@ import berlinPhoto from './assets/pins/berlin.jpg'
 import romePhoto from './assets/pins/rome.jpg'
 import parisPhoto from './assets/pins/paris.jpg'
 import parisWidePhoto from './assets/pins/paris-wide.jpg'
+import europeMap from './assets/pins/europe-map.jpg'
 import './ProfileScreen.css'
 
 /**
@@ -56,6 +57,7 @@ export default function ProfileScreen() {
     <div className="profile">
       <ProfileSidebar
         {...PROFILE_SIDEBAR_EXAMPLE}
+        mapImageSrc={europeMap}
         onEditProfile={noop}
         onSelectPreference={noop}
       />

@@ -21,6 +21,7 @@ delete the corresponding row here.
 | `src/assets/pins/rome.jpg` | Rome pin, chip, pinboard | NateBergin | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0) | [File:01 Colosseum Exterior.jpg](https://commons.wikimedia.org/wiki/File:01_Colosseum_Exterior.jpg) |
 | `src/assets/pins/paris.jpg` | Paris pin, chip, pinboard | Benh LIEU SONG | Public domain | [File:Tour Eiffel Wikimedia Commons.jpg](https://commons.wikimedia.org/wiki/File:Tour_Eiffel_Wikimedia_Commons.jpg) |
 | `src/assets/pins/paris-wide.jpg` | Journey hero (16:9) | Wladyslaw Sojka | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0) | [File:Paris-pano-wladyslaw.jpg](https://commons.wikimedia.org/wiki/File:Paris-pano-wladyslaw.jpg) |
+| `src/assets/pins/europe-map.jpg` | Profile map teaser card | Alexrk2 | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | [File:Europe relief laea location map.jpg](https://commons.wikimedia.org/wiki/File:Europe_relief_laea_location_map.jpg) |
 
 Under CC BY and CC BY-SA the author and licence must be credited wherever the image
 is shown or distributed; this file is that credit. CC0 and public-domain images carry

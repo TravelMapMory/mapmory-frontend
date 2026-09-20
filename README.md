@@ -76,14 +76,11 @@ Two different provenances, both deliberate:
   own, recovered from the one Figma asset manifest that was issued before the
   file's MCP quota ran out.
 - The five landmark photographs behind the map pins, the city chips, the pinboard
-  and the journey hero are **stand-ins**. Figma never issued asset URLs for those
+  and the journey hero, plus the profile sidebar's map teaser, are **stand-ins**. Figma never issued asset URLs for those
   nodes, so they are freely licensed photographs from Wikimedia Commons. Each is
   credited with its author and licence in [CREDITS.md](CREDITS.md) — the licences
   require it and this repository is public. Replace them with the design's own
   photographs when the Figma quota allows, and delete the matching rows there.
-
-The map teaser card in the profile sidebar still has no image; its node's asset was
-never issued either, so it renders as a flat tinted card.
 
 Individual paddings and font sizes inside components built while the Figma quota was
 exhausted are pixel estimates rather than measurements.
