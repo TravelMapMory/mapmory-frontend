@@ -64,3 +64,24 @@ any of them:
 - **Photo blob storage** — not yet discussed.
 
 Deployment is expected to target Google Cloud via GitHub Actions.
+
+## UI skeleton
+
+Two screens, switched by local state in `src/App.tsx` (two screens do not
+justify a routing dependency yet):
+
+- **Map** (`src/MapScreen.tsx`) — Leaflet map with OSM tiles and placeholder
+  pins, a list of memory cards beside it, and a row of counters underneath.
+- **Profile** (`src/ProfileScreen.tsx`) — identity card, a featured memory, and
+  a photo gallery.
+
+All pins, counters, names and dates are fabricated placeholders. Photos render
+as labelled grey blocks rather than committed stand-in images.
+
+### Figma fidelity
+
+The layout follows the team's mock-up (`w3-services-design-template`), but the
+file is shared view-only: Figma's inspect panel and the Figma MCP tools both
+require edit access, so exact colours, spacing and type scales could not be
+read. Every token in `src/index.css` is an approximation. To replace them with
+the real values, share the Figma file with edit access.
