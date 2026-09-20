@@ -29,11 +29,49 @@ To produce a production build (this typechecks first):
 npm run build
 ```
 
-## Map tiles
+## UI
 
-Tiles come from OpenStreetMap and need no API key. Swapping in MapBox later is
-still an open option; nothing in this repository is tied to OSM beyond the
-single tile-layer URL in `src/App.tsx`.
+Two screens, switched by the header's trailing control (`src/App.tsx`). No routing
+dependency yet: the design specifies no URLs.
+
+- **Map** (`src/MapScreen.tsx`) — a desaturated OpenStreetMap basemap under the
+  design's search control and five memory markers, with the memory drawer docked
+  on the right. Below 900px the desktop drawer is replaced by the mobile one,
+  which is a different layout in the design, not a restyle of the same one.
+- **Profile** (`src/ProfileScreen.tsx`) — the 400px identity column beside the
+  stats, journey, cities and pinboard column.
+
+Components live in `src/components/`, one Figma node each, and read their colours
+and radii from `src/tokens.css`.
+
+### Basemap
+
+The design draws a flat, pale grey landmass. Rather than a ready-made grey
+basemap, the OSM tiles are desaturated in CSS: CARTO's `light_nolabels` serves an
+"API KEY REQUIRED" watermark tile without a key, and Stadia's toner-lite answers
+401. A static picture of a map would match the mock-up more closely but would
+throw away panning and zooming.
+
+Nothing is tied to OSM beyond the single tile-layer URL in `src/MapScreen.tsx`,
+so swapping in MapBox later remains an open option.
+
+### What is NOT faithful yet
+
+The Figma file is on a Starter plan and its MCP tool-call quota was exhausted part
+way through this build. Two consequences, both still open:
+
+1. **The icons are stand-ins.** Every SVG under `src/assets/` was hand-authored in
+   Lucide's style, not exported from Figma, because the asset manifest could never
+   be fetched. Shapes and stroke weights are approximations.
+2. **The design's photographs are missing.** Every image slot falls back to
+   `src/assets/photo-placeholder.svg`. The carousel, the avatars, the map teaser,
+   the city chips and the pinboard all render as grey placeholder blocks.
+
+Layout, structure, copy and the token values in `src/tokens.css` come from real
+design data. Individual paddings and font sizes inside components that were built
+after the quota ran out are pixel estimates and are marked in this file's history
+rather than asserted as correct. Re-running the build once the quota resets (or on
+a paid Figma plan) is what closes the gap.
 
 ## Docker
 
@@ -64,24 +102,3 @@ any of them:
 - **Photo blob storage** — not yet discussed.
 
 Deployment is expected to target Google Cloud via GitHub Actions.
-
-## UI skeleton
-
-Two screens, switched by local state in `src/App.tsx` (two screens do not
-justify a routing dependency yet):
-
-- **Map** (`src/MapScreen.tsx`) — Leaflet map with OSM tiles and placeholder
-  pins, a list of memory cards beside it, and a row of counters underneath.
-- **Profile** (`src/ProfileScreen.tsx`) — identity card, a featured memory, and
-  a photo gallery.
-
-All pins, counters, names and dates are fabricated placeholders. Photos render
-as labelled grey blocks rather than committed stand-in images.
-
-### Figma fidelity
-
-The layout follows the team's mock-up (`w3-services-design-template`), but the
-file is shared view-only: Figma's inspect panel and the Figma MCP tools both
-require edit access, so exact colours, spacing and type scales could not be
-read. Every token in `src/index.css` is an approximation. To replace them with
-the real values, share the Figma file with edit access.

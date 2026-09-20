@@ -1,0 +1,116 @@
+/* Map pin markers, from the Figma nodes pin-Helsinki (2:44) and
+   cluster-Paris (2:25). Both variants are a plain centred flow column, so the
+   component can be dropped into any positioning scheme the map layer uses.
+
+   Two ring colours are literals rather than tokens because the token contract
+   has no entry for them: #10b981 (city ring and status dot) and #d4af37 (the
+   cluster's gold ring and count-badge border). */
+
+.mpin {
+  --mpin-ring: 56px;
+  --mpin-ring-gap: 1px;
+  --mpin-ring-ink: #10b981;
+  --mpin-ring-tint: var(--c-mint-bg);
+
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  font-family: var(--font);
+}
+
+.mpin--cluster {
+  --mpin-ring: 68px;
+  --mpin-ring-gap: 2px;
+  --mpin-ring-ink: #d4af37;
+  --mpin-ring-tint: var(--c-amber-bg);
+}
+
+/* The tint fills the hairline gap the design leaves between the saturated
+   ring and the photo: 1px on a city pin, 2px on the wider cluster ring. */
+.mpin-ring {
+  box-sizing: border-box;
+  width: var(--mpin-ring);
+  height: var(--mpin-ring);
+  padding: var(--mpin-ring-gap);
+  border: 2px solid var(--mpin-ring-ink);
+  border-radius: 50%;
+  background: var(--mpin-ring-tint);
+  box-shadow: var(--shadow-raised);
+}
+
+.mpin--cluster .mpin-ring {
+  box-shadow:
+    0 0 12px rgba(212, 175, 55, 0.55),
+    var(--shadow-raised);
+}
+
+.mpin-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.mpin-chip,
+.mpin-label {
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-raised);
+  white-space: nowrap;
+}
+
+.mpin-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 6px;
+  padding: 4px 9px;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+  color: var(--c-ink);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 12px;
+}
+
+.mpin-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mpin-ring-ink);
+}
+
+/* Pulled up over the lower edge of the ring, matching the badge's y=49 inside
+   the 68px-tall cluster ring. Later in document order, so it paints on top
+   without needing a stacking context.
+
+   The type is set here rather than by reusing the global .eyebrow class: this
+   node is 10px with normal tracking, so .eyebrow's 11px/0.04em would render
+   the badge about 20% wider than the design. */
+.mpin-count {
+  box-sizing: border-box;
+  margin-top: -19px;
+  padding: 3px 7px;
+  border: 1px solid var(--mpin-ring-ink);
+  border-radius: var(--r-pill);
+  background: var(--c-amber-bg);
+  box-shadow: var(--shadow-raised);
+  color: var(--c-amber-ink);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 13px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.mpin-label {
+  margin-top: 4px;
+  padding: 5px 12px;
+  background: var(--c-ink);
+  color: var(--c-surface);
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 14px;
+}

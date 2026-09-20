@@ -1,44 +1,34 @@
 import { useState } from 'react'
+import Header from './components/Header'
 import MapScreen from './MapScreen'
 import ProfileScreen from './ProfileScreen'
+import './App.css'
 
 /**
- * The two screens the Figma mock-up contains. Kept as a plain union with local
- * state rather than a router: two screens do not justify a routing dependency,
- * and no URL-addressable routes have been specified yet.
+ * The two screens the Figma file describes. Kept as local state rather than
+ * routes: the design specifies no URLs, and the header's own control is the
+ * only way between them.
  */
 type Screen = 'map' | 'profile'
 
 /**
- * Application shell: the mock-up's white top bar (brand, screen switcher and
- * the dark "Interactive Map" action) above whichever screen is selected.
+ * Application shell. The header is shared by both screens and changes its
+ * trailing control per screen, exactly as the design's two header variants do:
+ * the map screen shows a menu button, the profile page an "Interactive Map"
+ * button that goes back to the map.
  */
 export default function App() {
   const [screen, setScreen] = useState<Screen>('map')
 
   return (
-    <div className="shell">
-      <header className="topbar">
-        <div className="brand">
-          <strong>MapMory</strong>
-          <span className="eyebrow">Memory Platform</span>
-        </div>
-
-        <nav className="nav">
-          <button type="button" aria-current={screen === 'map'} onClick={() => setScreen('map')}>
-            Map
-          </button>
-          <button type="button" aria-current={screen === 'profile'} onClick={() => setScreen('profile')}>
-            Profile
-          </button>
-        </nav>
-
-        <button type="button" className="pill" onClick={() => setScreen('map')}>
-          Interactive Map
-        </button>
-      </header>
-
-      <main className="screen">{screen === 'map' ? <MapScreen /> : <ProfileScreen />}</main>
+    <div className="app">
+      <Header
+        action={screen === 'map' ? 'menu' : 'interactive-map'}
+        onAction={() => setScreen(screen === 'map' ? 'profile' : 'map')}
+      />
+      <main className="app-body">
+        {screen === 'map' ? <MapScreen /> : <ProfileScreen />}
+      </main>
     </div>
   )
 }

@@ -1,0 +1,320 @@
+/* Profile page right column (Figma node 8:61 "right-column", 912x1252). */
+
+.pm-col {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.pm-stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+/* Figma draws these card hairlines as an inside stroke, which does not grow the
+   frame; an inset shadow keeps the design's exact 112px/743px/229px block
+   heights where a CSS border would add 2px to each. */
+
+.pm-stat {
+  padding: 24px;
+  background: var(--c-surface);
+  box-shadow: inset 0 0 0 1px var(--c-line);
+  border-radius: var(--r-md);
+}
+
+.pm-stat-value {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 40px;
+}
+
+.pm-stat-label {
+  display: block;
+  margin-top: 8px;
+  line-height: 16px;
+}
+
+.pm-stat[data-highlight='true'] {
+  box-shadow: inset 0 0 0 1px var(--c-teal);
+}
+
+.pm-stat[data-highlight='true'] .pm-stat-value {
+  color: var(--c-teal);
+}
+
+.pm-jrn {
+  padding: 32px;
+  background: var(--c-surface);
+  box-shadow: inset 0 0 0 1px var(--c-line);
+  border-radius: var(--r-xl);
+}
+
+.pm-jrn-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.eyebrow.pm-jrn-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 10px;
+  line-height: 14px;
+  color: var(--c-amber-ink);
+  background: var(--c-amber-bg);
+  border-radius: var(--r-pill);
+}
+
+.pm-jrn-tag::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: var(--r-pill);
+}
+
+.pm-jrn-modified {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--c-ink-faint);
+}
+
+.pm-jrn-title {
+  margin: 24px 0 0;
+  font-size: 24px;
+  font-weight: 800;
+  line-height: 32px;
+  letter-spacing: -0.025em;
+}
+
+.pm-jrn-route {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 17px;
+  color: var(--c-ink-soft);
+}
+
+.pm-jrn-pin {
+  flex: none;
+}
+
+.pm-jrn-carousel {
+  position: relative;
+  margin-top: 24px;
+}
+
+.pm-jrn-hero {
+  display: block;
+  width: 100%;
+  height: 320px;
+  object-fit: cover;
+  background: var(--c-line);
+  border-radius: var(--r-md);
+}
+
+.pm-jrn-dots {
+  position: absolute;
+  right: 0;
+  bottom: 16px;
+  left: 0;
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+}
+
+.pm-jrn-dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  background: rgba(255, 255, 255, 0.55);
+  border: 0;
+  border-radius: var(--r-pill);
+}
+
+.pm-jrn-dot[aria-current='true'] {
+  background: var(--c-surface);
+}
+
+.pm-jrn-log {
+  margin-top: 24px;
+}
+
+.eyebrow.pm-jrn-log-label,
+.eyebrow.pm-jrn-crew-label {
+  display: block;
+  font-size: 10px;
+  line-height: 14px;
+}
+
+.pm-jrn-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pm-jrn-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 24px;
+}
+
+.pm-jrn-step-num {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 24px;
+  color: var(--c-surface);
+  text-align: center;
+  background: var(--c-ink);
+  border-radius: var(--r-pill);
+}
+
+.pm-jrn-step-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--c-ink-soft);
+}
+
+.pm-jrn-step-text strong {
+  font-weight: 700;
+  color: var(--c-ink);
+}
+
+.pm-jrn-crew {
+  margin-top: 24px;
+}
+
+.pm-jrn-crew-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.pm-jrn-avatar {
+  box-sizing: border-box;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--c-teal);
+  background: var(--c-mint-bg);
+  border: 2px solid var(--c-line);
+  border-radius: var(--r-pill);
+}
+
+.pm-jrn-add {
+  font-size: 18px;
+  font-weight: 400;
+  line-height: 1;
+  color: var(--c-ink-faint);
+  background: var(--c-surface);
+}
+
+.pm-jrn-crew-note {
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--c-ink-soft);
+}
+
+.pm-cities-label {
+  display: block;
+  line-height: 16px;
+}
+
+.pm-cities-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.pm-city {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  background: var(--c-surface);
+  box-shadow: inset 0 0 0 1px var(--c-line);
+  border-radius: var(--r-md);
+}
+
+.pm-city-thumb {
+  display: block;
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  background: var(--c-line);
+  border-radius: var(--r-xs);
+}
+
+.pm-city-name {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 17px;
+}
+
+.pm-pin {
+  padding: 32px;
+  background: var(--c-surface);
+  box-shadow: inset 0 0 0 1px var(--c-line);
+  border-radius: var(--r-xl);
+}
+
+.pm-pin-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pm-pin-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 25px;
+  letter-spacing: -0.025em;
+}
+
+.pm-pin-link {
+  padding: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 17px;
+  color: var(--c-teal);
+  background: none;
+  border: 0;
+}
+
+.pm-pin-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.pm-pin-photo {
+  display: block;
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  background: var(--c-line);
+  border-radius: var(--r-md);
+}

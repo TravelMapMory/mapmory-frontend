@@ -1,0 +1,106 @@
+/*
+ * Styles for Header.tsx. The Figma frames lay the header out with absolute
+ * coordinates; it is really one row with the brand pinned to the leading edge
+ * and one control to the trailing edge, so it is expressed as a flex row and
+ * derives its height from its content (24px of padding either side of a 37px
+ * brand block plus the rule = the 86px of frame 6:16).
+ */
+.hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 48px;
+  background: var(--c-surface);
+  border-bottom: 1px solid var(--c-line);
+}
+
+/*
+ * Brand block: the dark icon tile beside the two stacked labels. Identical in
+ * both header variants.
+ */
+.hdr-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hdr-logo {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 32px;
+  background: var(--c-ink);
+  border-radius: var(--r-xs);
+}
+
+.hdr-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hdr-name {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 22px;
+  color: var(--c-ink);
+}
+
+/*
+ * The shared .eyebrow class supplies size, weight and casing. Only the colour
+ * is restated: the design renders this label in #475569, which is one step
+ * darker than --c-ink-soft and has no token of its own. Scoped through the
+ * parent so it outranks .eyebrow regardless of stylesheet order.
+ */
+.hdr-brand-text .hdr-eyebrow {
+  line-height: 13px;
+  color: #475569;
+}
+
+/*
+ * Trailing control, variant 'interactive-map' (frame 6:16): a dark 156x36
+ * button. Its width is not set — 16px of padding either side of the 16px icon,
+ * the 8px gap and the 99px label add up to within a pixel of the design's 156.
+ */
+.hdr-pill {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 16px;
+  background: var(--c-ink);
+  color: var(--c-surface);
+  border: 0;
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-raised);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/*
+ * Trailing control, variant 'menu' (frame 8:5): three stacked bars. The design
+ * ships these as one flat SVG; they are real elements here so the button can
+ * animate or reflect an open state without swapping an image.
+ */
+.hdr-menu {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  width: 40px;
+  padding: 0;
+  background: none;
+  border: 0;
+}
+
+.hdr-menu-bar {
+  display: block;
+  height: 8px;
+  background: #3e3e3e;
+  border-radius: 2px;
+}
