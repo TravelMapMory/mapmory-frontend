@@ -1,23 +1,4 @@
-/*
- * Design tokens approximated from the team's Figma mock-up
- * (w3-services-design-template). Exact values are not yet available: the file
- * is shared view-only, so Figma's inspect panel and the Figma MCP tools both
- * refuse to expose real colours, spacing and type scales. Treat every value
- * here as a stand-in to be replaced once the file is shared with edit access.
- */
-:root {
-  --surface: #ffffff;
-  --surface-muted: #f4f5f7;
-  --ink: #101418;
-  --ink-soft: #5c6670;
-  --line: #e3e6ea;
-  --accent: #10a37f;
-  --pill: #14181d;
-  --radius: 14px;
-  --gap: 20px;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  color: var(--ink);
-}
+@import './tokens.css';
 
 html,
 body,
@@ -27,275 +8,26 @@ body,
 }
 
 body {
-  background: var(--surface-muted);
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
 }
 
-.shell {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-}
-
-.topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gap);
-  padding: 14px 24px;
-  background: var(--surface);
-  border-bottom: 1px solid var(--line);
-  flex-wrap: wrap;
-}
-
-.brand {
-  display: flex;
-  flex-direction: column;
-  line-height: 1.1;
-}
-
-.brand strong {
-  font-size: 20px;
-  letter-spacing: -0.02em;
-}
-
+/*
+ * The design uses uppercase micro-labels ("TRIP DATE", "SHARED WITH") in
+ * several unrelated components, so the one rule that they all share lives here
+ * instead of being repeated in each component stylesheet.
+ */
 .eyebrow {
-  font-size: 10px;
-  letter-spacing: 0.16em;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--ink-soft);
+  color: var(--c-ink-soft);
 }
 
-.nav {
-  display: flex;
-  gap: 4px;
-}
-
-.nav button {
-  border: 0;
-  background: transparent;
-  padding: 8px 14px;
-  border-radius: 999px;
+button {
   font: inherit;
-  font-size: 14px;
-  color: var(--ink-soft);
   cursor: pointer;
-}
-
-.nav button[aria-current='true'] {
-  background: var(--surface-muted);
-  color: var(--ink);
-}
-
-.pill {
-  border: 0;
-  background: var(--pill);
-  color: var(--surface);
-  padding: 10px 18px;
-  border-radius: 999px;
-  font: inherit;
-  font-size: 14px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.screen {
-  flex: 1;
-  min-height: 0;
-  overflow: auto;
-  padding: var(--gap);
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-}
-
-/*
- * Without this the rows shrink below their content height — a flex item's
- * default flex-shrink lets the scroll container squash them — and the map row's
- * overflowing sidebar then paints on top of the stat row beneath it.
- */
-.screen > * {
-  flex: none;
-}
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-
-.map-row {
-  display: grid;
-  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr);
-  gap: var(--gap);
-  min-height: 420px;
-}
-
-.map {
-  height: 100%;
-  min-height: 420px;
-}
-
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  gap: var(--gap);
-  min-width: 0;
-}
-
-.memory {
-  display: flex;
-  flex-direction: column;
-}
-
-.memory-body {
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.memory-body h3 {
-  margin: 0;
-  font-size: 15px;
-}
-
-.memory-body p {
-  margin: 0;
-  font-size: 13px;
-  color: var(--ink-soft);
-}
-
-.stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: var(--gap);
-}
-
-.stat {
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stat[data-accent='true'] {
-  border-color: var(--accent);
-}
-
-.stat b {
-  font-size: 30px;
-  letter-spacing: -0.03em;
-}
-
-.stat span {
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-
-.profile-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr);
-  gap: var(--gap);
-  align-items: start;
-}
-
-.identity {
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  align-items: flex-start;
-}
-
-.avatar {
-  width: 64px;
-  height: 64px;
-  border-radius: 999px;
-  background: var(--surface-muted);
-  border: 1px solid var(--line);
-}
-
-.identity h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.meta {
-  display: flex;
-  gap: 18px;
-  margin-top: 6px;
-}
-
-.meta div {
-  display: flex;
-  flex-direction: column;
-}
-
-.meta b {
-  font-size: 16px;
-}
-
-.hero {
-  display: flex;
-  flex-direction: column;
-}
-
-.hero-body {
-  padding: 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.hero-body h2 {
-  margin: 0;
-  font-size: 22px;
-  letter-spacing: -0.02em;
-}
-
-.hero-body p {
-  margin: 0;
-  font-size: 14px;
-  color: var(--ink-soft);
-}
-
-.gallery {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: var(--gap);
-}
-
-/*
- * Placeholder for photos that will eventually be user uploads. The mock-up
- * shows real travel images; committing stand-in image files or hotlinking
- * someone else's photos would both be worse than an obvious grey block.
- */
-.photo {
-  aspect-ratio: 16 / 10;
-  background:
-    repeating-linear-gradient(
-      45deg,
-      var(--surface-muted) 0 12px,
-      #eceef1 12px 24px
-    );
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-
-.photo[data-tall='true'] {
-  aspect-ratio: 16 / 9;
-}
-
-@media (max-width: 900px) {
-  .map-row,
-  .profile-row {
-    grid-template-columns: minmax(0, 1fr);
-  }
 }

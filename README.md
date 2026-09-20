@@ -29,11 +29,61 @@ To produce a production build (this typechecks first):
 npm run build
 ```
 
-## Map tiles
+## UI
 
-Tiles come from OpenStreetMap and need no API key. Swapping in MapBox later is
-still an open option; nothing in this repository is tied to OSM beyond the
-single tile-layer URL in `src/App.tsx`.
+Two screens, switched by the header's trailing control (`src/App.tsx`). No routing
+dependency yet: the design specifies no URLs.
+
+- **Map** (`src/MapScreen.tsx`) — a desaturated OpenStreetMap basemap under the
+  design's search control and five memory markers, with the memory drawer docked
+  on the right. Below 900px the desktop drawer is replaced by the mobile one,
+  which is a different layout in the design, not a restyle of the same one.
+- **Profile** (`src/ProfileScreen.tsx`) — the 400px identity column beside the
+  stats, journey, cities and pinboard column.
+
+Components live in `src/components/`, one Figma node each, and read their colours
+and radii from `src/tokens.css`.
+
+### Basemap
+
+The design draws a flat, pale grey landmass. Rather than a ready-made grey
+basemap, the OSM tiles are desaturated in CSS: CARTO's `light_nolabels` serves an
+"API KEY REQUIRED" watermark tile without a key, and Stadia's toner-lite answers
+401. A static picture of a map would match the mock-up more closely but would
+throw away panning and zooming.
+
+Nothing is tied to OSM beyond the single tile-layer URL in `src/MapScreen.tsx`,
+so swapping in MapBox later remains an open option.
+
+### Icons
+
+Every icon comes from `lucide-react`, not from a file. The design's set is Lucide:
+an exported `chevron-right` is `M6 12L10 8L6 4` on a 16 viewBox, which is Lucide's
+`m9 18 6-6-6-6` on a 24 viewBox scaled by exactly 16/24, and `plus` matches the
+same way. Using the components rather than SVG files also means icon colour flows
+from the CSS tokens through `currentColor`.
+
+Lucide expresses `strokeWidth` in its own 24 viewBox, so a 2px rendered stroke —
+what the design specifies — needs `strokeWidth = 48 / size`. Every call site
+follows that rule, and icon sizes come from the design nodes rather than from
+whatever size an exported file happened to be.
+
+### Images
+
+Two different provenances, both deliberate:
+
+- The memory carousel photograph and the two shared-with avatars are the design's
+  own, recovered from the one Figma asset manifest that was issued before the
+  file's MCP quota ran out.
+- The five landmark photographs behind the map pins, the city chips, the pinboard
+  and the journey hero, plus the profile sidebar's map teaser, are **stand-ins**. Figma never issued asset URLs for those
+  nodes, so they are freely licensed photographs from Wikimedia Commons. Each is
+  credited with its author and licence in [CREDITS.md](CREDITS.md) — the licences
+  require it and this repository is public. Replace them with the design's own
+  photographs when the Figma quota allows, and delete the matching rows there.
+
+Individual paddings and font sizes inside components built while the Figma quota was
+exhausted are pixel estimates rather than measurements.
 
 ## Docker
 
@@ -64,24 +114,3 @@ any of them:
 - **Photo blob storage** — not yet discussed.
 
 Deployment is expected to target Google Cloud via GitHub Actions.
-
-## UI skeleton
-
-Two screens, switched by local state in `src/App.tsx` (two screens do not
-justify a routing dependency yet):
-
-- **Map** (`src/MapScreen.tsx`) — Leaflet map with OSM tiles and placeholder
-  pins, a list of memory cards beside it, and a row of counters underneath.
-- **Profile** (`src/ProfileScreen.tsx`) — identity card, a featured memory, and
-  a photo gallery.
-
-All pins, counters, names and dates are fabricated placeholders. Photos render
-as labelled grey blocks rather than committed stand-in images.
-
-### Figma fidelity
-
-The layout follows the team's mock-up (`w3-services-design-template`), but the
-file is shared view-only: Figma's inspect panel and the Figma MCP tools both
-require edit access, so exact colours, spacing and type scales could not be
-read. Every token in `src/index.css` is an approximation. To replace them with
-the real values, share the Figma file with edit access.

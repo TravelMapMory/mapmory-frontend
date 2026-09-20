@@ -1,57 +1,72 @@
-/**
- * Fabricated profile figures standing in for the mock-up's identity block.
- * Replaced once the backend exposes a real profile.
- */
-const PLACEHOLDER_COUNTS = [
-  { label: 'Memories', value: '73' },
-  { label: 'Cities', value: '12' },
-  { label: 'Following', value: '18' },
-]
+import ProfileSidebar, { PROFILE_SIDEBAR_EXAMPLE } from './components/ProfileSidebar'
+import ProfileMain, { profileMainExample } from './components/ProfileMain'
+import helsinkiPhoto from './assets/pins/helsinki.jpg'
+import londonPhoto from './assets/pins/london.jpg'
+import berlinPhoto from './assets/pins/berlin.jpg'
+import romePhoto from './assets/pins/rome.jpg'
+import parisPhoto from './assets/pins/paris.jpg'
+import parisWidePhoto from './assets/pins/paris-wide.jpg'
+import europeMap from './assets/pins/europe-map.jpg'
+import './ProfileScreen.css'
 
 /**
- * The profile screen, mirroring the `unimap-profile-info` frame: an identity
- * card beside a featured memory, with a gallery of that trip's photos below.
+ * Stand-in photographs for the journey hero, the city chips and the pinboard.
  *
- * Photos render as labelled placeholder blocks — the design uses real travel
- * images, and neither committing stand-in image files nor hotlinking someone
- * else's photos belongs in a skeleton.
+ * They are supplied here rather than inside ProfileMain because the component is
+ * a translation of the Figma node and should not decide which pictures a screen
+ * shows. The hero uses a separate 16:9 crop: the square sources the pins share
+ * would centre-crop to sky and girders in a wide slot. The design's own photographs were never exported by Figma; see
+ * CREDITS.md for each replacement's author and licence.
+ */
+const CITY_PHOTOS: Record<string, string> = {
+  Helsinki: helsinkiPhoto,
+  London: londonPhoto,
+  Berlin: berlinPhoto,
+  Rome: romePhoto,
+  Paris: parisPhoto,
+}
+
+/**
+ * The profile page body (Figma node 8:4, "unimap-profile-info"): a fixed 400px
+ * identity column beside the stats, journey, cities and pinboard column.
+ *
+ * The header is not rendered here — it is shared with the map screen and so is
+ * owned by the app shell.
  */
 export default function ProfileScreen() {
+  const noop = () => undefined
+
+  const journey = {
+    ...profileMainExample.journey,
+    photos: [{ src: parisWidePhoto, alt: 'Paris seen from above, with the Eiffel Tower' }],
+  }
+
+  const topCities = profileMainExample.topCities.map((city) => ({
+    ...city,
+    thumb: CITY_PHOTOS[city.name] ?? city.thumb,
+  }))
+
+  const pinboard = [
+    { src: helsinkiPhoto, alt: 'Helsinki Cathedral' },
+    { src: berlinPhoto, alt: 'The Brandenburg Gate, Berlin' },
+    { src: londonPhoto, alt: 'The Palace of Westminster, London' },
+    { src: romePhoto, alt: 'The Colosseum, Rome' },
+  ]
+
   return (
-    <>
-      <div className="profile-row">
-        <section className="card identity">
-          <div className="avatar" />
-          <h2>Traveller name</h2>
-          <p className="eyebrow">Helsinki, Finland</p>
-          <div className="meta">
-            {PLACEHOLDER_COUNTS.map((count) => (
-              <div key={count.label}>
-                <b>{count.value}</b>
-                <span className="eyebrow">{count.label}</span>
-              </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="card hero">
-          <div className="photo" data-tall="true">
-            featured photo
-          </div>
-          <div className="hero-body">
-            <h2>Paris, France</h2>
-            <p>Sep 2026 · 18 photos · grouped by city</p>
-          </div>
-        </section>
-      </div>
-
-      <div className="gallery">
-        {['1', '2', '3'].map((slot) => (
-          <div className="card" key={slot}>
-            <div className="photo">photo {slot}</div>
-          </div>
-        ))}
-      </div>
-    </>
+    <div className="profile">
+      <ProfileSidebar
+        {...PROFILE_SIDEBAR_EXAMPLE}
+        mapImageSrc={europeMap}
+        onEditProfile={noop}
+        onSelectPreference={noop}
+      />
+      <ProfileMain
+        {...profileMainExample}
+        journey={journey}
+        topCities={topCities}
+        pinboard={pinboard}
+      />
+    </div>
   )
 }

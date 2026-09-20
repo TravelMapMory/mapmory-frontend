@@ -1,0 +1,16 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/*
+ * The map screen fills the remaining height and scrolls internally, so the body
+ * must be allowed to shrink below its content; without min-height the flex item
+ * refuses to and the map overflows the viewport.
+ */
+.app-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}

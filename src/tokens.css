@@ -1,0 +1,34 @@
+/*
+ * Design tokens read from the Figma file RVvTVXwLQw7t3ONVMvbHzL via the Figma
+ * MCP server. The file defines no Figma variables, so these names are ours —
+ * the values are the literal ones the design uses. Components MUST reference
+ * these variables rather than repeating hex codes, so a later change in Figma
+ * is a one-line edit here.
+ */
+:root {
+  --c-bg: #f8fafc;
+  --c-surface: #ffffff;
+  --c-line: #e2e8f0;
+  --c-ink: #0f172a;
+  --c-ink-soft: #64748b;
+  --c-ink-faint: #94a3b8;
+  --c-ink-placeholder: #cbd5e1;
+
+  --c-amber-bg: #fef3c7;
+  --c-amber-ink: #b45309;
+  --c-mint-bg: #d1fae5;
+  --c-teal: #0d9488;
+  --c-heart: #ef4444;
+
+  --r-xs: 8px;
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-xl: 24px;
+  --r-pill: 100px;
+
+  --shadow-raised: 0 4px 6px rgba(15, 23, 42, 0.15);
+  --shadow-float: 0 8px 24px rgba(15, 23, 42, 0.08);
+
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}

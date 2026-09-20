@@ -1,0 +1,311 @@
+/* Detail drawer — Figma node 2:70 "detail-drawer", 420x824.
+   Figma draws card strokes inside the frame, so a 16px design padding is
+   written here as 16px padding plus a 1px border (1px wider than the node). */
+
+.drawer,
+.drawer *,
+.drawer *::before,
+.drawer *::after {
+  box-sizing: border-box;
+}
+
+.drawer {
+  width: 420px;
+  min-height: 824px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  background: var(--c-bg);
+  color: var(--c-ink);
+  font-family: var(--font);
+}
+
+.drawer img {
+  display: block;
+}
+
+/* The node's uppercase micro-labels are not tracked out, so the global
+   .eyebrow letter-spacing is dropped inside this component. Labels that
+   also restyle .eyebrow use a compound selector, so the override wins
+   whatever order the two stylesheets land in. */
+
+.drawer .eyebrow {
+  letter-spacing: normal;
+}
+
+.drawer-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.drawer-badge.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 12px;
+  border-radius: var(--r-pill);
+  background: var(--c-amber-bg);
+  color: var(--c-amber-ink);
+  white-space: nowrap;
+}
+
+.drawer-hdr-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.drawer-icon-btn {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-xs);
+  background: var(--c-surface);
+  color: var(--c-ink);
+}
+
+.drawer-heart {
+  color: var(--c-heart);
+}
+
+.drawer-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.drawer-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--c-ink);
+}
+
+.drawer-loc {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  color: var(--c-ink-soft);
+}
+
+.drawer-photo {
+  position: relative;
+  height: 240px;
+  flex: none;
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--c-line);
+}
+
+.drawer-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.drawer-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.drawer-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.drawer-dot-on {
+  background: var(--c-surface);
+}
+
+.drawer-card {
+  flex: none;
+  padding: 15px;
+  border: 1px solid var(--c-line);
+  background: var(--c-surface);
+}
+
+.drawer-card-date {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-radius: var(--r-md);
+}
+
+.drawer-tile {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-xs);
+  background: var(--c-bg);
+  color: var(--c-ink-soft);
+}
+
+.drawer-date-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.drawer-date-label.eyebrow {
+  color: var(--c-ink-faint);
+}
+
+.drawer-date-value {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 20px;
+  color: var(--c-ink);
+}
+
+.drawer-upload,
+.drawer-gallery {
+  height: 44px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--c-ink);
+  box-shadow: var(--shadow-raised);
+  color: var(--c-surface);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.drawer-upload {
+  text-transform: uppercase;
+}
+
+.drawer-card-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  border-radius: var(--r-lg);
+}
+
+.drawer-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+}
+
+.drawer-avatar-lg {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--c-ink-placeholder);
+  color: var(--c-surface);
+}
+
+.drawer-stats {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+}
+
+.drawer-stat {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--c-ink-soft);
+}
+
+.drawer-stat-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer-stat-value {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 18px;
+  color: var(--c-ink);
+}
+
+.drawer-stat-label {
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 14px;
+  color: var(--c-ink-soft);
+}
+
+.drawer-prefs {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 0 0;
+  border: 0;
+  border-top: 1px solid var(--c-line);
+  background: none;
+  color: var(--c-ink-faint);
+  text-align: left;
+}
+
+.drawer-prefs-label.eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+
+.drawer-shared {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.drawer-shared-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.drawer-avatar {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.drawer-add {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--c-line);
+  border-radius: 50%;
+  background: var(--c-surface);
+  color: var(--c-ink);
+}

@@ -1,101 +1,163 @@
-import { Icon } from 'leaflet'
-import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet'
-import markerIconUrl from 'leaflet/dist/images/marker-icon.png'
-import markerIconRetinaUrl from 'leaflet/dist/images/marker-icon-2x.png'
-import markerShadowUrl from 'leaflet/dist/images/marker-shadow.png'
+import { divIcon, type LeafletEvent } from 'leaflet'
+import { createPortal } from 'react-dom'
+import { MapContainer, Marker, TileLayer } from 'react-leaflet'
+import { useCallback, useMemo, useState } from 'react'
+import Search, { SEARCH_RESULTS, type SearchResult } from './components/Search'
+import MapPin from './components/MapPin'
+import DetailDrawer, { featuredMemory } from './components/DetailDrawer'
+import MobileDrawer, { MOBILE_DRAWER_EXAMPLE } from './components/MobileDrawer'
+import { useMediaQuery } from './useMediaQuery'
+import helsinkiPhoto from './assets/pins/helsinki.jpg'
+import londonPhoto from './assets/pins/london.jpg'
+import berlinPhoto from './assets/pins/berlin.jpg'
+import romePhoto from './assets/pins/rome.jpg'
+import parisPhoto from './assets/pins/paris.jpg'
+import './MapScreen.css'
 
 /**
- * Leaflet resolves its default marker images relative to the stylesheet URL,
- * which Vite inlines — so the icons must be wired to bundled asset URLs or the
- * marker renders as a broken image.
+ * A memory pinned to a place on the map. Coordinates are hard-coded for now:
+ * the real ones will come from photo EXIF once the backend extracts it.
  */
-const markerIcon = new Icon({
-  iconUrl: markerIconUrl,
-  iconRetinaUrl: markerIconRetinaUrl,
-  shadowUrl: markerShadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-})
+interface PinnedMemory {
+  id: string
+  city: string
+  at: [number, number]
+  photo: string
+  countLabel?: string
+}
 
 /**
- * Helsinki city centre, used as the initial map view until real memory pins
- * (whose coordinates come from photo EXIF data) are loaded from the backend.
+ * The five markers the design places on Europe, including Paris as the one
+ * cluster. Coordinates are the real city centres. The photographs stand in for
+ * the design's own, which Figma never exported — see CREDITS.md for each one's
+ * author and licence.
  */
-const HELSINKI: [number, number] = [60.1699, 24.9384]
-
-/**
- * Stand-in pins and cards so the layout can be judged with content in it.
- * Every value here is fabricated placeholder copy — the real rows will come
- * from the backend once photo import and EXIF extraction exist.
- */
-const PLACEHOLDER_MEMORIES = [
-  { id: 'hki', title: 'Helsinki', when: 'Aug 2026 · 24 photos', at: HELSINKI },
-  { id: 'tll', title: 'Tallinn', when: 'Jul 2026 · 11 photos', at: [59.437, 24.7536] as [number, number] },
-  { id: 'sto', title: 'Stockholm', when: 'Jun 2026 · 38 photos', at: [59.3293, 18.0686] as [number, number] },
+const PINNED: PinnedMemory[] = [
+  { id: 'paris', city: 'Paris', at: [48.8566, 2.3522], photo: parisPhoto, countLabel: '50+ Photos' },
+  { id: 'london', city: 'London', at: [51.5072, -0.1276], photo: londonPhoto },
+  { id: 'berlin', city: 'Berlin', at: [52.52, 13.405], photo: berlinPhoto },
+  { id: 'rome', city: 'Rome', at: [41.9028, 12.4964], photo: romePhoto },
+  { id: 'helsinki', city: 'Helsinki', at: [60.1699, 24.9384], photo: helsinkiPhoto },
 ]
 
 /**
- * Fabricated counters standing in for the mock-up's stat row. The third tile
- * carries the accent border the design uses to highlight one figure.
+ * Europe, framed so all five markers are visible the way the design shows them.
  */
-const PLACEHOLDER_STATS = [
-  { label: 'Cities', value: '12', accent: false },
-  { label: 'Countries', value: '5', accent: false },
-  { label: 'Longest trip', value: '14 Days', accent: true },
-  { label: 'Photos', value: '73', accent: false },
-]
+const EUROPE_CENTRE: [number, number] = [50.5, 10]
 
 /**
- * The map-first main screen: an OpenStreetMap-tiled Leaflet map with a list of
- * memory cards beside it and a row of counters underneath, mirroring the two
- * "Header" frames in the Figma mock-up.
+ * Places one MapPin on the map.
  *
- * The height must come from the `map` class rather than Leaflet's own
- * `leaflet-container` class: Leaflet adds that class while initialising and
- * measures the element first, so it would read a zero height and lay out the
- * tiles for a zero-size viewport.
+ * Leaflet owns the marker element, so the pin is portalled into it rather than
+ * rendered to an HTML string. Serialising it instead would drag `react-dom/server`
+ * into the browser bundle, which measured at +226 kB raw / +62 kB gzip — far too
+ * much for five markers.
+ *
+ * The host element is taken from Leaflet's `add` event rather than from a ref:
+ * when React hands over the marker instance its element does not exist yet, so a
+ * ref yields null and the portal never mounts.
+ *
+ * The anchor is the horizontal centre of the photo circle, 30px down, which is
+ * the point the design aligns to the coordinate.
  */
-export default function MapScreen() {
+function PinMarker({ memory }: { memory: PinnedMemory }) {
+  const [host, setHost] = useState<HTMLElement | null>(null)
+  const width = memory.countLabel ? 68 : 69
+  const height = memory.countLabel ? 98 : 84
+
+  const icon = useMemo(
+    () => divIcon({ className: 'map-pin-icon', html: '', iconSize: [width, height], iconAnchor: [width / 2, 30] }),
+    [width, height],
+  )
+
+  const attach = useCallback((event: LeafletEvent) => {
+    const element = (event.target as { getElement?: () => HTMLElement | undefined }).getElement?.() ?? null
+    setHost((current) => (current === element ? current : element))
+  }, [])
+
   return (
     <>
-      <div className="map-row">
-        <div className="card">
-          <MapContainer className="map" center={HELSINKI} zoom={5}>
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
-            {PLACEHOLDER_MEMORIES.map((memory) => (
-              <Marker key={memory.id} position={memory.at} icon={markerIcon}>
-                <Popup>{memory.title}</Popup>
-              </Marker>
-            ))}
-          </MapContainer>
-        </div>
-
-        <aside className="sidebar">
-          {PLACEHOLDER_MEMORIES.map((memory) => (
-            <article className="card memory" key={memory.id}>
-              <div className="photo">photo</div>
-              <div className="memory-body">
-                <h3>{memory.title}</h3>
-                <p>{memory.when}</p>
-              </div>
-            </article>
-          ))}
-        </aside>
-      </div>
-
-      <div className="stats">
-        {PLACEHOLDER_STATS.map((stat) => (
-          <div className="card stat" key={stat.label} data-accent={stat.accent}>
-            <b>{stat.value}</b>
-            <span>{stat.label}</span>
-          </div>
-        ))}
-      </div>
+      <Marker position={memory.at} icon={icon} eventHandlers={{ add: attach }} />
+      {host
+        ? createPortal(
+            <MapPin city={memory.city} photo={memory.photo} countLabel={memory.countLabel} />,
+            host,
+          )
+        : null}
     </>
+  )
+}
+
+/**
+ * The map screen: a grey, label-free basemap under the design's search control
+ * and memory markers, with the memory drawer docked on the right.
+ *
+ * The design draws a flat, pale grey landmass, so the OpenStreetMap tiles are
+ * desaturated in CSS instead of being swapped for a ready-made grey basemap:
+ * CARTO's `light_nolabels` looks right but serves an "API KEY REQUIRED"
+ * watermark tile without a key, and Stadia's toner-lite answers 401. A static
+ * picture of a map would match the mock-up even more closely but would throw
+ * away panning and zooming, which the product needs.
+ */
+export default function MapScreen() {
+  const [query, setQuery] = useState('Paris, France')
+  const [selectedId, setSelectedId] = useState<string | null>(SEARCH_RESULTS[0]?.id ?? null)
+  const [activePhoto, setActivePhoto] = useState(0)
+  const isNarrow = useMediaQuery('(max-width: 900px)')
+
+  const noop = () => undefined
+
+  return (
+    <div className="mapscreen">
+      <div className="mapscreen-map">
+        <MapContainer className="mapscreen-canvas" center={EUROPE_CENTRE} zoom={4} zoomControl={false}>
+          <TileLayer
+            url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          />
+          {PINNED.map((memory) => (
+            <PinMarker key={memory.id} memory={memory} />
+          ))}
+        </MapContainer>
+
+        <div className="mapscreen-search">
+          <Search
+            value={query}
+            onChange={setQuery}
+            onClear={() => setQuery('')}
+            results={SEARCH_RESULTS}
+            selectedId={selectedId}
+            onSelect={(result: SearchResult) => setSelectedId(result.id)}
+          />
+        </div>
+      </div>
+
+      <aside className="mapscreen-drawer">
+        {isNarrow ? (
+          <MobileDrawer
+            {...MOBILE_DRAWER_EXAMPLE}
+            onLike={noop}
+            onShare={noop}
+            onOpen={noop}
+            onSelectPhoto={setActivePhoto}
+            onUpload={noop}
+            onOpenPreferences={noop}
+            onAddPerson={noop}
+          />
+        ) : (
+          <DetailDrawer
+            memory={featuredMemory}
+            activePhoto={activePhoto}
+            onSelectPhoto={setActivePhoto}
+            onFavorite={noop}
+            onShare={noop}
+            onExpand={noop}
+            onUpload={noop}
+            onOpenPreferences={noop}
+            onAddPerson={noop}
+          />
+        )}
+      </aside>
+    </div>
   )
 }

@@ -1,0 +1,77 @@
+.mapscreen {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 420px;
+  height: 100%;
+  min-height: 0;
+}
+
+.mapscreen-map {
+  position: relative;
+  min-width: 0;
+}
+
+.mapscreen-canvas {
+  height: 100%;
+  width: 100%;
+}
+
+/*
+ * Only the tile pane is desaturated, never the whole map: the markers and the
+ * search control are children of sibling panes and must keep their colour.
+ */
+.mapscreen-canvas .leaflet-tile-pane {
+  filter: grayscale(1) brightness(1.06) contrast(0.92);
+}
+
+/*
+ * Leaflet stacks its own panes from z-index 400 upwards, so the search control
+ * has to sit above that to stay clickable over the map.
+ */
+.mapscreen-search {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 500;
+  width: 420px;
+  max-width: calc(100% - 32px);
+}
+
+.mapscreen-drawer {
+  overflow: auto;
+  background: var(--c-bg);
+  border-left: 1px solid var(--c-line);
+}
+
+/*
+ * Leaflet gives every divIcon a white background and a border; the pin draws
+ * its own chrome, so the wrapper must be invisible and must not clip it.
+ */
+.map-pin-icon {
+  background: transparent;
+  border: 0;
+}
+
+/*
+ * On a phone the design's drawer is a full screen, not a panel, so the screen
+ * stops being viewport-height and the page scrolls it as one document. Leaving
+ * the drawer as its own scroll container would trap an 855px design inside a
+ * ~365px window.
+ */
+@media (max-width: 900px) {
+  .mapscreen {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 360px auto;
+  }
+
+  .mapscreen-drawer {
+    overflow: visible;
+    border-left: 0;
+    border-top: 1px solid var(--c-line);
+  }
+
+  .mapscreen-map {
+    height: 360px;
+  }
+}

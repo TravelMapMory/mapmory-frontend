@@ -1,0 +1,315 @@
+/* Layout and skin for MobileDrawer, mirroring the "editable-unimap-screen"
+   frame. Every class is prefixed .mdrawer- so this sheet cannot collide with
+   another component's. */
+
+.mdrawer {
+  width: 100%;
+  max-width: 422px;
+  padding: 24px 24px 32px;
+  background: var(--c-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.mdrawer,
+.mdrawer * {
+  box-sizing: border-box;
+}
+
+.mdrawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.mdrawer-badge {
+  height: 24px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--r-pill);
+  background: var(--c-amber-bg);
+  color: var(--c-amber-ink);
+  line-height: 1;
+  letter-spacing: 0;
+}
+
+.mdrawer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mdrawer-action {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-sm);
+  color: var(--c-ink);
+}
+
+.mdrawer-action-like {
+  color: var(--c-heart);
+}
+
+.mdrawer-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mdrawer-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.26px;
+  color: var(--c-ink);
+}
+
+.mdrawer-place {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  color: var(--c-ink-soft);
+}
+
+.mdrawer-carousel {
+  position: relative;
+  height: 240px;
+  border-radius: var(--r-xl);
+  overflow: hidden;
+}
+
+.mdrawer-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  background: var(--c-ink-placeholder);
+}
+
+.mdrawer-dots {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 18px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.mdrawer-dot {
+  width: 6px;
+  height: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.mdrawer-dot[aria-current='true'] {
+  background: var(--c-surface);
+}
+
+.mdrawer-date {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+}
+
+.mdrawer-date-tile {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  background: var(--c-bg);
+  border-radius: var(--r-xs);
+  color: var(--c-ink-soft);
+}
+
+.mdrawer-date-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.mdrawer-date-label {
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--c-ink-faint);
+}
+
+.mdrawer-date-value {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--c-ink);
+}
+
+.mdrawer-upload {
+  width: 100%;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: var(--c-ink);
+  color: var(--c-surface);
+  box-shadow: var(--shadow-raised);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.mdrawer-profile {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 17px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-lg);
+}
+
+.mdrawer-profile-label {
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.mdrawer-profile-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mdrawer-avatar {
+  width: 48px;
+  height: 48px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-pill);
+  background: var(--c-ink-placeholder);
+  color: var(--c-surface);
+}
+
+img.mdrawer-avatar {
+  display: block;
+  object-fit: cover;
+}
+
+.mdrawer-stats {
+  flex: 1;
+  display: flex;
+  justify-content: space-between;
+}
+
+.mdrawer-stat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--c-ink-soft);
+}
+
+.mdrawer-stat-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.mdrawer-stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--c-ink);
+}
+
+.mdrawer-stat-label {
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--c-ink-soft);
+}
+
+.mdrawer-rule {
+  border-top: 1px solid var(--c-line);
+}
+
+.mdrawer-preferences {
+  width: 100%;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 0;
+  background: none;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+  text-transform: uppercase;
+  color: var(--c-ink-soft);
+}
+
+.mdrawer-preferences-chevron {
+  color: var(--c-ink-faint);
+}
+
+.mdrawer-shared {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mdrawer-shared-label {
+  margin: 0;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+.mdrawer-people {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mdrawer-person {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: block;
+  border-radius: var(--r-pill);
+  background: var(--c-ink-placeholder);
+  object-fit: cover;
+}
+
+.mdrawer-add {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-pill);
+  color: var(--c-ink);
+}
