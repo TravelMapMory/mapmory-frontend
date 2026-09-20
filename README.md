@@ -1,6 +1,6 @@
-# UniMap (frontend)
+# MapMory (frontend)
 
-UniMap is a photo-first travel-memory app. You upload the photos you took on a
+MapMory is a photo-first travel-memory app. You upload the photos you took on a
 trip and the backend reads their EXIF metadata to recover where and when each
 one was taken, so your memories place themselves on a map instead of being
 filed by hand. The map is the main UI: a search bar filters what is already
@@ -40,8 +40,8 @@ single tile-layer URL in `src/App.tsx`.
 The image builds the app and serves the static bundle with nginx:
 
 ```bash
-docker build -t unimap-frontend .
-docker run --rm -p 8080:8080 unimap-frontend
+docker build -t mapmory-frontend .
+docker run --rm -p 8080:8080 mapmory-frontend
 ```
 
 Then open http://localhost:8080. Client-side routes are served `index.html`, so
@@ -51,7 +51,7 @@ The listen port comes from the `PORT` environment variable (default `8080`),
 which is what Cloud Run injects:
 
 ```bash
-docker run --rm -e PORT=9090 -p 9090:9090 unimap-frontend
+docker run --rm -e PORT=9090 -p 9090:9090 mapmory-frontend
 ```
 
 ## Open decisions

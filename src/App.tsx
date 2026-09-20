@@ -20,7 +20,7 @@ export default function App() {
     <div className="shell">
       <header className="topbar">
         <div className="brand">
-          <strong>UniMap</strong>
+          <strong>MapMory</strong>
           <span className="eyebrow">Memory Platform</span>
         </div>
 
