@@ -1,8 +1,4 @@
-import searchIconUrl from '../assets/search/search.svg'
-import clearIconUrl from '../assets/search/x-circle.svg'
-import pinIconUrl from '../assets/search/map-pin.svg'
-import pinActiveIconUrl from '../assets/search/map-pin-active.svg'
-import clockIconUrl from '../assets/search/clock.svg'
+import { Clock, CircleX, MapPin, Search as SearchIcon } from 'lucide-react'
 import './Search.css'
 
 /**
@@ -45,20 +41,25 @@ export const SEARCH_RESULTS: SearchResult[] = [
 ]
 
 /**
- * Returns the icon url for a row, picking the green pin for the selected row
- * because an SVG's fill cannot inherit the row's state through an <img>.
+ * The 24-space `strokeWidth` that renders the design's 2px stroke at an icon
+ * drawn `size` px wide, because Lucide always strokes inside a 24 viewBox.
  */
-function rowIconUrl(icon: SearchResultIcon, selected: boolean): string {
-  if (icon === 'recent') {
-    return clockIconUrl
-  }
-  return selected ? pinActiveIconUrl : pinIconUrl
+function stroke(size: number): number {
+  return 48 / size
 }
+
+/**
+ * Size of both dropdown row glyphs, read from the design nodes themselves —
+ * 2:120 for the selected row's pin and 2:132 for the recent row's clock, both
+ * 16px. The exported SVG in the repo was a 14px pin from a different frame.
+ */
+const ROW_ICON_SIZE = 16
 
 /**
  * Map search: a rounded field with the query and a clear button, plus a
  * floating card of result rows. The dropdown is omitted when there are no
- * results so the field can stand alone.
+ * results so the field can stand alone. Icon colour comes from CSS via
+ * `currentColor`, so the selected row tints its own pin.
  */
 export default function Search({
   value,
@@ -71,7 +72,7 @@ export default function Search({
   return (
     <div className="srch">
       <div className="srch-field">
-        <img className="srch-icon" src={searchIconUrl} alt="" width={20} height={20} />
+        <SearchIcon className="srch-icon-field" size={20} strokeWidth={stroke(20)} aria-hidden />
         <input
           className="srch-input"
           type="text"
@@ -80,7 +81,7 @@ export default function Search({
           aria-label="Search"
         />
         <button className="srch-clear" type="button" onClick={onClear} aria-label="Clear search">
-          <img src={clearIconUrl} alt="" width={12} height={12} />
+          <CircleX size={10} strokeWidth={stroke(10)} aria-hidden />
         </button>
       </div>
       {results.length > 0 && (
@@ -95,13 +96,21 @@ export default function Search({
                   onClick={() => onSelect(result)}
                   aria-current={selected}
                 >
-                  <img
-                    className="srch-icon"
-                    src={rowIconUrl(result.icon, selected)}
-                    alt=""
-                    width={16}
-                    height={16}
-                  />
+                  {result.icon === 'recent' ? (
+                    <Clock
+                      className="srch-icon-clock"
+                      size={ROW_ICON_SIZE}
+                      strokeWidth={stroke(ROW_ICON_SIZE)}
+                      aria-hidden
+                    />
+                  ) : (
+                    <MapPin
+                      className="srch-icon-pin"
+                      size={ROW_ICON_SIZE}
+                      strokeWidth={stroke(ROW_ICON_SIZE)}
+                      aria-hidden
+                    />
+                  )}
                   <span className="srch-row-label">{result.label}</span>
                   {selected && <span className="eyebrow srch-badge">ACTIVE</span>}
                 </button>

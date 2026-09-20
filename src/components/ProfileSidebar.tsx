@@ -1,3 +1,5 @@
+import { Award, Lock, MapPin, RefreshCw, SquarePen, User } from 'lucide-react'
+
 import './ProfileSidebar.css'
 
 /**
@@ -36,66 +38,14 @@ export interface ProfileSidebarProps {
 }
 
 /**
- * Stand-ins for the icons the Figma frame ships as SVG exports. The Figma MCP
- * asset URLs could not be fetched while this file was written (the file's MCP
- * quota was exhausted after the reference render), so these are hand-authored
- * equivalents at the design's box sizes, stroke weight and colours — replace
- * them with the real exports once the quota resets.
+ * The Lucide glyph each "Account & preferences" row draws, keyed by
+ * `PreferenceRow.icon`. The design's icon set is Lucide, so these are the real
+ * glyphs rather than the hand-authored stand-ins that stood here before.
  */
 const PREFERENCE_ICONS = {
-  tier: (
-    <svg
-      className="psb-pref-icon"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="8" r="6" />
-      <path d="m15.5 12.9 1.5 8.5-3.6-2.7a1 1 0 0 0-1.2 0L8.5 21.4l1.5-8.5" />
-    </svg>
-  ),
-  privacy: (
-    <svg
-      className="psb-pref-icon"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="11" width="18" height="11" rx="2" />
-      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-    </svg>
-  ),
-  sync: (
-    <svg
-      className="psb-pref-icon"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 12a9 9 0 0 1 15.7-6L21 8" />
-      <path d="M21 3v5h-5" />
-      <path d="M21 12a9 9 0 0 1-15.7 6L3 16" />
-      <path d="M8 16H3v5" />
-    </svg>
-  ),
+  tier: Award,
+  privacy: Lock,
+  sync: RefreshCw,
 }
 
 /**
@@ -146,10 +96,7 @@ export default function ProfileSidebar({
             {avatarSrc ? (
               <img className="psb-avatar-photo" src={avatarSrc} alt={name} />
             ) : (
-              <svg width="112" height="112" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                <circle cx="12" cy="10.5" r="3.7" />
-                <path d="M12 16.2a7.6 7.6 0 0 0-7.6 7.6v1.2h15.2v-1.2a7.6 7.6 0 0 0-7.6-7.6Z" />
-              </svg>
+              <User size={56} strokeWidth={0.8571} aria-hidden />
             )}
           </div>
         </div>
@@ -157,21 +104,7 @@ export default function ProfileSidebar({
         <h2 className="psb-name">{name}</h2>
         <p className="psb-handle">{handle}</p>
         <p className="psb-location">
-          <svg
-            className="psb-pin"
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0Z" />
-            <circle cx="12" cy="10" r="3" />
-          </svg>
+          <MapPin className="psb-pin" size={14} strokeWidth={3.4286} aria-hidden />
           {location}
         </p>
 
@@ -179,20 +112,7 @@ export default function ProfileSidebar({
         <p className="psb-about">{about}</p>
 
         <button type="button" className="psb-edit" onClick={onEditProfile}>
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-            <path d="M18.4 2.6a2.1 2.1 0 1 1 3 3L12 15l-4 1 1-4Z" />
-          </svg>
+          <SquarePen size={14} strokeWidth={3.4286} aria-hidden />
           Edit Traveler Profile
         </button>
       </section>
@@ -209,21 +129,25 @@ export default function ProfileSidebar({
       <section className="psb-prefs">
         <h3 className="eyebrow psb-eyebrow psb-prefs-label">ACCOUNT &amp; PREFERENCES</h3>
         <ul className="psb-pref-list">
-          {preferences.map((preference) => (
-            <li key={preference.id}>
-              <button
-                type="button"
-                className="psb-pref"
-                onClick={() => onSelectPreference(preference.id)}
-              >
-                {PREFERENCE_ICONS[preference.icon]}
-                <span className="psb-pref-text">
-                  <span className="eyebrow psb-eyebrow psb-pref-label">{preference.label}</span>
-                  <span className="psb-pref-value">{preference.value}</span>
-                </span>
-              </button>
-            </li>
-          ))}
+          {preferences.map((preference) => {
+            const Icon = PREFERENCE_ICONS[preference.icon]
+
+            return (
+              <li key={preference.id}>
+                <button
+                  type="button"
+                  className="psb-pref"
+                  onClick={() => onSelectPreference(preference.id)}
+                >
+                  <Icon className="psb-pref-icon" size={16} strokeWidth={3} aria-hidden />
+                  <span className="psb-pref-text">
+                    <span className="eyebrow psb-eyebrow psb-pref-label">{preference.label}</span>
+                    <span className="psb-pref-value">{preference.value}</span>
+                  </span>
+                </button>
+              </li>
+            )
+          })}
         </ul>
       </section>
     </div>

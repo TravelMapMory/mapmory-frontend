@@ -68,6 +68,11 @@
   border: 1px solid var(--c-line);
   border-radius: var(--r-xs);
   background: var(--c-surface);
+  color: var(--c-ink);
+}
+
+.drawer-heart {
+  color: var(--c-heart);
 }
 
 .drawer-head {
@@ -155,6 +160,7 @@
   place-items: center;
   border-radius: var(--r-xs);
   background: var(--c-bg);
+  color: var(--c-ink-soft);
 }
 
 .drawer-date-text {
@@ -174,7 +180,8 @@
   color: var(--c-ink);
 }
 
-.drawer-upload {
+.drawer-upload,
+.drawer-gallery {
   height: 44px;
   flex: none;
   display: flex;
@@ -189,6 +196,9 @@
   color: var(--c-surface);
   font-size: 13px;
   font-weight: 800;
+}
+
+.drawer-upload {
   text-transform: uppercase;
 }
 
@@ -213,6 +223,7 @@
   place-items: center;
   border-radius: 50%;
   background: var(--c-ink-placeholder);
+  color: var(--c-surface);
 }
 
 .drawer-stats {
@@ -225,6 +236,7 @@
   display: flex;
   align-items: center;
   gap: 7px;
+  color: var(--c-ink-soft);
 }
 
 .drawer-stat-text {
@@ -256,6 +268,7 @@
   border: 0;
   border-top: 1px solid var(--c-line);
   background: none;
+  color: var(--c-ink-faint);
   text-align: left;
 }
 
@@ -294,4 +307,5 @@
   border: 1px solid var(--c-line);
   border-radius: 50%;
   background: var(--c-surface);
+  color: var(--c-ink);
 }

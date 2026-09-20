@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { MapPin } from 'lucide-react'
 import './ProfileMain.css'
 
 /**
@@ -62,6 +63,10 @@ export interface ProfileMainProps {
   journey: ProfileMainJourney
   topCities: ProfileMainCity[]
   pinboard: ProfileMainPhoto[]
+  /** Opens the companion picker. Without it the "+" control renders disabled. */
+  onAddCompanion?: () => void
+  /** Opens the full pinned-photo view. Without it the link renders disabled. */
+  onViewAllPhotos?: () => void
 }
 
 /**
@@ -175,7 +180,13 @@ function JourneyCarousel({ photos }: { photos: ProfileMainPhoto[] }) {
  * The featured journey card: status pill, headline, route, carousel, the
  * numbered memory log and the companion row.
  */
-function JourneyCard({ journey }: { journey: ProfileMainJourney }) {
+function JourneyCard({
+  journey,
+  onAddCompanion,
+}: {
+  journey: ProfileMainJourney
+  onAddCompanion?: () => void
+}) {
   return (
     <section className="pm-jrn">
       <div className="pm-jrn-head">
@@ -186,21 +197,7 @@ function JourneyCard({ journey }: { journey: ProfileMainJourney }) {
       <h2 className="pm-jrn-title">{journey.title}</h2>
 
       <p className="pm-jrn-route">
-        <svg
-          className="pm-jrn-pin"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-        >
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-          <circle cx="12" cy="10" r="3" />
-        </svg>
+        <MapPin className="pm-jrn-pin" size={14} strokeWidth={3.4286} aria-hidden />
         {journey.route}
       </p>
 
@@ -228,7 +225,13 @@ function JourneyCard({ journey }: { journey: ProfileMainJourney }) {
               {initials}
             </span>
           ))}
-          <button type="button" className="pm-jrn-avatar pm-jrn-add" aria-label="Add a companion">
+          <button
+            type="button"
+            className="pm-jrn-avatar pm-jrn-add"
+            aria-label="Add a companion"
+            onClick={onAddCompanion}
+            disabled={onAddCompanion === undefined}
+          >
             +
           </button>
           <span className="pm-jrn-crew-note">{journey.companionsNote}</span>
@@ -244,7 +247,7 @@ function JourneyCard({ journey }: { journey: ProfileMainJourney }) {
  */
 function TopCities({ cities }: { cities: ProfileMainCity[] }) {
   return (
-    <section className="pm-cities">
+    <section>
       <span className="eyebrow pm-cities-label">Top Visited Cities</span>
       <div className="pm-cities-row">
         {cities.map((city) => (
@@ -262,12 +265,23 @@ function TopCities({ cities }: { cities: ProfileMainCity[] }) {
  * The "Visual Pinboard" card: heading, the "View All Pinned Photos" action and
  * a row of four photos.
  */
-function Pinboard({ photos }: { photos: ProfileMainPhoto[] }) {
+function Pinboard({
+  photos,
+  onViewAllPhotos,
+}: {
+  photos: ProfileMainPhoto[]
+  onViewAllPhotos?: () => void
+}) {
   return (
     <section className="pm-pin">
       <div className="pm-pin-head">
         <h2 className="pm-pin-title">Visual Pinboard</h2>
-        <button type="button" className="pm-pin-link">
+        <button
+          type="button"
+          className="pm-pin-link"
+          onClick={onViewAllPhotos}
+          disabled={onViewAllPhotos === undefined}
+        >
           View All Pinned Photos
         </button>
       </div>
@@ -285,13 +299,20 @@ function Pinboard({ photos }: { photos: ProfileMainPhoto[] }) {
  * featured journey card, the top-cities chips and the visual pinboard, stacked
  * with the design's 32px rhythm.
  */
-export default function ProfileMain({ stats, journey, topCities, pinboard }: ProfileMainProps) {
+export default function ProfileMain({
+  stats,
+  journey,
+  topCities,
+  pinboard,
+  onAddCompanion,
+  onViewAllPhotos,
+}: ProfileMainProps) {
   return (
     <div className="pm-col">
       <StatRow stats={stats} />
-      <JourneyCard journey={journey} />
+      <JourneyCard journey={journey} onAddCompanion={onAddCompanion} />
       <TopCities cities={topCities} />
-      <Pinboard photos={pinboard} />
+      <Pinboard photos={pinboard} onViewAllPhotos={onViewAllPhotos} />
     </div>
   )
 }

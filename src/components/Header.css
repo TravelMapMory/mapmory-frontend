@@ -34,6 +34,7 @@
   height: 32px;
   background: var(--c-ink);
   border-radius: var(--r-xs);
+  color: var(--c-surface);
 }
 
 .hdr-brand-text {

@@ -44,6 +44,7 @@
   background: var(--c-bg);
   border: 0;
   border-radius: 50%;
+  color: #475569;
 }
 
 .srch-list {
@@ -117,6 +118,24 @@
   color: #10b981;
 }
 
-.srch-icon {
+.srch-icon-field,
+.srch-icon-pin,
+.srch-icon-clock {
   flex: none;
+}
+
+.srch-icon-field {
+  color: var(--c-ink);
+}
+
+.srch-icon-pin {
+  color: var(--c-ink-soft);
+}
+
+.srch-icon-clock {
+  color: var(--c-ink-faint);
+}
+
+.srch-row-selected .srch-icon-pin {
+  color: #10b981;
 }

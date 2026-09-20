@@ -1,17 +1,31 @@
 import { useState } from 'react'
+import {
+  Calendar,
+  ChevronRight,
+  Globe,
+  Heart,
+  Image,
+  MapPin,
+  Plus,
+  Share2,
+  SlidersVertical,
+  Upload,
+  User,
+  type LucideIcon,
+} from 'lucide-react'
 import './MobileDrawer.css'
-import heartIcon from '../assets/mobile-drawer/heart.svg'
-import shareIcon from '../assets/mobile-drawer/share-2.svg'
-import chevronIcon from '../assets/mobile-drawer/chevron-right.svg'
-import chevronFaintIcon from '../assets/mobile-drawer/chevron-right-faint.svg'
-import mapPinIcon from '../assets/mobile-drawer/map-pin.svg'
-import calendarIcon from '../assets/mobile-drawer/calendar.svg'
-import uploadIcon from '../assets/mobile-drawer/upload.svg'
-import userIcon from '../assets/mobile-drawer/user.svg'
-import globeIcon from '../assets/mobile-drawer/globe.svg'
-import imageIcon from '../assets/mobile-drawer/image.svg'
-import slidersIcon from '../assets/mobile-drawer/sliders.svg'
-import plusIcon from '../assets/mobile-drawer/plus.svg'
+import carouselPhoto from '../assets/photos/memory-carousel.jpg'
+import sharedAvatar1 from '../assets/photos/shared-avatar-1.jpg'
+import sharedAvatar2 from '../assets/photos/shared-avatar-2.jpg'
+
+/**
+ * The props every icon in the drawer shares. The design strokes its icons at
+ * 2px as rendered, so `absoluteStrokeWidth` rescales Lucide's 24-unit stroke to
+ * whatever `size` an icon is given instead of a hand-computed stroke per size.
+ * No `color` is passed: Lucide strokes with `currentColor`, which the CSS sets
+ * on each icon's surrounding element.
+ */
+const iconProps = { strokeWidth: 2, absoluteStrokeWidth: true, 'aria-hidden': true } as const
 
 /**
  * One carousel slide. `src` is left empty when the memory's photo has not been
@@ -24,12 +38,13 @@ export interface DrawerPhoto {
 }
 
 /**
- * One of the three counters in the profile card. `icon` is an image URL rather
- * than an enum so the caller owns which glyph goes with which counter, keeping
- * the component free of a lookup table that only ever has three entries.
+ * One of the three counters in the profile card. `icon` is a Lucide component
+ * rather than an enum so the caller owns which glyph goes with which counter,
+ * keeping the component free of a lookup table that only ever has three
+ * entries.
  */
 export interface DrawerStat {
-  icon: string
+  icon: LucideIcon
   value: string
   label: string
 }
@@ -72,21 +87,24 @@ export interface MobileDrawerProps {
 }
 
 /**
- * The content of the "editable-unimap-screen" frame, ready to drop into a
- * story or a screen. Its values are the ones the Figma file ships, so the
- * drawer can be rendered exactly as designed without inventing copy; the
- * photo and avatar URLs are blank because the design's raster images are not
- * available to this build.
+ * The content of the "editable-unimap-screen" frame, ready to drop into a story
+ * or a screen. Every string is the one the Figma file ships, so the drawer can
+ * be rendered as designed without inventing copy.
+ *
+ * All four carousel slides point at the same photograph: the design shows four
+ * indicator dots but Figma exports only the visible slide. `avatar` is
+ * deliberately empty — the design draws the user glyph on a tinted circle
+ * there rather than a photograph, and the component falls back to it.
  */
 export const MOBILE_DRAWER_EXAMPLE = {
   badge: '✦ FEATURED MEMORY',
   title: 'My Memory Stream: Latest Vantaa snapshot',
   location: 'Paris, France',
   photos: [
-    { src: '', alt: 'Memory photo 1' },
-    { src: '', alt: 'Memory photo 2' },
-    { src: '', alt: 'Memory photo 3' },
-    { src: '', alt: 'Memory photo 4' },
+    { src: carouselPhoto, alt: 'Memory photo 1' },
+    { src: carouselPhoto, alt: 'Memory photo 2' },
+    { src: carouselPhoto, alt: 'Memory photo 3' },
+    { src: carouselPhoto, alt: 'Memory photo 4' },
   ],
   dateLabel: 'TRIP DATE',
   dateValue: '12 Feb 2024',
@@ -94,15 +112,15 @@ export const MOBILE_DRAWER_EXAMPLE = {
   profileLabel: 'MY PROFILE & STATS',
   avatar: '',
   stats: [
-    { icon: globeIcon, value: '20', label: 'Countries' },
-    { icon: imageIcon, value: '1500', label: 'Pictures' },
-    { icon: slidersIcon, value: '0', label: 'Accounts' },
+    { icon: Globe, value: '20', label: 'Countries' },
+    { icon: Image, value: '1500', label: 'Pictures' },
+    { icon: SlidersVertical, value: '0', label: 'Accounts' },
   ],
   preferencesLabel: 'ACCOUNT PREFERENCES',
   sharedLabel: 'SHARED WITH',
   people: [
-    { src: '', alt: 'Shared with person 1' },
-    { src: '', alt: 'Shared with person 2' },
+    { src: sharedAvatar1, alt: 'Shared with person 1' },
+    { src: sharedAvatar2, alt: 'Shared with person 2' },
   ],
 } satisfies Omit<
   MobileDrawerProps,
@@ -159,14 +177,19 @@ export default function MobileDrawer({
         <span className="eyebrow mdrawer-badge">{badge}</span>
 
         <div className="mdrawer-actions">
-          <button type="button" className="mdrawer-action" onClick={onLike} aria-label="Like this memory">
-            <img src={heartIcon} alt="" />
+          <button
+            type="button"
+            className="mdrawer-action mdrawer-action-like"
+            onClick={onLike}
+            aria-label="Like this memory"
+          >
+            <Heart size={16} {...iconProps} />
           </button>
           <button type="button" className="mdrawer-action" onClick={onShare} aria-label="Share this memory">
-            <img src={shareIcon} alt="" />
+            <Share2 size={16} {...iconProps} />
           </button>
           <button type="button" className="mdrawer-action" onClick={onOpen} aria-label="Open this memory">
-            <img src={chevronIcon} alt="" />
+            <ChevronRight size={16} {...iconProps} />
           </button>
         </div>
       </div>
@@ -174,7 +197,7 @@ export default function MobileDrawer({
       <div className="mdrawer-heading">
         <h2 className="mdrawer-title">{title}</h2>
         <p className="mdrawer-place">
-          <img src={mapPinIcon} alt="" />
+          <MapPin size={14} {...iconProps} />
           {location}
         </p>
       </div>
@@ -198,7 +221,7 @@ export default function MobileDrawer({
 
       <div className="mdrawer-date">
         <span className="mdrawer-date-tile">
-          <img src={calendarIcon} alt="" />
+          <Calendar size={18} {...iconProps} />
         </span>
         <span className="mdrawer-date-text">
           <span className="mdrawer-date-label">{dateLabel}</span>
@@ -207,7 +230,7 @@ export default function MobileDrawer({
       </div>
 
       <button type="button" className="mdrawer-upload" onClick={onUpload}>
-        <img src={uploadIcon} alt="" />
+        <Upload size={16} {...iconProps} />
         {uploadLabel}
       </button>
 
@@ -219,17 +242,17 @@ export default function MobileDrawer({
             <img className="mdrawer-avatar" src={avatar} alt="Your profile picture" />
           ) : (
             <span className="mdrawer-avatar">
-              <img src={userIcon} alt="" />
+              <User size={24} {...iconProps} />
             </span>
           )}
 
           <div className="mdrawer-stats">
-            {stats.map((stat) => (
-              <div className="mdrawer-stat" key={stat.label}>
-                <img src={stat.icon} alt="" />
+            {stats.map(({ icon: Icon, value, label }) => (
+              <div className="mdrawer-stat" key={label}>
+                <Icon size={18} {...iconProps} />
                 <span className="mdrawer-stat-text">
-                  <b className="mdrawer-stat-value">{stat.value}</b>
-                  <span className="mdrawer-stat-label">{stat.label}</span>
+                  <b className="mdrawer-stat-value">{value}</b>
+                  <span className="mdrawer-stat-label">{label}</span>
                 </span>
               </div>
             ))}
@@ -240,7 +263,7 @@ export default function MobileDrawer({
 
         <button type="button" className="mdrawer-preferences" onClick={onOpenPreferences}>
           {preferencesLabel}
-          <img src={chevronFaintIcon} alt="" />
+          <ChevronRight className="mdrawer-preferences-chevron" size={14} {...iconProps} />
         </button>
       </section>
 
@@ -257,7 +280,7 @@ export default function MobileDrawer({
           )}
 
           <button type="button" className="mdrawer-add" onClick={onAddPerson} aria-label="Share with someone else">
-            <img src={plusIcon} alt="" />
+            <Plus size={14} {...iconProps} />
           </button>
         </div>
       </div>

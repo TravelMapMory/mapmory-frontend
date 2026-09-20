@@ -1,5 +1,4 @@
-import mapPinIcon from '../assets/header/map-pin.svg'
-import mapIcon from '../assets/header/map.svg'
+import { MapIcon, MapPin } from 'lucide-react'
 import './Header.css'
 
 /**
@@ -25,13 +24,18 @@ export interface HeaderProps {
  * trailing control whose shape depends on the screen. Both Figma variants
  * (6:16 profile, 8:5 map) share one brand block, so it is inlined here rather
  * than split into a component that would only ever have this one caller.
+ *
+ * Both icons are Lucide glyphs drawn in `currentColor`, so the dark surfaces
+ * they sit on (`.hdr-logo`, `.hdr-pill`) set their white via `color`. The
+ * `strokeWidth` values are the design's 2px rendered stroke expressed in
+ * Lucide's 24 viewBox: 48 / size.
  */
 export default function Header({ action, onAction }: HeaderProps) {
   return (
     <header className="hdr">
       <div className="hdr-brand">
         <span className="hdr-logo">
-          <img src={mapPinIcon} alt="" width={18} height={18} />
+          <MapPin size={18} strokeWidth={2.6667} aria-hidden />
         </span>
 
         <span className="hdr-brand-text">
@@ -42,7 +46,7 @@ export default function Header({ action, onAction }: HeaderProps) {
 
       {action === 'interactive-map' ? (
         <button type="button" className="hdr-pill" onClick={onAction}>
-          <img src={mapIcon} alt="" width={16} height={16} />
+          <MapIcon size={14} strokeWidth={3.4286} aria-hidden />
           Interactive Map
         </button>
       ) : (
