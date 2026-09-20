@@ -1,0 +1,14 @@
+# Rendered to /etc/nginx/conf.d/default.conf by the nginx image entrypoint,
+# which runs envsubst over this file. The listen port is substituted because
+# PORT exists in the environment; $uri is written bare on purpose so it
+# survives that pass and is resolved by nginx per request.
+server {
+    listen ${PORT};
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

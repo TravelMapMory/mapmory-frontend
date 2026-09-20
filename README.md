@@ -19,6 +19,10 @@ npm install
 npm run dev
 ```
 
+`package-lock.json` is generated inside a linux container so CI can install it;
+if `npm install` on macOS rewrites it, restore it with `git checkout
+package-lock.json` instead of committing the rewrite.
+
 To produce a production build (this typechecks first):
 
 ```bash
@@ -30,6 +34,25 @@ npm run build
 Tiles come from OpenStreetMap and need no API key. Swapping in MapBox later is
 still an open option; nothing in this repository is tied to OSM beyond the
 single tile-layer URL in `src/App.tsx`.
+
+## Docker
+
+The image builds the app and serves the static bundle with nginx:
+
+```bash
+docker build -t unimap-frontend .
+docker run --rm -p 8080:8080 unimap-frontend
+```
+
+Then open http://localhost:8080. Client-side routes are served `index.html`, so
+deep links such as `/profile/xyz` survive a refresh.
+
+The listen port comes from the `PORT` environment variable (default `8080`),
+which is what Cloud Run injects:
+
+```bash
+docker run --rm -e PORT=9090 -p 9090:9090 unimap-frontend
+```
 
 ## Open decisions
 
