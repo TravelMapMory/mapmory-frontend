@@ -99,7 +99,15 @@ function PinMarker({ memory }: { memory: PinnedMemory }) {
  * picture of a map would match the mock-up even more closely but would throw
  * away panning and zooming, which the product needs.
  */
-export default function MapScreen() {
+export interface MapScreenProps {
+  /**
+   * Trip chosen with "Show on map" on the Dashboard, or null for all photos.
+   * Exposed on the root for now; the trip filter (feat/map) consumes it.
+   */
+  tripId?:string | null
+}
+
+export default function MapScreen({ tripId = null }: MapScreenProps) {
   const [query, setQuery] = useState('Paris, France')
   const [selectedId, setSelectedId] = useState<string | null>(SEARCH_RESULTS[0]?.id ?? null)
   const [activePhoto, setActivePhoto] = useState(0)
@@ -108,7 +116,7 @@ export default function MapScreen() {
   const noop = () => undefined
 
   return (
-    <div className="mapscreen">
+    <div className="mapscreen" data-trip-id={tripId ?? undefined}>
       <div className="mapscreen-map">
         <MapContainer className="mapscreen-canvas" center={EUROPE_CENTRE} zoom={4} zoomControl={false}>
           <TileLayer

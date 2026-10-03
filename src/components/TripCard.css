@@ -1,0 +1,97 @@
+.trip-card {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+}
+
+.trip-card-cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: var(--c-page);
+}
+
+.trip-card-cover img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.trip-card-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 100%;
+  color: var(--c-text-2);
+  font-size: 12px;
+}
+
+.trip-card-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+}
+
+.trip-card-badge .vis-badge {
+  box-shadow: 0 1px 3px rgba(21, 34, 56, 0.2);
+}
+
+.trip-card-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px 4px;
+}
+
+.trip-card-title {
+  margin: 0 0 2px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.trip-card-meta,
+.trip-card-places,
+.trip-card-warn {
+  margin: 0;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--c-text-2);
+}
+
+.trip-card-places {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  color: var(--c-text);
+}
+
+.trip-card-places svg,
+.trip-card-warn svg {
+  flex: none;
+}
+
+.trip-card-warn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--c-public);
+  font-weight: 600;
+}
+
+.trip-card-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 16px;
+}
+
+.trip-card-actions .btn {
+  flex: 1;
+}
