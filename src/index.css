@@ -31,3 +31,68 @@ button {
   font: inherit;
   cursor: pointer;
 }
+
+/*
+ * Button hierarchy shared by the Dashboard and Map (doc 4.3): navy primary,
+ * blue reserved for upload and other primary actions, outlined secondary.
+ */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.btn-primary {
+  background: var(--c-primary);
+  color: #fff;
+}
+
+.btn-action {
+  background: var(--c-action);
+  color: #fff;
+}
+
+.btn-secondary {
+  background: var(--c-surface);
+  border-color: var(--c-border);
+  color: var(--c-primary);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #22355a;
+}
+
+.btn-action:hover:not(:disabled) {
+  background: #2760b8;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--c-page);
+}
+
+.btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

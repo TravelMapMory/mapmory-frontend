@@ -1,0 +1,17 @@
+.vis-badge {
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+  padding:2px 8px;
+  border-radius:var(--r-pill);
+  background:var(--c-surface);
+  font-size:12px;
+  font-weight:600;
+  line-height:18px;
+}
+.vis-badge[data-visibility='private'] {
+  color:var(--c-private);
+}
+.vis-badge[data-visibility='public'] {
+  color:var(--c-public);
+}
