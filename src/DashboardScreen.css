@@ -73,6 +73,22 @@
   color: var(--c-text);
 }
 
+.dash-upload-field {
+  display: flex;
+  flex: 1 1 240px;
+  flex-direction: column;
+}
+
+.dash-file {
+  min-height: 36px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.dash-upload-cancel {
+  align-self: flex-end;
+}
+
 .dash-create-error {
   margin: 8px 0 0;
   font-size: 14px;

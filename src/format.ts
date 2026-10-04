@@ -31,3 +31,21 @@ export function formatUploaded(iso: string): string {
 export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`
 }
+
+const captured = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'UTC',
+})
+
+/**
+ * "12 Jun 2026, 18:40" for a local capture time. It is wall-clock time at
+ * the place the photo was taken, so it is shown as recorded, never converted.
+ */
+export function formatCaptured(local: string | null): string | null {
+  if (!local) return null
+  return captured.format(new Date(`${local.slice(0, 19)}Z`))
+}
