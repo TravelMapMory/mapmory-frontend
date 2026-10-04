@@ -2,11 +2,10 @@
 
 MapMory is a photo-first travel-memory app. You upload the photos you took on a
 trip and the backend reads their EXIF metadata to recover where and when each
-one was taken, so your memories place themselves on a map instead of being
-filed by hand. The map is the main UI: a search bar filters what is already
-there, memories can be grouped flexibly by city, country or your own custom
-grouping, privacy is customizable per user, and a profile page collects your
-own trips. This repository holds only the frontend.
+one was taken, so your trips place themselves on a map instead of being filed
+by hand. Everything is private until the owner shares it. This repository
+holds only the frontend; the design document is the source of truth for
+screens, rules and API.
 
 ## Prerequisites
 
@@ -20,7 +19,7 @@ npm run dev
 ```
 
 `package-lock.json` is generated inside a linux container so CI can install it;
-if `npm install` on macOS rewrites it, restore it with `git checkout
+if `npm install` on Windows or macOS rewrites it, restore it with `git checkout
 package-lock.json` instead of committing the rewrite.
 
 To produce a production build (this typechecks first):
@@ -31,59 +30,66 @@ npm run build
 
 ## UI
 
-Two screens, switched by the header's trailing control (`src/App.tsx`). No routing
-dependency yet: the design specifies no URLs.
+Screens are switched by local state in `src/App.tsx` (no router yet). The
+header tabs are **Dashboard | Map**; a trip page is reached from either.
 
-- **Map** (`src/MapScreen.tsx`) — a desaturated OpenStreetMap basemap under the
-  design's search control and five memory markers, with the memory drawer docked
-  on the right. Below 900px the desktop drawer is replaced by the mobile one,
-  which is a different layout in the design, not a restyle of the same one.
-- **Profile** (`src/ProfileScreen.tsx`) — the 400px identity column beside the
-  stats, journey, cities and pinboard column.
+- **Dashboard** (`src/DashboardScreen.tsx`): totals, trip cards, recently
+  uploaded, create trip, empty states.
+- **Trip** (`src/TripScreen.tsx`): trip header, every photo including the ones
+  without GPS as a gallery or a day-by-day journey list, upload with per-photo
+  status (`src/components/UploadPanel.tsx`), and location correction: search
+  for a place, drop or drag a pin on a map, or reuse the previous photo's
+  place (`src/components/LocationPicker.tsx`). Creating a trip opens it.
+- **Map · My photos** (`src/MapScreen.tsx`): the owner's located photos as
+  clustered pins (`src/components/PhotoClusters.tsx`), filters for trip,
+  capture dates and "Filter my photos", "Find a place", and a panel with the
+  selected pin's photos. Below 900px the panel sits under the map.
 
-Components live in `src/components/`, one Figma node each, and read their colours
-and radii from `src/tokens.css`.
+The earlier Profile screen from the Figma mock-up was dropped, as agreed with
+the team, because the design doc has no Profile page.
+
+### Data
+
+The backend has no API yet, so `src/api/client.ts` returns mock data from
+`src/api/mock.ts`, shaped like the endpoints in design doc 5.2 (types in
+`src/api/types.ts`). When an endpoint exists, only its function in
+`client.ts` changes. The mock keeps state until the page reloads, so a
+correction really does update the Dashboard counts and the map.
+
+### Photo metadata
+
+Uploads accept JPEG and PNG up to 25 MB. The capture time and GPS position are
+read from each file's EXIF (`src/api/exif.ts`, both byte orders, PNG eXIf
+chunks). In production the Go worker does this after upload; until then the
+mock backend uses this reader so the prototype shows real metadata. A GPS of
+exactly 0,0 counts as no fix. Photos without usable GPS are kept with state
+`needs-location` and appear in the gallery, not on the map.
 
 ### Basemap
 
-The design draws a flat, pale grey landmass. Rather than a ready-made grey
-basemap, the OSM tiles are desaturated in CSS: CARTO's `light_nolabels` serves an
-"API KEY REQUIRED" watermark tile without a key, and Stadia's toner-lite answers
-401. A static picture of a map would match the mock-up more closely but would
-throw away panning and zooming.
+The design doc specifies Geoapify Positron tiles. Put a Geoapify browser key
+in `.env.local` (git-ignored; see `.env.example`):
 
-Nothing is tied to OSM beyond the single tile-layer URL in `src/MapScreen.tsx`,
-so swapping in MapBox later remains an open option.
+```
+VITE_GEOAPIFY_KEY=your-key
+```
+
+and restart `npm run dev`. Without a key the map falls back to desaturated
+OpenStreetMap tiles, so the app still runs for anyone who clones the repo.
+For a Docker build, pass it with `--build-arg VITE_GEOAPIFY_KEY=...`.
 
 ### Icons
 
-Every icon comes from `lucide-react`, not from a file. The design's set is Lucide:
-an exported `chevron-right` is `M6 12L10 8L6 4` on a 16 viewBox, which is Lucide's
-`m9 18 6-6-6-6` on a 24 viewBox scaled by exactly 16/24, and `plus` matches the
-same way. Using the components rather than SVG files also means icon colour flows
-from the CSS tokens through `currentColor`.
-
-Lucide expresses `strokeWidth` in its own 24 viewBox, so a 2px rendered stroke —
-what the design specifies — needs `strokeWidth = 48 / size`. Every call site
-follows that rule, and icon sizes come from the design nodes rather than from
-whatever size an exported file happened to be.
+Every icon comes from `lucide-react`, not from a file, so icon colour follows
+the CSS through `currentColor`. Status is never shown by colour alone: each
+status has an icon and a word (doc 4.3).
 
 ### Images
 
-Two different provenances, both deliberate:
-
-- The memory carousel photograph and the two shared-with avatars are the design's
-  own, recovered from the one Figma asset manifest that was issued before the
-  file's MCP quota ran out.
-- The five landmark photographs behind the map pins, the city chips, the pinboard
-  and the journey hero, plus the profile sidebar's map teaser, are **stand-ins**. Figma never issued asset URLs for those
-  nodes, so they are freely licensed photographs from Wikimedia Commons. Each is
-  credited with its author and licence in [CREDITS.md](CREDITS.md) — the licences
-  require it and this repository is public. Replace them with the design's own
-  photographs when the Figma quota allows, and delete the matching rows there.
-
-Individual paddings and font sizes inside components built while the Figma quota was
-exhausted are pixel estimates rather than measurements.
+The sample photos in `src/assets/pins/` are freely licensed photographs from
+Wikimedia Commons, one per mock photo, each placed at the coordinates of the
+landmark it shows. Each is credited with its author and licence in
+[CREDITS.md](CREDITS.md); the licences require it and this repository is public.
 
 ## Docker
 
@@ -94,8 +100,8 @@ docker build -t mapmory-frontend .
 docker run --rm -p 8080:8080 mapmory-frontend
 ```
 
-Then open http://localhost:8080. Client-side routes are served `index.html`, so
-deep links such as `/profile/xyz` survive a refresh.
+Then open http://localhost:8080. nginx serves `index.html` for unknown paths,
+so client-side routes will survive a refresh once the app has them.
 
 The listen port comes from the `PORT` environment variable (default `8080`),
 which is what Cloud Run injects:
@@ -104,13 +110,7 @@ which is what Cloud Run injects:
 docker run --rm -e PORT=9090 -p 9090:9090 mapmory-frontend
 ```
 
-## Open decisions
+## Decisions
 
-These are not settled yet, and nothing in this repository assumes an answer to
-any of them:
-
-- **Database** — MongoDB or PostgreSQL.
-- **API style** — GraphQL or REST.
-- **Photo blob storage** — not yet discussed.
-
-Deployment is expected to target Google Cloud via GitHub Actions.
+Settled in the design document: PostgreSQL, a REST API, Google Cloud Storage
+with signed URLs for photos, Firebase Auth, and Cloud Run for deployment.

@@ -6,6 +6,9 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+# Optional Geoapify browser key for the basemap; Vite inlines it at build time.
+ARG VITE_GEOAPIFY_KEY=
+ENV VITE_GEOAPIFY_KEY=$VITE_GEOAPIFY_KEY
 RUN npm run build
 
 # Serve stage: nginx serving the static Vite bundle. The listen port is not

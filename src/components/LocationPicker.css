@@ -1,0 +1,60 @@
+.lpick {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.lpick-previous {
+  align-self: flex-start;
+}
+
+.lpick-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lpick-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--c-text-2);
+}
+
+/* Isolated so Leaflet's high pane z-indexes stay inside the picker. */
+.lpick-map {
+  isolation: isolate;
+  height: 260px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  cursor: crosshair;
+}
+
+.lpick-map--grey .leaflet-tile-pane {
+  filter: grayscale(1) brightness(1.06) contrast(0.92);
+}
+
+.lpick-pin {
+  background: transparent;
+  border: 0;
+  cursor: grab;
+}
+
+.lpick-pin-dot {
+  display: block;
+  box-sizing: border-box;
+  width: 28px;
+  height: 28px;
+  border: 4px solid #fff;
+  border-radius: 50%;
+  background: var(--c-action);
+  box-shadow: 0 0 0 2px var(--c-action), var(--shadow-raised);
+}
+
+.lpick-chosen {
+  margin: 0;
+  font-size: 14px;
+  color: var(--c-text);
+}
