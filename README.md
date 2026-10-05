@@ -151,3 +151,36 @@ docker run --rm -e PORT=9090 -p 9090:9090 mapmory-frontend
 
 Settled in the design document: PostgreSQL, a REST API, Google Cloud Storage
 with signed URLs for photos, Firebase Auth, and Cloud Run for deployment.
+
+## Acceptance tests
+
+Install the pinned dependencies and Playwright's Chromium once:
+
+```bash
+npm ci
+npx playwright install chromium
+npm run test:typecheck
+npm run test:acceptance
+```
+
+On Linux machines missing browser libraries, use
+`npx playwright install --with-deps chromium`. CI installs those dependencies.
+The tests start their own Vite server at `127.0.0.1:4173` and block external
+requests, so tiles, fonts and provider availability cannot change the result.
+No Geoapify key or Firebase account is needed.
+
+The suite exercises real keyboard navigation, pin/cluster activation,
+previous/next photos, search, location correction, mock uploads and retries.
+It checks layout bounds at desktop (1440px), tablet (768px) and phone (390px)
+widths and fails on uncaught browser errors. Generated image fixtures cover
+GPS/time, absent metadata and invalid dates. The exact upload byte boundary
+runs once on desktop; it is not repeated for every viewport.
+
+These are Chromium viewport checks, not a claim of Safari/Firefox compatibility
+or a complete accessibility audit. They do not test real storage, authentication,
+persistent recovery or large datasets. Run the gala flow on an actual phone too.
+
+Use `npm run test:acceptance:ui` to debug, or `npx playwright show-report` to
+inspect the HTML report. Failure screenshots and traces are saved in
+`test-results/`; generated reports are git-ignored. To use an existing Chromium
+binary, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its absolute path.
