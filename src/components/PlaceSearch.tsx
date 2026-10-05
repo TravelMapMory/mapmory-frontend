@@ -28,11 +28,15 @@ export default function PlaceSearch({ label, placeholder, onSelect, autoFocus, s
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
   const [searching, setSearching] = useState(false)
+  const [failed, setFailed] = useState(false)
   const id = useId()
   const listId = `${id}-list`
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
+    setResults([])
+    setActive(-1)
+    setFailed(false)
     if (query.trim().length < 2) {
       setResults([])
       setSearching(false)
@@ -50,6 +54,8 @@ export default function PlaceSearch({ label, placeholder, onSelect, autoFocus, s
         .catch(() => {
           if (!controller.signal.aborted) {
             setResults([])
+            setActive(-1)
+            setFailed(true)
             setSearching(false)
           }
         })
@@ -89,7 +95,7 @@ export default function PlaceSearch({ label, placeholder, onSelect, autoFocus, s
   }
 
   const expanded = open && query.trim().length >= 2
-  const status = searching ? 'Searching…' : results.length === 0 ? 'No places found' : null
+  const status = searching ? 'Searching…' : failed ? 'Place search could not be loaded. Try another search.' : results.length === 0 ? 'No places found' : null
 
   return (
     <div className="psearch">
@@ -114,6 +120,8 @@ export default function PlaceSearch({ label, placeholder, onSelect, autoFocus, s
           value={query}
           onChange={(event) => {
             setQuery(event.target.value)
+            setResults([])
+            setActive(-1)
             setOpen(true)
           }}
           onFocus={() => setOpen(true)}
