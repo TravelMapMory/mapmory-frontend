@@ -1,7 +1,7 @@
 /*
  * The only module screens import for data. Each function names the endpoint it
- * stands for (doc 5.2); when the backend serves it, replace the mock call with
- * a fetch carrying the Firebase ID token, and nothing above this file changes.
+ * stands for (doc 5.2). The mock uses frontend view models; backend integration
+ * also needs contract adapters, authentication, pagination and upload recovery.
  */
 import {
   mockCreateTrip,
