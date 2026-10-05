@@ -1,3 +1,5 @@
+import { parseCaptureTime } from '../captureTime'
+
 /*
  * Reads the capture time and GPS position from a photo's EXIF metadata.
  *
@@ -139,7 +141,8 @@ function toDegrees(dms: number[] | null, ref: string | null, negative: 'S' | 'W'
 function parseExifDate(raw: string | null): string | null {
   const m = raw?.match(/^(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/)
   if (!m || m[1] === '0000') return null
-  return `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}`
+  const local = `${m[1]}-${m[2]}-${m[3]}T${m[4]}:${m[5]}:${m[6]}`
+  return parseCaptureTime(local) ? local : null
 }
 
 function findJpegTiff(view: DataView): number | null {
