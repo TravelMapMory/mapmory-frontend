@@ -210,6 +210,7 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
+  overflow-wrap: anywhere;
 }
 
 .mp-selected-head {
@@ -258,3 +259,9 @@
     z-index: 600;
   }
 }
+
+/* Long imported labels must not push the close control outside the panel. */
+.mp-selected-head .mp-h2 {
+  min-width: 0;
+}
+
