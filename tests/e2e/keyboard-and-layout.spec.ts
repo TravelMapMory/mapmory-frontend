@@ -121,3 +121,15 @@ test('date filtering excludes unknown capture dates without hiding them in Trip'
   await openTrip(page, 'Europe by rail')
   await expect(page.locator('.trip-tile')).toHaveCount(7)
 })
+
+test('long place and trip labels fit the open map details', async ({ page }) => {
+  await boot(page, { scenario: 'long-content' })
+  await openMap(page)
+  await page.getByRole('searchbox', { name: 'Filter my photos' }).fill('C'.repeat(120))
+  await expect(page.locator('.mp-count')).toHaveText('1 photo on the map')
+  await page.getByRole('button', { name: `Photo at ${'P'.repeat(180)}`, exact: true }).click()
+  await expect(page.locator('.mp-selected')).toBeVisible()
+  await checkLayout(page)
+  await page.getByRole('button', { name: 'Close photo details' }).click()
+  await expect(page.locator('.mp-selected')).toHaveCount(0)
+})
