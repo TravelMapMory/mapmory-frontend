@@ -101,13 +101,6 @@ export interface MapPhoto {
   city: string | null
   country: string | null
   place_name: string | null
-  /**
-   * Null for the signed-in owner's own photos; otherwise the person who shared
-   * the album with them. Shared photos come at city level only (doc 3.3).
-   */
-  owner_name: string | null
-  /** Named recipients of the photo's trip; always empty on a shared album. */
-  shared_with: string[]
 }
 /** [west, south, east, north] in degrees, the order the query string uses. */
 export type BBox = [number, number, number, number]

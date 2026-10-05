@@ -5,7 +5,7 @@ import { MapPinOff } from 'lucide-react'
 import { getMapPhotos, listTrips } from './api/client'
 import type { BBox, MapPhoto, MapPhotoQuery, TripSummary } from './api/types'
 import PhotoClusters from './components/PhotoClusters'
-import PlaceAlbums from './components/PlaceAlbums'
+import PlaceTrips from './components/PlaceTrips'
 import PlaceSearch from './components/PlaceSearch'
 import { TILES } from './mapTiles'
 import { plural } from './format'
@@ -129,7 +129,7 @@ export default function MapScreen({ tripId = null, onOpenTrip }: MapScreenProps)
   )
 
   // A pin opens every loaded photo in its cities, so the panel can page
-  // through the place and through other albums taken there.
+  // through the place and through other trips taken there.
   const placePhotos = useMemo(() => {
     if (!selected) return null
     const cities = new Set(selected.map((p) => p.city).filter(Boolean))
@@ -310,7 +310,7 @@ export default function MapScreen({ tripId = null, onOpenTrip }: MapScreenProps)
         ) : null}
 
         {selected ? (
-          <PlaceAlbums
+          <PlaceTrips
             photos={placePhotos ?? selected}
             pinnedIds={pinnedIds}
             onClose={() => setSelected(null)}
