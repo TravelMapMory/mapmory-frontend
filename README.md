@@ -169,12 +169,18 @@ The tests start their own Vite server at `127.0.0.1:4173` and block external
 requests, so tiles, fonts and provider availability cannot change the result.
 No Geoapify key or Firebase account is needed.
 
-The suite exercises real keyboard navigation, pin/cluster activation,
-previous/next photos, search, location correction, mock uploads and retries.
-It checks layout bounds at desktop (1440px), tablet (768px) and phone (390px)
-widths and fails on uncaught browser errors. Generated image fixtures cover
-GPS/time, absent metadata and invalid dates. The exact upload byte boundary
-runs once on desktop; it is not repeated for every viewport.
+The suite covers Dashboard forms and summaries, trip/card navigation, Map
+filters and world search, photo/trip navigation, Gallery/Journey states,
+location correction, and mock upload selection/drop/progress/retry controls.
+It includes empty collections, malformed metadata, mixed uploads, failed reads
+and saves, loading states, and long content. Keyboard and layout checks run at
+desktop (1440px), tablet (768px) and phone (390px) widths; uncaught browser errors
+fail every E2E test. The exact byte boundary runs once on desktop.
+
+See [the coverage inventory](tests/docs/acceptance-coverage.md) for the controls,
+assertions, fixture setup and deliberately deferred integration work. Test data
+and one-shot failures are enabled only on the dedicated acceptance-test server;
+ordinary development and production builds keep the normal mock behavior.
 
 These are Chromium viewport checks, not a claim of Safari/Firefox compatibility
 or a complete accessibility audit. They do not test real storage, authentication,
