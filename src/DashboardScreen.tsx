@@ -5,6 +5,7 @@ import type { MeSummary, Photo, TripSummary } from './api/types'
 import StatTile from './components/StatTile'
 import TripCard from './components/TripCard'
 import { formatUploaded } from './format'
+import UploadDropZone from './components/UploadDropZone'
 import './DashboardScreen.css'
 
 export interface DashboardScreenProps {
@@ -97,17 +98,17 @@ function UploadForm({
 }) {
   const [tripId, setTripId] = useState(trips[0]?.id ?? '')
   const tripField = useId()
-  const fileField = useId()
 
   return (
     <form
-      className="dash-create"
+      className="upl"
       onSubmit={(event) => event.preventDefault()}
       onKeyDown={(event) => {
         if (event.key === 'Escape') onCancel()
       }}
     >
-      <div className="dash-create-row dash-upload-row">
+      <h2 className="upl-title">Upload photos</h2>
+      <div className="dash-upload-row">
         <div className="dash-upload-field">
           <label htmlFor={tripField} className="dash-create-label">
             Trip
@@ -120,30 +121,13 @@ function UploadForm({
             ))}
           </select>
         </div>
-        <div className="dash-upload-field">
-          <label htmlFor={fileField} className="dash-create-label">
-            Photos
-          </label>
-          <input
-            id={fileField}
-            className="dash-file"
-            aria-describedby={`${fileField}-help`}
-            type="file"
-            multiple
-            accept="image/jpeg,image/png,.jpg,.jpeg,.png"
-            onChange={(event) => {
-              const files = [...(event.target.files ?? [])]
-              if (files.length > 0 && tripId) onUpload(tripId, files)
-            }}
-          />
-        </div>
         <button type="button" className="btn btn-secondary dash-upload-cancel" onClick={onCancel}>
           Cancel
         </button>
-        <p id={`${fileField}-help`} className="dash-upload-help">
-          JPEG or PNG · Up to 25 MB per photo
-        </p>
       </div>
+      <UploadDropZone inputClassName="dash-file" onFiles={(files) => {
+        if (files.length > 0 && tripId) onUpload(tripId, files)
+      }} />
     </form>
   )
 }

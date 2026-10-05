@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useId, useRef, useState, type DragEvent } from 'react'
-import { CircleAlert, CircleCheck, Clock, LoaderCircle, MapPinOff, RotateCcw, Upload, type LucideIcon } from 'lucide-react'
+import UploadDropZone from './UploadDropZone'
+import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import { CircleAlert, CircleCheck, Clock, LoaderCircle, MapPinOff, RotateCcw, type LucideIcon } from 'lucide-react'
 import { uploadPhotos } from '../api/client'
 import type { Photo, PhotoState, UploadItem } from '../api/types'
 import { formatCaptured, plural } from '../format'
@@ -61,7 +62,6 @@ function describe(item: UploadItem): string | null {
  */
 export default function UploadPanel({ tripId, photos, initialFiles, onBatchDone, onSetLocation }: UploadPanelProps) {
   const [items, setItems] = useState<UploadItem[]>([])
-  const [dragging, setDragging] = useState(false)
   const files = useRef(new Map<string, File>())
   const inputId = useId()
 
@@ -96,12 +96,6 @@ export default function UploadPanel({ tripId, photos, initialFiles, onBatchDone,
     }
   }, [initialFiles, start])
 
-  function onDrop(event: DragEvent) {
-    event.preventDefault()
-    setDragging(false)
-    start([...event.dataTransfer.files])
-  }
-
   // Once stored, a photo's own record is the truth: a later correction moves it out of needs-location.
   const shown = items.map((item) => {
     const latest = item.photo && photos.find((p) => p.id === item.photo?.id)
@@ -118,41 +112,7 @@ export default function UploadPanel({ tripId, photos, initialFiles, onBatchDone,
         Upload photos
       </h2>
 
-      <div
-        className="upl-drop"
-        data-dragging={dragging}
-        onDragOver={(event) => {
-          event.preventDefault()
-          setDragging(true)
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={onDrop}
-      >
-        <Upload size={24} aria-hidden />
-        <p>
-          Drop JPEG or PNG photos here, or{' '}
-          <label htmlFor={inputId} className="upl-choose">
-            choose files
-          </label>
-          . Up to 25 MB each.
-        </p>
-        <input
-          id={inputId}
-          className="visually-hidden"
-          type="file"
-          multiple
-          accept="image/jpeg,image/png,.jpg,.jpeg,.png"
-          onChange={(event) => {
-            start([...(event.target.files ?? [])])
-            event.target.value = ''
-          }}
-        />
-        <p className="upl-note">
-          MapMory reads each photo's capture time and GPS from its metadata. Phones often remove the location when
-          you pick photos in the browser, so for past trips upload from a computer. Photos without a location stay in
-          the gallery and wait for you to place them.
-        </p>
-      </div>
+      <UploadDropZone onFiles={start} />
 
       {items.length > 0 ? (
         <>
