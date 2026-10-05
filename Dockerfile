@@ -10,7 +10,7 @@ RUN npm run build
 
 # Serve stage: nginx serving the static Vite bundle. The listen port is not
 # baked in; it is rendered from PORT at container start so Cloud Run can pick it.
-FROM nginx:1.27-alpine
+FROM nginx:stable-alpine
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY --from=build /app/dist /usr/share/nginx/html
 ENV PORT=8080
