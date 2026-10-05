@@ -21,6 +21,7 @@ import helsinkiCathedral from '../assets/pins/helsinki.jpg'
 import uspenskiCathedral from '../assets/pins/helsinki-uspenski.jpg'
 import suomenlinna from '../assets/pins/helsinki-suomenlinna.jpg'
 import { readPhotoMetadata, sniffImageKind } from './exif'
+import type { AcceptanceOptions, MockOperation } from './acceptanceOptions'
 import type {
   CreateTripInput,
   LocationPatch,
@@ -168,6 +169,69 @@ const photos: Photo[] = [
   },
 ]
 
+// Playwright supplies options before the app loads. Ordinary dev/production
+// builds never consult this global; the flag is set only by playwright.config.ts.
+const acceptance: AcceptanceOptions | undefined =
+  import.meta.env.DEV && import.meta.env.VITE_ACCEPTANCE_TESTS === 'true'
+    ? (globalThis as typeof globalThis & { __MAPMORY_ACCEPTANCE__?: AcceptanceOptions }).__MAPMORY_ACCEPTANCE__
+    : undefined
+
+switch (acceptance?.scenario) {
+  case 'empty':
+    trips.splice(0)
+    photos.splice(0)
+    break
+  case 'empty-trip':
+    trips.unshift({ id: 'trip-empty', title: 'Empty trip', notes: null, created_at: '2026-10-01T00:00:00Z', cover_photo_id: null })
+    break
+  case 'unlocated':
+    photos.forEach((p) => Object.assign(p, { lat: null, lng: null, city: null, country: null, place_name: null, state: 'needs-location', label_status: 'pending', location_source: null }))
+    break
+  case 'places':
+    trips.splice(0, trips.length,
+      { id: 'trip-a', title: 'Paris trip A', notes: null, created_at: '2026-09-01T00:00:00Z', cover_photo_id: null },
+      { id: 'trip-b', title: 'Paris trip B', notes: null, created_at: '2026-09-02T00:00:00Z', cover_photo_id: null },
+    )
+    photos.splice(0, photos.length,
+      photo('a1', 'trip-a', 'eiffelTower', '2026-06-01T09:00:00', '2026-09-01T00:00:00Z'),
+      photo('a2', 'trip-a', 'eiffelTower', '2026-06-02T09:00:00', '2026-09-01T00:00:01Z'),
+      photo('b1', 'trip-b', 'eiffelTower', '2026-06-03T09:00:00', '2026-09-02T00:00:00Z'),
+      photo('us1', 'trip-b', 'eiffelTower', '2026-06-04T09:00:00', '2026-09-02T00:00:01Z', { country: 'United States', lat: 33.6609, lng: -95.5555, place_name: 'Paris, United States' }),
+    )
+    break
+  case 'long-content':
+    trips[0].title = 'T'.repeat(120)
+    trips[0].notes = 'N'.repeat(600)
+    photos[0].place_name = 'P'.repeat(180)
+    photos[0].city = 'C'.repeat(120)
+    break
+  case 'photo-states': {
+    const states: Photo['state'][] = ['pending', 'uploading', 'processing', 'ready', 'needs-location', 'failed']
+    photos.splice(0, photos.length, ...states.map((state, i) => photo(`state-${state}`, 'trip-rome', 'colosseum', `2026-09-${20 + i}T09:00:00`, `2026-09-28T17:35:0${i}Z`, {
+      state,
+      thumb_url: state === 'ready' || state === 'needs-location' ? colosseum : null,
+      display_url: state === 'ready' || state === 'needs-location' ? colosseum : null,
+      lat: state === 'ready' ? 41.8902 : null,
+      lng: state === 'ready' ? 12.4922 : null,
+      label_status: state === 'needs-location' ? 'pending' : 'confirmed',
+    })))
+    break
+  }
+  case 'undated':
+    photos.forEach((p) => Object.assign(p, { capture_time_local: null, capture_utc_offset: null }))
+    break
+}
+
+async function beforeOperation(operation: MockOperation, signal?: AbortSignal): Promise<void> {
+  if (!acceptance) return
+  await delay(null, acceptance.delayMs ?? 0, signal)
+  const remaining = acceptance.failures?.[operation] ?? 0
+  if (remaining > 0) {
+    acceptance.failures![operation] = remaining - 1
+    throw new Error(`Simulated ${operation} failure`)
+  }
+}
+
 // Doc 3.3: only photos with usable coordinates are map pins.
 function isLocated(p: Photo): boolean {
   return p.lat !== null && p.lng !== null
@@ -224,7 +288,8 @@ function delay<T>(value: T, ms = 250, signal?: AbortSignal): Promise<T> {
     else signal?.addEventListener('abort', abort, { once: true })
   })
 }
-export function mockSummary(signal?: AbortSignal): Promise<MeSummary> {
+export async function mockSummary(signal?: AbortSignal): Promise<MeSummary> {
+  await beforeOperation('summary', signal)
   const located = photos.filter(isLocated)
   return delay({
     photo_count: photos.length,
@@ -234,11 +299,13 @@ export function mockSummary(signal?: AbortSignal): Promise<MeSummary> {
     recently_uploaded: [...photos].sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at)).slice(0, 8),
   }, undefined, signal)
 }
-export function mockListTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {
+export async function mockListTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {
+  await beforeOperation('listTrips', signal)
   const items = [...trips].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(summarise)
   return delay({ items, next_cursor: null }, undefined, signal)
 }
-export function mockCreateTrip(input: CreateTripInput): Promise<TripSummary> {
+export async function mockCreateTrip(input: CreateTripInput): Promise<TripSummary> {
+  await beforeOperation('createTrip')
   const row: TripRow = {
     id: `trip-${Date.now()}`,
     title: input.title,
@@ -258,14 +325,16 @@ export class NotFoundError extends Error {
   }
 }
 
-export function mockGetTrip(id: string, signal?: AbortSignal): Promise<TripDetail> {
+export async function mockGetTrip(id: string, signal?: AbortSignal): Promise<TripDetail> {
+  await beforeOperation('getTrip', signal)
   const row = trips.find((t) => t.id === id)
   if (!row) return Promise.reject(new NotFoundError('Trip'))
   return delay({ ...summarise(row), cover_photo_id: row.cover_photo_id }, undefined, signal)
 }
 
 /** Every photo of the trip, located or not, in capture order (journey log). */
-export function mockTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
+export async function mockTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
+  await beforeOperation('tripPhotos', signal)
   const items = photos.filter((p) => p.trip_id === id).sort(byCapture)
   return delay({ items, next_cursor: null }, undefined, signal)
 }
@@ -295,7 +364,8 @@ function matchesDates(p: MapPhoto, from?: string, to?: string): boolean {
   return (!from || day >= from) && (!to || day <= to)
 }
 
-export function mockMapPhotos(query: MapPhotoQuery, signal?: AbortSignal): Promise<MapPhotoPage> {
+export async function mockMapPhotos(query: MapPhotoQuery, signal?: AbortSignal): Promise<MapPhotoPage> {
+  await beforeOperation('mapPhotos', signal)
   const titles = new Map(trips.map((t) => [t.id, t.title]))
   const own: MapPhoto[] = photos.filter(isLocated).map((p) => ({
     id: p.id,
@@ -428,7 +498,8 @@ const COUNTRIES: Place[] = [
   country('Australia', -25, 134, 4),
 ]
 
-export function mockSearchPlaces(q: string, signal?: AbortSignal): Promise<Place[]> {
+export async function mockSearchPlaces(q: string, signal?: AbortSignal): Promise<Place[]> {
+  await beforeOperation('searchPlaces', signal)
   const needle = q.trim().toLowerCase()
   if (needle.length < 2) return delay([], 0, signal)
   const all = [...COUNTRIES, ...CITIES]
@@ -484,7 +555,8 @@ function resolveLabels(lat: number, lng: number): Labels {
  * totals, trip cards, map pins, the place filter) is derived from that row,
  * so they all move together, as doc 3.3 requires. Capture time is untouched.
  */
-export function mockPatchLocation(id: string, patch: LocationPatch, signal?: AbortSignal): Promise<Photo> {
+export async function mockPatchLocation(id: string, patch: LocationPatch, signal?: AbortSignal): Promise<Photo> {
+  await beforeOperation('patchLocation', signal)
   const index = photos.findIndex((p) => p.id === id)
   if (index < 0) return Promise.reject(new NotFoundError('Photo'))
   const current = photos[index]
