@@ -161,9 +161,6 @@ function CorrectionPanel({
             {suggested ? ' (suggested, not yet confirmed)' : ''}
           </dd>
         </dl>
-        <p className="trip-caption">
-          The capture time never changes; the map, place filter and Dashboard totals update together.
-        </p>
         {suggested ? (
           <button
             type="button"
