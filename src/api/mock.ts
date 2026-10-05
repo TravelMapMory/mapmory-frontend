@@ -10,10 +10,6 @@
  */
 import eiffelTower from '../assets/pins/paris.jpg'
 import parisSkyline from '../assets/pins/paris-wide.jpg'
-import louvre from '../assets/pins/paris-louvre.jpg'
-import arcDeTriomphe from '../assets/pins/paris-arc.jpg'
-import notreDame from '../assets/pins/paris-notre-dame.jpg'
-import sacreCoeur from '../assets/pins/paris-sacre-coeur.jpg'
 import bigBen from '../assets/pins/london.jpg'
 import brandenburgGate from '../assets/pins/berlin.jpg'
 import berlinCathedral from '../assets/pins/berlin-dom.jpg'
@@ -172,75 +168,6 @@ const photos: Photo[] = [
   },
 ]
 
-/** Named recipients of the owner's trips (Inc. 3 shares), by trip id. */
-const shares: Record<string, string[]> = {
-  'trip-europe': ['Emma Virtanen', 'Lukas Meyer'],
-  'trip-rome': ['Sofia Rossi'],
-}
-
-/**
- * Albums other people shared with the owner by name. A recipient only ever
- * gets city-level positions (doc 3.3), so every photo sits on its city centre
- * rather than on the landmark it shows.
- */
-interface SharedAlbum {
-  trip_id: string
-  title: string
-  owner_name: string
-  city: string
-  country: string
-  lat: number
-  lng: number
-  photos: { id: string; name: string; img: string; captured: string }[]
-}
-
-const sharedAlbums: SharedAlbum[] = [
-  {
-    trip_id: 'shared-emma-paris',
-    title: 'Paris in spring',
-    owner_name: 'Emma Virtanen',
-    city: 'Paris',
-    country: 'France',
-    lat: 48.8566,
-    lng: 2.3522,
-    photos: [
-      { id: 's-emma-1', name: 'Louvre', img: louvre, captured: '2026-04-18T21:05:00' },
-      { id: 's-emma-2', name: 'Arc de Triomphe', img: arcDeTriomphe, captured: '2026-04-19T10:30:00' },
-    ],
-  },
-  {
-    trip_id: 'shared-lukas-paris',
-    title: 'Long weekend in Paris',
-    owner_name: 'Lukas Meyer',
-    city: 'Paris',
-    country: 'France',
-    lat: 48.8566,
-    lng: 2.3522,
-    photos: [
-      { id: 's-lukas-1', name: 'Notre-Dame', img: notreDame, captured: '2026-07-03T09:40:00' },
-      { id: 's-lukas-2', name: 'Sacré-Cœur', img: sacreCoeur, captured: '2026-07-04T17:15:00' },
-    ],
-  },
-]
-
-const sharedMapPhotos: MapPhoto[] = sharedAlbums.flatMap((album) =>
-  album.photos.map((p) => ({
-    id: p.id,
-    trip_id: album.trip_id,
-    trip_title: album.title,
-    lat: album.lat,
-    lng: album.lng,
-    thumb_url: p.img,
-    display_url: p.img,
-    capture_time_local: p.captured,
-    city: album.city,
-    country: album.country,
-    place_name: `${p.name}, ${album.city}`,
-    owner_name: album.owner_name,
-    shared_with: [],
-  })),
-)
-
 // Doc 3.3: only photos with usable coordinates are map pins.
 function isLocated(p: Photo): boolean {
   return p.lat !== null && p.lng !== null
@@ -357,7 +284,7 @@ function inBBox(p: MapPhoto, bbox: MapPhotoQuery['bbox']): boolean {
 function matchesText(p: MapPhoto, q: string): boolean {
   const needle = q.trim().toLowerCase()
   if (!needle) return true
-  return [p.place_name, p.city, p.country, p.trip_title, p.owner_name].some((v) => v?.toLowerCase().includes(needle))
+  return [p.place_name, p.city, p.country, p.trip_title].some((v) => v?.toLowerCase().includes(needle))
 }
 
 function matchesDates(p: MapPhoto, from?: string, to?: string): boolean {
@@ -382,10 +309,8 @@ export function mockMapPhotos(query: MapPhotoQuery, signal?: AbortSignal): Promi
     city: p.city,
     country: p.country,
     place_name: p.place_name,
-    owner_name: null,
-    shared_with: shares[p.trip_id] ?? [],
   }))
-  const hits = [...own, ...sharedMapPhotos]
+  const hits = own
     .filter((p) => !query.trip_id || p.trip_id === query.trip_id)
     .filter((p) => matchesDates(p, query.from, query.to))
     .filter((p) => matchesText(p, query.q ?? ''))

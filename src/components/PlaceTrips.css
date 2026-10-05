@@ -1,4 +1,4 @@
-/* Album card in the map panel: photo carousel, details, shared-with row and album switcher. */
+/* Trip photos at a place: photo navigation, details and trip switcher. */
 
 .pa-card {
   overflow: hidden;
@@ -115,50 +115,6 @@
   color: var(--c-text-2);
 }
 
-.pa-shared {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--c-border);
-}
-
-.pa-shared-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--c-text-2);
-}
-
-.pa-shared-people {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  color: var(--c-text);
-}
-
-.pa-avatars {
-  display: flex;
-}
-
-.pa-avatars .pa-avatar + .pa-avatar {
-  margin-left: -8px;
-}
-
-.pa-avatar {
-  display: grid;
-  flex: none;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border: 2px solid var(--c-surface);
-  border-radius: 50%;
-  font-size: 11px;
-  font-weight: 700;
-  color: #fff;
-}
-
 .pa-footer {
   display: flex;
   align-items: center;
@@ -167,21 +123,21 @@
   margin-top: 12px;
 }
 
-.pa-albums {
+.pa-trips {
   display: flex;
   align-items: center;
   gap: 6px;
   margin-left: auto;
 }
 
-.pa-albums-count {
+.pa-trips-count {
   font-size: 12px;
   font-weight: 600;
   color: var(--c-text-2);
   white-space: nowrap;
 }
 
-.pa-album-btn {
+.pa-trip-btn {
   display: grid;
   place-items: center;
   width: 32px;
@@ -194,6 +150,6 @@
   cursor: pointer;
 }
 
-.pa-album-btn:hover {
+.pa-trip-btn:hover {
   background: var(--c-page);
 }
