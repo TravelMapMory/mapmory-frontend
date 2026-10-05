@@ -26,3 +26,34 @@ export async function checkLayout(page: Page) {
     expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1)
   }
 }
+
+export async function boot(page: Page, options: import('../../src/api/acceptanceOptions').AcceptanceOptions = {}) {
+  await page.addInitScript((value) => {
+    Object.assign(globalThis, { __MAPMORY_ACCEPTANCE__: value })
+  }, options)
+  await page.goto('/')
+  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
+}
+
+export async function dashboard(page: Page) {
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'Dashboard', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
+}
+
+export async function openTrip(page: Page, title: string) {
+  await page.getByRole('article', { name: title, exact: true }).getByRole('button', { name: 'Open trip', exact: true }).click()
+  await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible()
+}
+
+export async function openMap(page: Page, count = 11) {
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('button', { name: 'Map', exact: true }).click()
+  await expect(page.locator('.mp-count')).toHaveText(`${count} ${count === 1 ? 'photo' : 'photos'} on the map`)
+}
+
+export async function failNext(page: Page, operation: import('../../src/api/acceptanceOptions').MockOperation) {
+  await page.evaluate((operation) => {
+    const options = (globalThis as typeof globalThis & { __MAPMORY_ACCEPTANCE__: import('../../src/api/acceptanceOptions').AcceptanceOptions }).__MAPMORY_ACCEPTANCE__
+    options.failures ??= {}
+    options.failures[operation] = 1
+  }, operation)
+}
