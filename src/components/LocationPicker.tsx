@@ -103,6 +103,7 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
           center={[start.lat, start.lng]}
           zoom={initial || previous ? 12 : 2}
           worldCopyJump
+          zoomAnimation={false}
         >
           <TileLayer url={TILES.url} attribution={TILES.attribution} />
           <ClickToPlace onPlace={(position) => place(position, 'Pin dropped on the map')} />
