@@ -62,8 +62,12 @@
   gap: 8px;
 }
 
-.dash-create-input {
+.dash-create-row > .dash-create-input {
   flex: 1 1 240px;
+}
+
+.dash-create-input {
+  min-width: 0;
   min-height: 36px;
   padding: 0 12px;
   border: 1px solid #8a93a3;
@@ -74,6 +78,7 @@
 }
 
 .dash-upload-field {
+  min-width: 0;
   display: flex;
   flex: 1 1 240px;
   flex-direction: column;
