@@ -165,6 +165,7 @@ export default function MapScreen({ tripId = null, onOpenTrip }: MapScreenProps)
           zoom={START_ZOOM}
           zoomControl={false}
           worldCopyJump
+          zoomAnimation={false}
         >
           <TileLayer url={TILES.url} attribution={TILES.attribution} />
           <ZoomControl position="bottomright" />
