@@ -9,6 +9,7 @@ import PlaceTrips from './components/PlaceTrips'
 import PlaceSearch from './components/PlaceSearch'
 import { TILES } from './mapTiles'
 import { plural } from './format'
+import { placeKey } from './placeKey'
 import './MapScreen.css'
 
 /** Europe, where the sample trips are, until the owner's photos give a better frame. */
@@ -128,13 +129,16 @@ export default function MapScreen({ tripId = null, onOpenTrip }: MapScreenProps)
     [truncated],
   )
 
-  // A pin opens every loaded photo in its cities, so the panel can page
+  // A pin opens every loaded photo in its country/city pairs, so the panel can page
   // through the place and through other trips taken there.
   const placePhotos = useMemo(() => {
     if (!selected) return null
-    const cities = new Set(selected.map((p) => p.city).filter(Boolean))
+    const places = new Set(selected.map(placeKey).filter((key) => key !== null))
     const pinned = new Set(selected.map((p) => p.id))
-    return photos.filter((p) => pinned.has(p.id) || (p.city !== null && cities.has(p.city)))
+    return photos.filter((p) => {
+      const key = placeKey(p)
+      return pinned.has(p.id) || (key !== null && places.has(key))
+    })
   }, [selected, photos])
   const pinnedIds = useMemo(() => selected?.map((p) => p.id) ?? [], [selected])
 
