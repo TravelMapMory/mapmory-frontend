@@ -18,5 +18,11 @@ jobs:
       - name: Typecheck
         run: npx tsc --noEmit
       - run: npm run build
+      - name: Typecheck acceptance tests
+        run: npm run test:typecheck
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Acceptance tests
+        run: npm run test:acceptance
       - name: Docker build
         run: docker build -t mapmory-frontend:ci .
