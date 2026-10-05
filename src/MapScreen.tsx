@@ -300,7 +300,7 @@ export default function MapScreen({ tripId = null, onOpenTrip }: MapScreenProps)
           </div>
         ) : null}
 
-        {load.status === 'ready' && photos.length === 0 && !trip ? (
+        {load.status === 'ready' && photos.length === 0 && (!trip || (filtered && trip.located_count > 0)) ? (
           <div className="mp-notice" role="note">
             <MapPinOff size={18} aria-hidden />
             <div>
