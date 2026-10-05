@@ -19,3 +19,5 @@ export const test = base.extend<{ browserErrors: void; externalRequestsBlocked: 
     expect(errors, 'Uncaught browser errors').toEqual([])
   }, { auto: true }],
 })
+
+export { expect }
