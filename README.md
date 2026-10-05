@@ -14,13 +14,11 @@ screens, rules and API.
 ## Getting started
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-`package-lock.json` is generated inside a linux container so CI can install it;
-if `npm install` on Windows or macOS rewrites it, restore it with `git checkout
-package-lock.json` instead of committing the rewrite.
+Use `npm ci` to install the committed dependency versions without rewriting the lockfile.
 
 To produce a production build (this typechecks first):
 
@@ -50,20 +48,59 @@ the team, because the design doc has no Profile page.
 
 ### Data
 
-The backend has no API yet, so `src/api/client.ts` returns mock data from
-`src/api/mock.ts`, shaped like the endpoints in design doc 5.2 (types in
-`src/api/types.ts`). When an endpoint exists, only its function in
-`client.ts` changes. The mock keeps state until the page reloads, so a
-correction really does update the Dashboard counts and the map.
+`src/api/client.ts` currently calls the in-memory mock in `src/api/mock.ts`.
+Its types are frontend view models, not a complete implementation of the
+OpenAPI contract. Backend integration will need response adapters, cursor
+pagination, Firebase tokens, signed-URL expiry handling and the real batch
+registration/upload/completion/status workflow.
+
+The mock keeps state only until the page reloads. Closing the upload UI or
+navigating away loses its local progress list even if processing continues.
+It has no GCS storage, server processing, persistent batch recovery or access
+checks. Its filename/size/mtime-based file IDs are globally deduplicated:
+reusing a file in another trip can return the original trip's photo, and
+concurrent repeated files can produce duplicate records. Use distinct files
+for the gala's controlled upload attempts. Backend integration must use the
+agreed `(batch_id, client_file_id)` identity; this mock is not proof of retry
+idempotency or content deduplication.
+
+My photos contains only owned photos. Shared collections and recipient rows
+are deferred until their access and presentation model is agreed.
+
+### Map limitations
+
+The custom screen-space clustering is a prototype deviation from the
+`Leaflet.markercluster` choice in design document §5.1. Its ordering,
+performance and world-wrap edge cases have not yet been fully evaluated.
+
+Large-dataset viewport loading is deferred. The design calls for at most
+2,000 markers in the visible area. The mock initially fetches without a
+bounding box; after a truncated result, it fetches viewports only while the
+latest result remains truncated. A small viewport can therefore stop future
+pan requests. The current implementation is suitable for the small demo
+collection, not evidence that large collections are supported.
 
 ### Photo metadata
 
-Uploads accept JPEG and PNG up to 25 MB. The capture time and GPS position are
+Uploads accept JPEG and PNG up to 25,000,000 bytes (25 MB). The capture time and GPS position are
 read from each file's EXIF (`src/api/exif.ts`, both byte orders, PNG eXIf
 chunks). In production the Go worker does this after upload; until then the
 mock backend uses this reader so the prototype shows real metadata. A GPS of
 exactly 0,0 counts as no fix. Photos without usable GPS are kept with state
 `needs-location` and appear in the gallery, not on the map.
+
+The browser parser is a demo stand-in for the Go worker, with known incomplete
+and potentially incorrect behavior. Invalid dates are treated as unknown,
+but GPS hemisphere handling and the assumption that `(0,0)` means no fix
+remain mock limitations. Original EXIF coordinates are not retained separately
+when the mock applies corrections.
+
+Place search uses a fixed gazetteer, not a worldwide provider. Reverse lookup
+assigns the nearest listed city within 50 km, automatically confirming labels
+within 15 km or after a manual correction. These heuristics can assign the
+wrong city/country and do not implement provider normalization, attribution,
+confidence ranking or timezone lookup. Keep this logic isolated as a mock;
+replace it with the server resolver during integration.
 
 ### Basemap
 

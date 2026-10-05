@@ -28,7 +28,7 @@ const STATE_LABEL: Record<PhotoState, { label: string; icon: LucideIcon }> = {
 
 const DONE: PhotoState[] = ['ready', 'needs-location', 'failed']
 
-/** Same file, same id: choosing it again is idempotent instead of duplicating it (doc 7.1). */
+/** Demo file key only; production retry identity is scoped to an upload batch. */
 function clientFileId(file: File): string {
   const text = `${file.name}|${file.size}|${file.lastModified}`
   let hash = 0
