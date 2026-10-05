@@ -510,7 +510,7 @@ export function mockPatchLocation(id: string, patch: LocationPatch, signal?: Abo
 }
 
 /** Doc 6.1: JPEG and PNG only from Increment 1, at most 25 MB per file. */
-const MAX_UPLOAD_BYTES = 25 * 1024 * 1024
+const MAX_UPLOAD_BYTES = 25_000_000
 /** How many files of one batch are in flight at once. */
 const UPLOAD_CONCURRENCY = 3
 
