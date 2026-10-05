@@ -107,7 +107,7 @@ function UploadForm({
         if (event.key === 'Escape') onCancel()
       }}
     >
-      <div className="dash-create-row">
+      <div className="dash-create-row dash-upload-row">
         <div className="dash-upload-field">
           <label htmlFor={tripField} className="dash-create-label">
             Trip
@@ -122,11 +122,12 @@ function UploadForm({
         </div>
         <div className="dash-upload-field">
           <label htmlFor={fileField} className="dash-create-label">
-            Photos (JPEG or PNG, up to 25 MB each)
+            Photos
           </label>
           <input
             id={fileField}
             className="dash-file"
+            aria-describedby={`${fileField}-help`}
             type="file"
             multiple
             accept="image/jpeg,image/png,.jpg,.jpeg,.png"
@@ -139,6 +140,9 @@ function UploadForm({
         <button type="button" className="btn btn-secondary dash-upload-cancel" onClick={onCancel}>
           Cancel
         </button>
+        <p id={`${fileField}-help`} className="dash-upload-help">
+          JPEG or PNG · Up to 25 MB per photo
+        </p>
       </div>
     </form>
   )

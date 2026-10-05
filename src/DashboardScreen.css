@@ -59,7 +59,8 @@
 .dash-create-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  column-gap: 12px;
+  row-gap: 16px;
 }
 
 .dash-create-row > .dash-create-input {
@@ -68,36 +69,96 @@
 
 .dash-create-input {
   min-width: 0;
-  min-height: 36px;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid #8a93a3;
   border-radius: var(--r-sm);
+  background: var(--c-surface);
   font: inherit;
   font-size: 14px;
   color: var(--c-text);
 }
 
-.dash-upload-field {
-  min-width: 0;
-  display: flex;
-  flex: 1 1 240px;
-  flex-direction: column;
+.dash-upload-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) auto;
+  grid-template-areas: "trip photos cancel" ". help .";
+  row-gap: 8px;
+  align-items: end;
 }
 
-.dash-file {
-  min-height: 36px;
-  font: inherit;
-  font-size: 14px;
+.dash-upload-field {
+  min-width: 0;
+}
+
+.dash-upload-field:first-child {
+  grid-area: trip;
+}
+
+.dash-upload-field:nth-child(2) {
+  grid-area: photos;
 }
 
 .dash-upload-cancel {
-  align-self: flex-end;
+  grid-area: cancel;
+}
+
+.dash-upload-field .dash-create-input {
+  display: block;
+  width: 100%;
+}
+
+.dash-file {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  height: 36px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--c-text);
+}
+
+.dash-file::file-selector-button {
+  height: 36px;
+  margin-right: 8px;
+  padding: 0 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  background: var(--c-surface);
+  color: var(--c-primary);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dash-file::file-selector-button:hover {
+  background: var(--c-page);
+}
+
+.dash-upload-help {
+  grid-area: help;
+  margin: 0;
+  color: var(--c-text-2);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .dash-create-error {
   margin: 8px 0 0;
   font-size: 14px;
   color: #b42318;
+}
+
+@media (max-width: 600px) {
+  .dash-upload-row {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "trip" "photos" "help" "cancel";
+    row-gap: 12px;
+  }
+
+  .dash-upload-cancel {
+    justify-self: start;
+  }
 }
 
 .dash-status {
