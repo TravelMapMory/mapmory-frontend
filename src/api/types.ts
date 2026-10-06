@@ -2,7 +2,7 @@
  * Response shapes for the REST API in design doc 5.2, with field names taken
  * from the data model in 5.3. The backend does not serve these yet, so
  * `mock.ts` produces them; once an endpoint exists, only its function in
- * `client.ts` changes. We need to work on this in order to support the Dashboard and Map screens, and the photo upload flow.
+ * `client.ts` changes.
  */
 
 // photo lifecycle (doc 3.3). Only `ready` photos have display images
@@ -80,4 +80,75 @@ export interface Page<T> {
 export interface CreateTripInput {
   title: string
   notes?: string
+}
+/** `GET /api/trips/{id}`: the summary plus the cover the owner chose. */
+export interface TripDetail extends TripSummary {
+  cover_photo_id: string | null
+}
+/**
+ * One located photo as `GET /api/map/photos` returns it: only what a marker
+ * and the photo panel need, so 2,000 of them stay small.
+ */
+export interface MapPhoto {
+  id: string
+  trip_id: string
+  trip_title: string
+  lat: number
+  lng: number
+  thumb_url: string | null
+  display_url: string | null
+  capture_time_local: string | null
+  city: string | null
+  country: string | null
+  place_name: string | null
+}
+/** [west, south, east, north] in degrees, the order the query string uses. */
+export type BBox = [number, number, number, number]
+/** Query of `GET /api/map/photos`. Every field is optional. */
+export interface MapPhotoQuery {
+  bbox?: BBox
+  trip_id?: string
+  /** Capture dates, inclusive, "YYYY-MM-DD". */
+  from?: string
+  to?: string
+  /** "Filter my photos": matches place, city, country or trip title. */
+  q?: string
+}
+/** `GET /api/map/photos`. `truncated` is true when the 2,000 cap was hit. */
+export interface MapPhotoPage {
+  items: MapPhoto[]
+  truncated: boolean
+}
+/** One `GET /api/places/search` hit: a world place, not one of the owner's photos. */
+export interface Place {
+  id: string
+  name: string
+  /** "Paris, France" style label for lists. */
+  label: string
+  kind: 'city' | 'country'
+  lat: number
+  lng: number
+  /** Map zoom that frames the place. */
+  zoom: number
+  city: string | null
+  country: string
+}
+/**
+ * `PATCH /api/photos/{id}/location` body: either new coordinates (the server
+ * resolves their place labels) or acceptance of the suggested label.
+ * Capture time is never part of a correction (doc 3.3).
+ */
+export type LocationPatch = { lat: number; lng: number } | { confirm_label: true }
+
+/**
+ * One file of an upload batch as the browser tracks it (doc 4.1, 7.2):
+ * its photo state, why it failed if it did, and the photo once stored.
+ */
+export interface UploadItem {
+  /** Browser-chosen id; uploading the same id again never creates a duplicate. */
+  client_file_id: string
+  file_name: string
+  state: PhotoState
+  error: string | null
+  photo: Photo | null
 }

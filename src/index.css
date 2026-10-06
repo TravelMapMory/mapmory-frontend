@@ -8,23 +8,10 @@ body,
 }
 
 body {
-  background: var(--c-bg);
-  color: var(--c-ink);
+  background: var(--c-page);
+  color: var(--c-text);
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
-}
-
-/*
- * The design uses uppercase micro-labels ("TRIP DATE", "SHARED WITH") in
- * several unrelated components, so the one rule that they all share lives here
- * instead of being repeated in each component stylesheet.
- */
-.eyebrow {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--c-ink-soft);
 }
 
 button {

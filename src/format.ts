@@ -1,3 +1,5 @@
+import { parseCaptureTime } from './captureTime'
+
 /*
  * Date formatting shared by cards and lists. Capture dates are local calendar
  * dates ("2026-06-01"), so they are formatted in UTC to stop the viewer's own
@@ -16,6 +18,7 @@ export function formatDateRange(start: string | null, end: string | null): strin
   if (!start || !end) return null
   const a = parseDate(start)
   const b = parseDate(end)
+  if (!Number.isFinite(a.getTime()) || !Number.isFinite(b.getTime())) return null
   if (start.slice(0, 10) === end.slice(0, 10)) return full.format(a)
   if (a.getUTCFullYear() !== b.getUTCFullYear()) return `${full.format(a)} – ${full.format(b)}`
   if (a.getUTCMonth() !== b.getUTCMonth()) return `${dayMonth.format(a)} – ${full.format(b)}`
@@ -30,4 +33,22 @@ export function formatUploaded(iso: string): string {
 /** "1 photo", "7 photos". */
 export function plural(n: number, one: string, many = `${one}s`): string {
   return `${n} ${n === 1 ? one : many}`
+}
+
+const captured = new Intl.DateTimeFormat('en-GB', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZone: 'UTC',
+})
+
+/**
+ * "12 Jun 2026, 18:40" for a local capture time. It is wall-clock time at
+ * the place the photo was taken, so it is shown as recorded, never converted.
+ */
+export function formatCaptured(local: string | null): string | null {
+  const date = parseCaptureTime(local)
+  return date ? captured.format(date) : null
 }

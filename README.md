@@ -2,11 +2,10 @@
 
 MapMory is a photo-first travel-memory app. You upload the photos you took on a
 trip and the backend reads their EXIF metadata to recover where and when each
-one was taken, so your memories place themselves on a map instead of being
-filed by hand. The map is the main UI: a search bar filters what is already
-there, memories can be grouped flexibly by city, country or your own custom
-grouping, privacy is customizable per user, and a profile page collects your
-own trips. This repository holds only the frontend.
+one was taken, so your trips place themselves on a map instead of being filed
+by hand. Everything is private until the owner shares it. This repository
+holds only the frontend; the design document is the source of truth for
+screens, rules and API.
 
 ## Prerequisites
 
@@ -15,13 +14,11 @@ own trips. This repository holds only the frontend.
 ## Getting started
 
 ```bash
-npm install
+npm ci
 npm run dev
 ```
 
-`package-lock.json` is generated inside a linux container so CI can install it;
-if `npm install` on macOS rewrites it, restore it with `git checkout
-package-lock.json` instead of committing the rewrite.
+Use `npm ci` to install the committed dependency versions without rewriting the lockfile.
 
 To produce a production build (this typechecks first):
 
@@ -31,59 +28,105 @@ npm run build
 
 ## UI
 
-Two screens, switched by the header's trailing control (`src/App.tsx`). No routing
-dependency yet: the design specifies no URLs.
+Screens are switched by local state in `src/App.tsx` (no router yet). The
+header tabs are **Dashboard | Map**; a trip page is reached from either.
 
-- **Map** (`src/MapScreen.tsx`) — a desaturated OpenStreetMap basemap under the
-  design's search control and five memory markers, with the memory drawer docked
-  on the right. Below 900px the desktop drawer is replaced by the mobile one,
-  which is a different layout in the design, not a restyle of the same one.
-- **Profile** (`src/ProfileScreen.tsx`) — the 400px identity column beside the
-  stats, journey, cities and pinboard column.
+- **Dashboard** (`src/DashboardScreen.tsx`): totals, trip cards, recently
+  uploaded, create trip, empty states.
+- **Trip** (`src/TripScreen.tsx`): trip header, every photo including the ones
+  without GPS as a gallery or a day-by-day journey list, upload with per-photo
+  status (`src/components/UploadPanel.tsx`), and location correction: search
+  for a place, drop or drag a pin on a map, or reuse the previous photo's
+  place (`src/components/LocationPicker.tsx`). Creating a trip opens it.
+- **Map · My photos** (`src/MapScreen.tsx`): the owner's located photos as
+  clustered pins (`src/components/PhotoClusters.tsx`), filters for trip,
+  capture dates and "Filter my photos", "Find a place", and a panel with the
+  selected pin's photos. Below 900px the panel sits under the map.
 
-Components live in `src/components/`, one Figma node each, and read their colours
-and radii from `src/tokens.css`.
+The earlier Profile screen from the Figma mock-up was dropped, as agreed with
+the team, because the design doc has no Profile page.
+
+### Data
+
+`src/api/client.ts` currently calls the in-memory mock in `src/api/mock.ts`.
+Its types are frontend view models, not a complete implementation of the
+OpenAPI contract. Backend integration will need response adapters, cursor
+pagination, Firebase tokens, signed-URL expiry handling and the real batch
+registration/upload/completion/status workflow.
+
+The mock keeps state only until the page reloads. Closing the upload UI or
+navigating away loses its local progress list even if processing continues.
+It has no GCS storage, server processing, persistent batch recovery or access
+checks. Its filename/size/mtime-based file IDs are globally deduplicated:
+reusing a file in another trip can return the original trip's photo, and
+concurrent repeated files can produce duplicate records. Use distinct files
+for the gala's controlled upload attempts. Backend integration must use the
+agreed `(batch_id, client_file_id)` identity; this mock is not proof of retry
+idempotency or content deduplication.
+
+My photos contains only owned photos. Shared collections and recipient rows
+are deferred until their access and presentation model is agreed.
+
+### Map limitations
+
+The custom screen-space clustering is a prototype deviation from the
+`Leaflet.markercluster` choice in design document §5.1. Its ordering,
+performance and world-wrap edge cases have not yet been fully evaluated.
+
+Large-dataset viewport loading is deferred. The design calls for at most
+2,000 markers in the visible area. The mock initially fetches without a
+bounding box; after a truncated result, it fetches viewports only while the
+latest result remains truncated. A small viewport can therefore stop future
+pan requests. The current implementation is suitable for the small demo
+collection, not evidence that large collections are supported.
+
+### Photo metadata
+
+Uploads accept JPEG and PNG up to 25,000,000 bytes (25 MB). The capture time and GPS position are
+read from each file's EXIF (`src/api/exif.ts`, both byte orders, PNG eXIf
+chunks). In production the Go worker does this after upload; until then the
+mock backend uses this reader so the prototype shows real metadata. A GPS of
+exactly 0,0 counts as no fix. Photos without usable GPS are kept with state
+`needs-location` and appear in the gallery, not on the map.
+
+The browser parser is a demo stand-in for the Go worker, with known incomplete
+and potentially incorrect behavior. Invalid dates are treated as unknown,
+but GPS hemisphere handling and the assumption that `(0,0)` means no fix
+remain mock limitations. Original EXIF coordinates are not retained separately
+when the mock applies corrections.
+
+Place search uses a fixed gazetteer, not a worldwide provider. Reverse lookup
+assigns the nearest listed city within 50 km, automatically confirming labels
+within 15 km or after a manual correction. These heuristics can assign the
+wrong city/country and do not implement provider normalization, attribution,
+confidence ranking or timezone lookup. Keep this logic isolated as a mock;
+replace it with the server resolver during integration.
 
 ### Basemap
 
-The design draws a flat, pale grey landmass. Rather than a ready-made grey
-basemap, the OSM tiles are desaturated in CSS: CARTO's `light_nolabels` serves an
-"API KEY REQUIRED" watermark tile without a key, and Stadia's toner-lite answers
-401. A static picture of a map would match the mock-up more closely but would
-throw away panning and zooming.
+The design doc specifies Geoapify Positron tiles. Put a Geoapify browser key
+in `.env.local` (git-ignored; see `.env.example`):
 
-Nothing is tied to OSM beyond the single tile-layer URL in `src/MapScreen.tsx`,
-so swapping in MapBox later remains an open option.
+```
+VITE_GEOAPIFY_KEY=your-key
+```
+
+and restart `npm run dev`. Without a key the map falls back to desaturated
+OpenStreetMap tiles, so the app still runs for anyone who clones the repo.
+For a Docker build, pass it with `--build-arg VITE_GEOAPIFY_KEY=...`.
 
 ### Icons
 
-Every icon comes from `lucide-react`, not from a file. The design's set is Lucide:
-an exported `chevron-right` is `M6 12L10 8L6 4` on a 16 viewBox, which is Lucide's
-`m9 18 6-6-6-6` on a 24 viewBox scaled by exactly 16/24, and `plus` matches the
-same way. Using the components rather than SVG files also means icon colour flows
-from the CSS tokens through `currentColor`.
-
-Lucide expresses `strokeWidth` in its own 24 viewBox, so a 2px rendered stroke —
-what the design specifies — needs `strokeWidth = 48 / size`. Every call site
-follows that rule, and icon sizes come from the design nodes rather than from
-whatever size an exported file happened to be.
+Every icon comes from `lucide-react`, not from a file, so icon colour follows
+the CSS through `currentColor`. Status is never shown by colour alone: each
+status has an icon and a word (doc 4.3).
 
 ### Images
 
-Two different provenances, both deliberate:
-
-- The memory carousel photograph and the two shared-with avatars are the design's
-  own, recovered from the one Figma asset manifest that was issued before the
-  file's MCP quota ran out.
-- The five landmark photographs behind the map pins, the city chips, the pinboard
-  and the journey hero, plus the profile sidebar's map teaser, are **stand-ins**. Figma never issued asset URLs for those
-  nodes, so they are freely licensed photographs from Wikimedia Commons. Each is
-  credited with its author and licence in [CREDITS.md](CREDITS.md) — the licences
-  require it and this repository is public. Replace them with the design's own
-  photographs when the Figma quota allows, and delete the matching rows there.
-
-Individual paddings and font sizes inside components built while the Figma quota was
-exhausted are pixel estimates rather than measurements.
+The sample photos in `src/assets/pins/` are freely licensed photographs from
+Wikimedia Commons, one per mock photo, each placed at the coordinates of the
+landmark it shows. Each is credited with its author and licence in
+[CREDITS.md](CREDITS.md); the licences require it and this repository is public.
 
 ## Docker
 
@@ -94,8 +137,8 @@ docker build -t mapmory-frontend .
 docker run --rm -p 8080:8080 mapmory-frontend
 ```
 
-Then open http://localhost:8080. Client-side routes are served `index.html`, so
-deep links such as `/profile/xyz` survive a refresh.
+Then open http://localhost:8080. nginx serves `index.html` for unknown paths,
+so client-side routes will survive a refresh once the app has them.
 
 The listen port comes from the `PORT` environment variable (default `8080`),
 which is what Cloud Run injects:
@@ -104,13 +147,46 @@ which is what Cloud Run injects:
 docker run --rm -e PORT=9090 -p 9090:9090 mapmory-frontend
 ```
 
-## Open decisions
+## Decisions
 
-These are not settled yet, and nothing in this repository assumes an answer to
-any of them:
+Settled in the design document: PostgreSQL, a REST API, Google Cloud Storage
+with signed URLs for photos, Firebase Auth, and Cloud Run for deployment.
 
-- **Database** — MongoDB or PostgreSQL.
-- **API style** — GraphQL or REST.
-- **Photo blob storage** — not yet discussed.
+## Acceptance tests
 
-Deployment is expected to target Google Cloud via GitHub Actions.
+Install the pinned dependencies and Playwright's Chromium once:
+
+```bash
+npm ci
+npx playwright install chromium
+npm run test:typecheck
+npm run test:acceptance
+```
+
+On Linux machines missing browser libraries, use
+`npx playwright install --with-deps chromium`. CI installs those dependencies.
+The tests start their own Vite server at `127.0.0.1:4173` and block external
+requests, so tiles, fonts and provider availability cannot change the result.
+No Geoapify key or Firebase account is needed.
+
+The suite covers Dashboard forms and summaries, trip/card navigation, Map
+filters and world search, photo/trip navigation, Gallery/Journey states,
+location correction, and mock upload selection/drop/progress/retry controls.
+It includes empty collections, malformed metadata, mixed uploads, failed reads
+and saves, loading states, and long content. Keyboard and layout checks run at
+desktop (1440px), tablet (768px) and phone (390px) widths; uncaught browser errors
+fail every E2E test. The exact byte boundary runs once on desktop.
+
+See [the coverage inventory](tests/docs/acceptance-coverage.md) for the controls,
+assertions, fixture setup and deliberately deferred integration work. Test data
+and one-shot failures are enabled only on the dedicated acceptance-test server;
+ordinary development and production builds keep the normal mock behavior.
+
+These are Chromium viewport checks, not a claim of Safari/Firefox compatibility
+or a complete accessibility audit. They do not test real storage, authentication,
+persistent recovery or large datasets. Run the gala flow on an actual phone too.
+
+Use `npm run test:acceptance:ui` to debug, or `npx playwright show-report` to
+inspect the HTML report. Failure screenshots and traces are saved in
+`test-results/`; generated reports are git-ignored. To use an existing Chromium
+binary, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its absolute path.

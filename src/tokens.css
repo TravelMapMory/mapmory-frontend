@@ -1,47 +1,35 @@
 /*
-  This file has the design tokens for the Mapmory frontend. These tokens are
-  used to define the colors, spacing, and other design properties of the application.
-  Change these values in this file to change the design of the application.
+  Design tokens for the MapMory frontend, from design doc 4.3. Change a value
+  here to change it everywhere.
  */
 :root {
-  --c-bg:#f8fafc;
-  --c-surface:#ffffff;
-  --c-line:#e2e8f0;
-  --c-ink:#0f172a;
-  --c-ink-soft:#64748b;
-  --c-ink-faint:#94a3b8;
-  --c-ink-placeholder:#cbd5e1;
-
-  --c-amber-bg:#fef3c7;
-  --c-amber-ink:#b45309;
-  --c-mint-bg:#d1fae5;
-  --c-teal:#0d9488;
-  --c-heart:#ef4444;
-
-  --r-xs:8px;
-  --r-sm:10px;
-  --r-md:16px;
-  --r-lg:20px;
-  --r-xl:24px;
-  --r-pill:100px;
-
-  --shadow-raised:0 4px 6px rgba(15,23,42,0.15);
-  --shadow-float:0 8px 24px rgba(15,23,42,0.08);
-
-  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-
-  /*
-    * Custom colors for Mapmory, not in the Figma file. These are used in the
-    * Mapmory design system, and are not part of the Figma design tokens.
-   */
+  /* Palette (doc 4.3) */
   --c-primary: #152238;
   --c-action: #2f6fd0;
   --c-accent: #ddf3ea;
   --c-page: #f5f7fa;
+  --c-surface: #ffffff;
   --c-text: #1a2433;
   --c-text-2: #5b6576;
   --c-border: #dde2ea;
+  --c-focus: #2f6fd0;
+
+  /* Visibility status: always paired with an icon and a word (doc 4.3). */
   --c-public: #b45309;
   --c-private: #5b6576;
-  --c-focus: #2f6fd0;
+
+  /* Map pin ring tints */
+  --c-mint-bg: #d1fae5;
+  --c-amber-bg: #fef3c7;
+
+  --r-xs: 8px;
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 20px;
+  --r-pill: 100px;
+
+  --shadow-raised: 0 4px 6px rgba(21, 34, 56, 0.15);
+  --shadow-float: 0 8px 24px rgba(21, 34, 56, 0.08);
+
+  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }

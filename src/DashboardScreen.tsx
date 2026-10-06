@@ -5,14 +5,15 @@ import type { MeSummary, Photo, TripSummary } from './api/types'
 import StatTile from './components/StatTile'
 import TripCard from './components/TripCard'
 import { formatUploaded } from './format'
+import UploadDropZone from './components/UploadDropZone'
 import './DashboardScreen.css'
 
 export interface DashboardScreenProps {
   onShowOnMap: (tripId: string) => void
-  /** Trip detail lives elsewhere; until it exists Open trip stays disabled. */
+  /** Opens trip detail; without it Open trip renders disabled. */
   onOpenTrip?: (tripId: string) => void
-  /** Upload flow (Kane); until it exists the button stays disabled. */
-  onUploadPhotos?: () => void
+  /** Starts uploading the chosen files into a trip; without it Upload photos renders disabled. */
+  onUploadPhotos?: (tripId: string, files: File[]) => void
 }
 
 type Load =
@@ -24,7 +25,7 @@ type Load =
  * Inline "Create trip" form. A trip only needs a title (notes can be added
  * from trip detail later), so a dialog would be heavier than the task.
  */
-function CreateTripForm({ onCreated, onCancel }: { onCreated: () => void; onCancel: () => void }) {
+function CreateTripForm({ onCreated, onCancel }: { onCreated: (trip: TripSummary) => void; onCancel: () => void }) {
   const [title, setTitle] = useState('')
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -37,8 +38,7 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
     setSaving(true)
     setFailed(false)
     try {
-      await createTrip({ title: trimmed })
-      onCreated()
+      onCreated(await createTrip({ title: trimmed }))
     } catch {
       setFailed(true)
       setSaving(false)
@@ -79,6 +79,55 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: () => void; onCanc
           The trip could not be created. Try again.
         </p>
       ) : null}
+    </form>
+  )
+}
+
+/**
+ * Inline "Upload photos": pick the trip, then the files. The upload itself
+ * runs on the trip page, which shows each photo's progress.
+ */
+function UploadForm({
+  trips,
+  onUpload,
+  onCancel,
+}: {
+  trips: TripSummary[]
+  onUpload: (tripId: string, files: File[]) => void
+  onCancel: () => void
+}) {
+  const [tripId, setTripId] = useState(trips[0]?.id ?? '')
+  const tripField = useId()
+
+  return (
+    <form
+      className="upl"
+      onSubmit={(event) => event.preventDefault()}
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') onCancel()
+      }}
+    >
+      <h2 className="upl-title">Upload photos</h2>
+      <div className="dash-upload-row">
+        <div className="dash-upload-field">
+          <label htmlFor={tripField} className="dash-create-label">
+            Trip
+          </label>
+          <select id={tripField} className="dash-create-input" value={tripId} onChange={(e) => setTripId(e.target.value)}>
+            {trips.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.title}
+              </option>
+            ))}
+          </select>
+        </div>
+        <button type="button" className="btn btn-secondary dash-upload-cancel" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+      <UploadDropZone inputClassName="dash-file" onFiles={(files) => {
+        if (files.length > 0 && tripId) onUpload(tripId, files)
+      }} />
     </form>
   )
 }
@@ -134,24 +183,27 @@ function RecentlyUploaded({ photos }: { photos: Photo[] }) {
  * The owner's Dashboard (doc 3.2): totals, trip cards and recently uploaded
  * photos, with Create trip and Upload photos. All numbers come from the API;
  * the screen never recomputes them, so a correction made anywhere shows up
- * here on the next load. we need to probablymodify them and add the api endpoints to support that.
- 
+ * here on the next load.
  */
 export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhotos }: DashboardScreenProps) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [creating, setCreating] = useState(false)
+  const [choosingUpload, setChoosingUpload] = useState(false)
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (signal?: AbortSignal) => {
     try {
-      const [summary, trips] = await Promise.all([getSummary(), listTrips()])
+      const [summary, trips] = await Promise.all([getSummary(signal), listTrips(signal)])
       setLoad({ status: 'ready', summary, trips: trips.items })
     } catch {
-      setLoad({ status: 'error' })
+      // A cancelled load (unmount, or StrictMode's dev re-run) is not an error.
+      if (!signal?.aborted) setLoad({ status: 'error' })
     }
   }, [])
 
   useEffect(() => {
-    void refresh()
+    const controller = new AbortController()
+    void refresh(controller.signal)
+    return () => controller.abort()
   }, [refresh])
 
   const hasTrips = load.status === 'ready' && load.trips.length > 0
@@ -176,7 +228,8 @@ export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhoto
           <button
             type="button"
             className="btn btn-action"
-            onClick={onUploadPhotos}
+            onClick={() => setChoosingUpload(true)}
+            aria-expanded={choosingUpload}
             disabled={!onUploadPhotos || !hasTrips}
             title={!onUploadPhotos ? 'Upload is not available yet' : !hasTrips ? 'Create a trip first' : undefined}
           >
@@ -189,11 +242,17 @@ export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhoto
       {creating ? (
         <CreateTripForm
           onCancel={() => setCreating(false)}
-          onCreated={() => {
+          onCreated={(trip) => {
             setCreating(false)
-            void refresh()
+            // A new trip is empty, so go straight to it to add photos.
+            if (onOpenTrip) onOpenTrip(trip.id)
+            else void refresh()
           }}
         />
+      ) : null}
+
+      {choosingUpload && onUploadPhotos && load.status === 'ready' ? (
+        <UploadForm trips={load.trips} onUpload={onUploadPhotos} onCancel={() => setChoosingUpload(false)} />
       ) : null}
 
       {load.status === 'loading' ? (

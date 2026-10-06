@@ -59,24 +59,52 @@
 .dash-create-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  column-gap: 12px;
+  row-gap: 16px;
+}
+
+.dash-create-row > .dash-create-input {
+  flex: 1 1 240px;
 }
 
 .dash-create-input {
-  flex: 1 1 240px;
-  min-height: 36px;
+  min-width: 0;
+  height: 36px;
   padding: 0 12px;
   border: 1px solid #8a93a3;
   border-radius: var(--r-sm);
+  background: var(--c-surface);
   font: inherit;
   font-size: 14px;
   color: var(--c-text);
+}
+
+.dash-upload-row {
+  display: flex;
+  align-items: end;
+  gap: 12px;
+}
+
+.dash-upload-field {
+  flex: 1;
+  min-width: 0;
+}
+
+.dash-upload-field .dash-create-input {
+  display: block;
+  width: 100%;
 }
 
 .dash-create-error {
   margin: 8px 0 0;
   font-size: 14px;
   color: #b42318;
+}
+
+@media (max-width: 600px) {
+  .dash-upload-row {
+    flex-wrap: wrap;
+  }
 }
 
 .dash-status {
