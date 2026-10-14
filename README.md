@@ -1,192 +1,355 @@
-# MapMory (frontend)
+# MapMory (Frontend)
 
-MapMory is a photo-first travel-memory app. You upload the photos you took on a
-trip and the backend reads their EXIF metadata to recover where and when each
-one was taken, so your trips place themselves on a map instead of being filed
-by hand. Everything is private until the owner shares it. This repository
-holds only the frontend; the design document is the source of truth for
-screens, rules and API.
+MapMory is a photo-first travel memory application that helps users organize and revisit their travels through an interactive map.
 
-## Prerequisites
+Instead of manually organizing photos by location, MapMory extracts GPS coordinates and timestamps from image metadata (EXIF) to associate photos with places and trips. Users can browse their memories geographically, correct missing locations, and eventually share selected photos with others.
 
-- Node.js 24 (the version CI builds against)
+This repository contains the **React frontend** of MapMory. The backend is implemented separately in Go.
+
+The project's design document and OpenAPI specification define the intended functionality and API contracts.
+
+## Project status
+
+MapMory is currently a working frontend prototype with partial backend integration. Features are progressively migrated from mock implementations to the real backend.
+
+| Feature | Current status |
+|---|---|
+| Landing page and navigation | Implemented |
+| Sign-up and login | Demo account; Firebase Auth pending |
+| Dashboard | Implemented |
+| Trip creation and listing | Integrated with Go backend |
+| Trip detail retrieval | Integrated with Go backend |
+| Photo uploads | Mock implementation |
+| EXIF extraction | Browser-side prototype |
+| Location correction | Mock implementation |
+| Interactive map | Implemented with mock photo data |
+| Photo sharing | Planned |
+
+The Go backend currently stores trips in memory. Persistent PostgreSQL storage, authentication, and the photo processing pipeline are pending integration.
 
 ## Getting started
 
+### Prerequisites
+
+- Node.js 24 (the version used in CI)
+- npm
+- [MapMory backend](https://github.com/TravelMapMory) (optional, for live API integration)
+
+### Local development
+
+Install the dependencies:
+
 ```bash
 npm ci
+```
+
+Create your local environment configuration:
+
+```bash
+cp .env.example .env.local
+```
+
+The example configuration contains:
+
+```dotenv
+# Local Go backend
+VITE_API_URL=http://localhost:8080
+
+# Optional Geoapify browser key
+VITE_GEOAPIFY_KEY=
+```
+
+To use the real trip API, start the Go backend in the backend repository:
+
+```bash
+go run ./cmd/server
+```
+
+To run the frontend entirely with mock data, remove or comment out `VITE_API_URL` in `.env.local`.
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-Use `npm ci` to install the committed dependency versions without rewriting the lockfile.
+Open http://localhost:5173.
 
-To produce a production build (this typechecks first):
+The `.env.local` file is intended for local configuration and should not be committed to Git.
 
-```bash
-npm run build
+### Development commands
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Typecheck and build for production |
+| `npm run test:typecheck` | Run TypeScript checks |
+| `npm run test:acceptance` | Run Playwright acceptance tests |
+| `npm run test:acceptance:ui` | Open Playwright's interactive test runner |
+
+Use `npm ci` to install the versions recorded in `package-lock.json` without modifying the lockfile.
+
+## Application structure
+
+### Pages and routing
+
+MapMory uses a lightweight History API router (`src/router.ts`) without an additional routing dependency.
+
+Each page has its own URL, supporting browser navigation, refreshing, and direct links.
+
+| Route | Page | Access |
+|---|---|---|
+| `/` | Landing page | Public |
+| `/signup` | Sign up | Signed out |
+| `/login` | Log in | Signed out |
+| `/dashboard` | Dashboard | Signed in |
+| `/map` | Map · My photos | Signed in |
+| `/map?trip={id}` | Map filtered by trip | Signed in |
+| `/trips/{id}` | Trip details | Signed in |
+| Other paths | Page not found | Everyone |
+
+Opening a protected page while signed out redirects to `/login`. After signing in, users return to their originally requested page.
+
+Currently, authentication uses a demo account stored in `sessionStorage`. Any credentials are accepted until Firebase Auth is integrated.
+
+Invalid routes and nonexistent trips display a "Page not found" screen. Authentication and server errors are handled separately.
+
+### Main screens
+
+- **Landing** (`src/LandingScreen.tsx`): Introduces MapMory and provides sign-up and sign-in entry points.
+- **Authentication** (`src/AuthScreen.tsx`): Sign-up and login forms using the temporary demo account.
+- **Dashboard** (`src/DashboardScreen.tsx`): Trip cards, summaries, recent photos, trip creation, and empty states.
+- **Trip details** (`src/TripScreen.tsx`): Trip information, photo gallery, journey view, uploads, and location correction.
+- **Map** (`src/MapScreen.tsx`): Clustered photo markers, trip and date filters, place search, and photo previews.
+
+The earlier Profile screen from the Figma mock-up was removed following team agreement because it was not part of the design document.
+
+## Architecture
+
+The frontend uses React, TypeScript, Vite, and Leaflet.
+
+Its data-access layer separates UI components from the backend and mock implementations.
+
+### Data flow
+
+```text
+React screens
+    |
+    v
+src/api/client.ts
+    |
+    +---- Mock implementation
+    |     src/api/mock.ts
+    |
+    +---- HTTP client
+          src/api/http.ts
+              |
+              v
+          Go REST API
+              |
+              v
+          Response adapters
+          src/api/adapters.ts
+              |
+              v
+          Frontend view models
+          src/api/types.ts
 ```
 
-## UI
+The main modules are:
 
-Screens are switched by local state in `src/App.tsx` (no router yet). The
-header tabs are **Dashboard | Map**; a trip page is reached from either.
+- `src/api/client.ts` — Public API interface used by screens; selects mock or live implementations.
+- `src/api/http.ts` — HTTP requests, bearer-token support, and structured API error handling.
+- `src/api/adapters.ts` — Converts backend responses into frontend models.
+- `src/api/types.ts` — Frontend data models.
+- `src/api/mock.ts` — Local simulation of features without backend integration.
 
-- **Dashboard** (`src/DashboardScreen.tsx`): totals, trip cards, recently
-  uploaded, create trip, empty states.
-- **Trip** (`src/TripScreen.tsx`): trip header, every photo including the ones
-  without GPS as a gallery or a day-by-day journey list, upload with per-photo
-  status (`src/components/UploadPanel.tsx`), and location correction: search
-  for a place, drop or drag a pin on a map, or reuse the previous photo's
-  place (`src/components/LocationPicker.tsx`). Creating a trip opens it.
-- **Map · My photos** (`src/MapScreen.tsx`): the owner's located photos as
-  clustered pins (`src/components/PhotoClusters.tsx`), filters for trip,
-  capture dates and "Filter my photos", "Find a place", and a panel with the
-  selected pin's photos. Below 900px the panel sits under the map.
+Screens should access data through `client.ts` rather than directly calling the backend or importing mock implementations.
 
-The earlier Profile screen from the Figma mock-up was dropped, as agreed with
-the team, because the design doc has no Profile page.
+### Backend integration
 
-### Data
+When `VITE_API_URL` is configured, the following endpoints use the Go backend:
 
-`src/api/client.ts` currently calls the in-memory mock in `src/api/mock.ts`.
-Its types are frontend view models, not a complete implementation of the
-OpenAPI contract. Backend integration will need response adapters, cursor
-pagination, Firebase tokens, signed-URL expiry handling and the real batch
-registration/upload/completion/status workflow.
+| Method | Endpoint | Description |
+|---|---|---|
+| GET | `/api/trips` | List the current user's trips |
+| POST | `/api/trips` | Create a trip |
+| GET | `/api/trips/{trip_id}` | Retrieve an individual trip |
 
-The mock keeps state only until the page reloads. Closing the upload UI or
-navigating away loses its local progress list even if processing continues.
-It has no GCS storage, server processing, persistent batch recovery or access
-checks. Its filename/size/mtime-based file IDs are globally deduplicated:
-reusing a file in another trip can return the original trip's photo, and
-concurrent repeated files can produce duplicate records. Use distinct files
-for the gala's controlled upload attempts. Backend integration must use the
-agreed `(batch_id, client_file_id)` identity; this mock is not proof of retry
-idempotency or content deduplication.
+Trip creation returns the new trip's ID, which the frontend uses to navigate to its detail page and retrieve the created trip.
 
-My photos contains only owned photos. Shared collections and recipient rows
-are deferred until their access and presentation model is agreed.
+Missing trips return HTTP 404 according to the OpenAPI contract, and the frontend displays its not-found screen.
 
-### Map limitations
+The HTTP client supports attaching Firebase ID tokens through `setTokenProvider`, but real authentication is not yet integrated.
 
-The custom screen-space clustering is a prototype deviation from the
-`Leaflet.markercluster` choice in design document §5.1. Its ordering,
-performance and world-wrap edge cases have not yet been fully evaluated.
+In development, Vite proxies `/api` requests to the backend configured by `VITE_API_URL`, avoiding the need for separate CORS configuration.
 
-Large-dataset viewport loading is deferred. The design calls for at most
-2,000 markers in the visible area. The mock initially fetches without a
-bounding box; after a truncated result, it fetches viewports only while the
-latest result remains truncated. A small viewport can therefore stop future
-pan requests. The current implementation is suitable for the small demo
-collection, not evidence that large collections are supported.
+Other operations continue to use mock implementations until their backend endpoints are available.
 
-### Photo metadata
+Remaining integration work includes:
 
-Uploads accept JPEG and PNG up to 25,000,000 bytes (25 MB). The capture time and GPS position are
-read from each file's EXIF (`src/api/exif.ts`, both byte orders, PNG eXIf
-chunks). In production the Go worker does this after upload; until then the
-mock backend uses this reader so the prototype shows real metadata. A GPS of
-exactly 0,0 counts as no fix. Photos without usable GPS are kept with state
-`needs-location` and appear in the gallery, not on the map.
+- Firebase authentication and authorization
+- Persistent trip and photo storage
+- Cursor-based pagination
+- Signed URL upload registration and completion
+- Asynchronous photo processing and status recovery
+- Location resolution and correction
+- Photo sharing and access control
 
-The browser parser is a demo stand-in for the Go worker, with known incomplete
-and potentially incorrect behavior. Invalid dates are treated as unknown,
-but GPS hemisphere handling and the assumption that `(0,0)` means no fix
-remain mock limitations. Original EXIF coordinates are not retained separately
-when the mock applies corrections.
+## Maps and photo metadata
 
-Place search uses a fixed gazetteer, not a worldwide provider. Reverse lookup
-assigns the nearest listed city within 50 km, automatically confirming labels
-within 15 km or after a manual correction. These heuristics can assign the
-wrong city/country and do not implement provider normalization, attribution,
-confidence ranking or timezone lookup. Keep this logic isolated as a mock;
-replace it with the server resolver during integration.
+### Interactive map
 
-### Basemap
+MapMory uses Leaflet to display photos geographically.
 
-The design doc specifies Geoapify Positron tiles. Put a Geoapify browser key
-in `.env.local` (git-ignored; see `.env.example`):
+The current prototype supports marker clustering, trip and date filtering, place search, and photo previews.
 
-```
+Clustering is implemented using a custom screen-space algorithm. Large-dataset viewport loading and some world-wrap edge cases are not yet fully supported.
+
+### Basemap configuration
+
+The intended basemap is Geoapify Positron.
+
+To enable it, add your browser API key to `.env.local`:
+
+```dotenv
 VITE_GEOAPIFY_KEY=your-key
 ```
 
-and restart `npm run dev`. Without a key the map falls back to desaturated
-OpenStreetMap tiles, so the app still runs for anyone who clones the repo.
-For a Docker build, pass it with `--build-arg VITE_GEOAPIFY_KEY=...`.
+Restart the development server after changing environment variables.
 
-### Icons
+Without a Geoapify key, the application falls back to desaturated OpenStreetMap tiles.
 
-Every icon comes from `lucide-react`, not from a file, so icon colour follows
-the CSS through `currentColor`. Status is never shown by colour alone: each
-status has an icon and a word (doc 4.3).
+For Docker builds, the key can be supplied using:
 
-### Images
+```bash
+docker build \
+  --build-arg VITE_GEOAPIFY_KEY=your-key \
+  -t mapmory-frontend .
+```
 
-The sample photos in `src/assets/pins/` are freely licensed photographs from
-Wikimedia Commons, one per mock photo, each placed at the coordinates of the
-landmark it shows. Each is credited with its author and licence in
-[CREDITS.md](CREDITS.md); the licences require it and this repository is public.
+### Photo metadata
 
-## Docker
+The upload prototype accepts JPEG and PNG images up to 25,000,000 bytes (25 MB).
 
-The image builds the app and serves the static bundle with nginx:
+The browser-side EXIF reader (`src/api/exif.ts`) extracts capture timestamps and GPS coordinates for the mock implementation.
+
+Photos without usable GPS coordinates remain available in the gallery with the `needs-location` state but do not appear on the map.
+
+Location correction currently supports place search and manual pin placement using mock data.
+
+The production architecture delegates EXIF extraction, image processing, and place resolution to backend services rather than relying on the browser implementation.
+
+## Testing
+
+MapMory uses Playwright for frontend acceptance testing.
+
+### Running tests
+
+Install the dependencies and Chromium:
+
+```bash
+npm ci
+npx playwright install chromium
+```
+
+Run TypeScript checks and acceptance tests:
+
+```bash
+npm run test:typecheck
+npm run test:acceptance
+```
+
+For interactive debugging:
+
+```bash
+npm run test:acceptance:ui
+```
+
+To inspect the HTML test report:
+
+```bash
+npx playwright show-report
+```
+
+On Linux environments missing browser dependencies, install them with:
+
+```bash
+npx playwright install --with-deps chromium
+```
+
+### Test coverage
+
+The acceptance suite covers:
+
+- Landing, sign-up, login, and navigation flows
+- Dashboard summaries and trip creation
+- Trip and photo navigation
+- Gallery and journey views
+- Map filtering and place search
+- Location correction
+- Mock photo uploads, progress, failures, and retries
+- Empty, loading, and error states
+- Keyboard interactions and responsive layouts
+
+Tests run at desktop (1440px), tablet (768px), and phone (390px) viewport widths.
+
+The suite uses a dedicated Vite server at `127.0.0.1:4173` with controlled mock data and blocked external requests. It does not require a Firebase account, Geoapify key, or running Go backend.
+
+See [Acceptance Test Coverage](tests/docs/acceptance-coverage.md) for detailed assertions, fixtures, and deferred testing work.
+
+These tests do not establish complete browser compatibility, accessibility compliance, or real backend integration correctness. Backend flows should also be verified separately.
+
+Test screenshots, traces, and reports are generated locally and ignored by Git.
+
+## Docker and deployment
+
+The frontend can be built into a Docker image that serves its static assets using nginx.
+
+Build and run:
 
 ```bash
 docker build -t mapmory-frontend .
 docker run --rm -p 8080:8080 mapmory-frontend
 ```
 
-Then open http://localhost:8080. nginx serves `index.html` for unknown paths,
-so client-side routes will survive a refresh once the app has them.
+Open http://localhost:8080.
 
-The listen port comes from the `PORT` environment variable (default `8080`),
-which is what Cloud Run injects:
+The nginx configuration supports SPA routing by serving `index.html` for frontend paths that do not correspond to static files.
 
-```bash
-docker run --rm -e PORT=9090 -p 9090:9090 mapmory-frontend
-```
-
-## Decisions
-
-Settled in the design document: PostgreSQL, a REST API, Google Cloud Storage
-with signed URLs for photos, Firebase Auth, and Cloud Run for deployment.
-
-## Acceptance tests
-
-Install the pinned dependencies and Playwright's Chromium once:
+The container's listening port is configurable through the `PORT` environment variable (default `8080`):
 
 ```bash
-npm ci
-npx playwright install chromium
-npm run test:typecheck
-npm run test:acceptance
+docker run --rm \
+  -e PORT=9090 \
+  -p 9090:9090 \
+  mapmory-frontend
 ```
 
-On Linux machines missing browser libraries, use
-`npx playwright install --with-deps chromium`. CI installs those dependencies.
-The tests start their own Vite server at `127.0.0.1:4173` and block external
-requests, so tiles, fonts and provider availability cannot change the result.
-No Geoapify key or Firebase account is needed.
+This supports platforms such as Google Cloud Run.
 
-The suite covers Dashboard forms and summaries, trip/card navigation, Map
-filters and world search, photo/trip navigation, Gallery/Journey states,
-location correction, and mock upload selection/drop/progress/retry controls.
-It includes empty collections, malformed metadata, mixed uploads, failed reads
-and saves, loading states, and long content. Keyboard and layout checks run at
-desktop (1440px), tablet (768px) and phone (390px) widths; uncaught browser errors
-fail every E2E test. The exact byte boundary runs once on desktop.
+**Note:** Vite environment variables are resolved during the frontend build. Running the container does not automatically configure its API backend. Production deployment must also provide suitable API routing.
 
-See [the coverage inventory](tests/docs/acceptance-coverage.md) for the controls,
-assertions, fixture setup and deliberately deferred integration work. Test data
-and one-shot failures are enabled only on the dedicated acceptance-test server;
-ordinary development and production builds keep the normal mock behavior.
+## Known limitations
 
-These are Chromium viewport checks, not a claim of Safari/Firefox compatibility
-or a complete accessibility audit. They do not test real storage, authentication,
-persistent recovery or large datasets. Run the gala flow on an actual phone too.
+MapMory is still under active development. Important limitations include:
 
-Use `npm run test:acceptance:ui` to debug, or `npx playwright show-report` to
-inspect the HTML report. Failure screenshots and traces are saved in
-`test-results/`; generated reports are git-ignored. To use an existing Chromium
-binary, set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to its absolute path.
+- Authentication currently uses a demo account without real access control.
+- Backend trips are stored in memory and disappear when the server restarts.
+- Photo uploads and processing remain mock implementations.
+- Mock upload identity and retry behavior do not represent production guarantees.
+- Browser-side EXIF parsing and place resolution are incomplete.
+- Map clustering and viewport loading are not optimized for large datasets.
+- Sharing functionality has not been integrated.
+
+See [Known Limitations](docs/limitations.md) for detailed implementation caveats and deferred work.
+
+## References and credits
+
+The design document is the source of truth for the application's intended screens, behavior, and architecture. The OpenAPI specification defines the backend API contract.
+
+The planned production stack includes PostgreSQL, Google Cloud Storage with signed URLs, Firebase Auth, and Google Cloud Run.
+
+Icons are provided by `lucide-react`, with status information represented through both text and iconography.
+
+Sample photographs in `src/assets/pins/` are sourced from Wikimedia Commons. Their authors and licenses are documented in [CREDITS.md](CREDITS.md).

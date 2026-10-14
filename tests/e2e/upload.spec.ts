@@ -1,9 +1,10 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { expect } from '@playwright/test'
 import { test } from './fixtures'
 import { checkLayout, openRome, tabTo } from './helpers'
 
-const fixture = (name: string) => new URL(`../fixtures/${name}`, import.meta.url).pathname
+const fixture = (name: string) => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url))
 
 test.beforeEach(async ({ page }) => {
   await page.route('**/*', async (route) => {
@@ -11,6 +12,8 @@ test.beforeEach(async ({ page }) => {
     else await route.abort()
   })
   await page.goto('/')
+  await page.getByRole('button', { name: 'Get started', exact: true }).click()
+  await page.getByRole('button', { name: 'Create account', exact: true }).click()
   await openRome(page)
   await tabTo(page, page.getByRole('button', { name: 'Upload photos', exact: true }))
   await page.keyboard.press('Enter')

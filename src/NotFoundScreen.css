@@ -1,0 +1,33 @@
+/* Styles for NotFoundScreen.tsx; the top bar comes from LandingScreen.css. */
+.nf-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 72px 16px;
+  text-align: center;
+}
+.nf-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  margin-bottom: 16px;
+  background: var(--c-accent);
+  border-radius: var(--r-md);
+  color: var(--c-primary);
+}
+.nf-title {
+  margin: 0 0 8px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--c-primary);
+}
+.nf-text {
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--c-text-2);
+}

@@ -10,6 +10,8 @@ test.beforeEach(async ({ page }) => {
     else await route.abort()
   })
   await page.goto('/')
+  await page.getByRole('button', { name: 'Get started', exact: true }).click()
+  await page.getByRole('button', { name: 'Create account', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
   await expect(page.getByText('Rome with family', { exact: true })).toBeVisible()
 })

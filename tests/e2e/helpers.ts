@@ -32,6 +32,8 @@ export async function boot(page: Page, options: import('../../src/api/acceptance
     Object.assign(globalThis, { __MAPMORY_ACCEPTANCE__: value })
   }, options)
   await page.goto('/')
+  await page.getByRole('button', { name: 'Get started', exact: true }).click()
+  await page.getByRole('button', { name: 'Create account', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
 }
 
