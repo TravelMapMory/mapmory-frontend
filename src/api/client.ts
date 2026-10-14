@@ -7,7 +7,7 @@
  * otherwise it keeps using the mock. Add an endpoint to LIVE once the backend
  * serves it; when all are live, the mock can go.
  */
-import { toTripPage, toTripSummary, type ApiTrip } from './adapters'
+import { toTripDetail, toTripPage, toTripSummary, type ApiTrip } from './adapters'
 import { request } from './http'
 import {
   mockCreateTrip,
@@ -46,7 +46,7 @@ type Endpoint =
   | 'upload'
 
 /** Endpoints mapmory-backend serves today. */
-const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip'])
+const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip', 'getTrip'])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
 
@@ -71,11 +71,14 @@ export async function createTrip(input: CreateTripInput): Promise<TripSummary> {
   return toTripSummary(await request<ApiTrip>('POST', '/api/trips', { body: input }))
 }
 /** GET /api/trips/{id} */
-export function getTrip(id: string, signal?: AbortSignal): Promise<TripDetail> {
-  return mockGetTrip(id, signal)
+export async function getTrip(id: string, signal?: AbortSignal): Promise<TripDetail> {
+  if (!live('getTrip')) return mockGetTrip(id, signal)
+  return toTripDetail(await request<ApiTrip>('GET', `/api/trips/${encodeURIComponent(id)}`, { signal }))
 }
 /** GET /api/trips/{id}/photos — all photos, including ones without a location. */
 export function listTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
+  // Photos are not served by the backend yet. Never mix demo photos with a real trip.
+  if (live('getTrip')) return Promise.resolve({ items: [], next_cursor: null })
   return mockTripPhotos(id, signal)
 }
 /** GET /api/map/photos — the owner's located photos in the bbox, at most 2,000. */

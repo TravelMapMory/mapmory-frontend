@@ -1,3 +1,6 @@
+import { ApiError } from './api/http'
+import { NotFoundError } from './api/mock'
+import NotFoundScreen from './NotFoundScreen'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ArrowLeft,
@@ -32,6 +35,7 @@ export interface TripScreenProps {
 type Load =
   | { status: 'loading' }
   | { status: 'error' }
+  | { status: 'not-found' }
   | { status: 'ready'; trip: TripDetail; photos: Photo[] }
 
 type View = 'gallery' | 'journey'
@@ -300,8 +304,11 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
       try {
         const [trip, page] = await Promise.all([getTrip(tripId, signal), listTripPhotos(tripId, signal)])
         setLoad({ status: 'ready', trip, photos: page.items })
-      } catch {
-        if (!signal?.aborted) setLoad({ status: 'error' })
+      } catch (error) {
+        if (!signal?.aborted) {
+          const missing = error instanceof NotFoundError || (error instanceof ApiError && error.status === 404)
+          setLoad({ status: missing ? 'not-found' : 'error' })
+        }
       }
     },
     [tripId],
@@ -332,6 +339,10 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
         </p>
       </div>
     )
+  }
+
+  if (load.status === 'not-found') {
+    return <NotFoundScreen signedIn onHome={onBack} />
   }
 
   if (load.status === 'error') {

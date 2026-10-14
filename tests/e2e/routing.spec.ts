@@ -65,3 +65,10 @@ test('an unknown address shows Page not found with a way home', async ({ page })
   await page.getByRole('button', { name: 'Go to home page', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Get started', exact: true })).toBeVisible()
 })
+
+test('a signed-in owner opening a missing trip sees Page not found', async ({ page }) => {
+  await boot(page)
+  await page.goto('/trips/123')
+  await expect(page.getByRole('heading', { name: 'Page not found', exact: true })).toBeVisible()
+  await expect(page).toHaveURL(/\/trips\/123$/)
+})

@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { toTripPage, toTripSummary, type ApiTrip } from '../../src/api/adapters'
+import { toTripDetail, toTripPage, toTripSummary, type ApiTrip } from '../../src/api/adapters'
 import { ApiError, request, setTokenProvider } from '../../src/api/http'
 
 // Exactly what mapmory-backend's POST /api/trips returns today.
@@ -92,5 +92,11 @@ test.describe('request', () => {
     answer(502, '<html>Bad gateway</html>')
     const error = await request('GET', '/api/trips').catch((e: unknown) => e)
     expect(error).toMatchObject({ status: 502, code: 'http_error' })
+  })
+})
+
+test('backend trip detail preserves the server ID and supports an empty gallery', () => {
+  expect(toTripDetail(backendTrip)).toMatchObject({
+    id: backendTrip.id, title: backendTrip.title, cover_photo_id: null, photo_count: 0,
   })
 })

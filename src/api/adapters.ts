@@ -3,7 +3,7 @@
  * one endpoint at a time, so fields it does not send yet get neutral
  * defaults here instead of breaking the screens.
  */
-import type { Page, TripSummary } from './types'
+import type { Page, TripDetail, TripSummary } from './types'
 
 /** A trip as mapmory-backend serves it today (cmd/server/api_types.go). */
 export interface ApiTrip {
@@ -44,4 +44,9 @@ export function toTripSummary(trip: ApiTrip): TripSummary {
 /** Keeps the server's order: the contract lists trips newest first, so pages stay consistent. */
 export function toTripPage(page: Page<ApiTrip>): Page<TripSummary> {
   return { items: page.items.map(toTripSummary), next_cursor: page.next_cursor }
+}
+
+/** Backend GET /api/trips/{id} uses the same shape as the list item. */
+export function toTripDetail(trip: ApiTrip): TripDetail {
+  return { ...toTripSummary(trip), cover_photo_id: trip.cover?.photo_id ?? null }
 }
