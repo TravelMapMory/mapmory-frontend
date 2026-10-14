@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { test, expect } from './fixtures'
 import { boot, openTrip, dashboard, checkLayout } from './helpers'
-const fixture = (name: string) => new URL(`../fixtures/${name}`, import.meta.url).pathname
+const fixture = (name: string) => fileURLToPath(new URL(`../fixtures/${name}`, import.meta.url))
 const png = readFileSync(fixture('no-metadata.png'))
 
 test('Dashboard upload uses selected destination and updates counts and recent uploads', async ({ page }) => {
@@ -96,7 +97,6 @@ test('reloading clears demo uploads as documented', async ({ page }) => {
   await page.locator('.upl input[type=file]').setInputFiles({ name: 'temporary.png', mimeType: 'image/png', buffer: png })
   await expect(page.locator('.trip-tile')).toHaveCount(4)
   await page.reload()
-  await expect(page.locator('.trip-card')).toHaveCount(3)
-  await openTrip(page, 'Rome with family')
+  await expect(page.getByRole('heading', { name: 'Rome with family', exact: true })).toBeVisible()
   await expect(page.locator('.trip-tile')).toHaveCount(3)
 })

@@ -1,0 +1,86 @@
+/* Styles for AuthScreen.tsx; the top bar comes from LandingScreen.css. */
+.auth-body {
+  display: flex;
+  justify-content: center;
+  padding: 56px 16px 64px;
+}
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-float);
+}
+.auth-title {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--c-primary);
+}
+.auth-sub {
+  margin: 0 0 24px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--c-text-2);
+}
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.auth-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.auth-field label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text);
+}
+.auth-field input {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  font: inherit;
+  font-size: 14px;
+  color: var(--c-text);
+  background: var(--c-surface);
+}
+.auth-submit {
+  min-height: 44px;
+  margin-top: 4px;
+  font-size: 15px;
+}
+.auth-switch {
+  margin: 20px 0 0;
+  font-size: 14px;
+  text-align: center;
+  color: var(--c-text-2);
+}
+.auth-link {
+  padding: 0;
+  background: none;
+  border: 0;
+  font-weight: 600;
+  color: var(--c-action);
+  text-decoration: underline;
+}
+.auth-demo {
+  margin: 16px 0 0;
+  font-size: 12px;
+  text-align: center;
+  color: var(--c-text-2);
+}
+
+@media (max-width: 600px) {
+  .auth-body {
+    padding-top: 32px;
+  }
+  .auth-card {
+    padding: 24px 20px;
+  }
+}

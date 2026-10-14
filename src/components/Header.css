@@ -64,11 +64,42 @@
   border-bottom-color: var(--c-primary);
   color: var(--c-primary);
 }
+/* Tabs stay grouped on the trailing edge; Sign out sits after them. */
+.hdr nav {
+  margin-left: auto;
+}
+.hdr-signout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 10px;
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text-2);
+}
+.hdr-signout:hover {
+  color: var(--c-primary);
+  background: var(--c-page);
+}
 @media (max-width: 600px) {
   .hdr {
+    gap: 8px;
     padding: 0 12px 0 16px;
+  }
+  .hdr-signout-label {
+    display: none;
   }
   .hdr-tab {
     padding: 0 10px;
+  }
+}
+/* On the narrowest phones the tab labels carry the meaning, so drop their icons to fit Sign out. */
+@media (max-width: 420px) {
+  .hdr-tab svg {
+    display: none;
   }
 }

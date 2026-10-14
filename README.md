@@ -28,9 +28,32 @@ npm run build
 
 ## UI
 
-Screens are switched by local state in `src/App.tsx` (no router yet). The
-header tabs are **Dashboard | Map**; a trip page is reached from either.
+Every page has an address (`src/router.ts`, a small History API router, no
+dependency), so Back/Forward, reload and copied links work. The header tabs
+are **Dashboard | Map**; a trip page is reached from either.
 
+| Path | Page | Who |
+| --- | --- | --- |
+| `/` | Landing | signed out (signed in → `/dashboard`) |
+| `/signup`, `/login` | Sign up / log in | signed out (signed in → `/dashboard`) |
+| `/dashboard` | Dashboard | owner |
+| `/map`, `/map?trip={id}` | Map · My photos, optionally one trip | owner |
+| `/trips/{id}` | Trip detail | owner |
+| anything else | Page not found | everyone |
+
+Opening an owner page while signed out goes to `/login` and, after logging
+in, back to the page that was asked for. nginx already serves `index.html` for
+unknown paths (`nginx.conf.template`), so deep links work in production too.
+Mock data still resets on reload, so a trip created in the browser is gone
+after a reload of its page.
+
+- **Landing** (`src/LandingScreen.tsx`): what a signed-out visitor sees first
+  (demo gala feedback): what MapMory does, the three main features, and
+  "Get started" (sign up) / "Sign in" (log in). Both open one form
+  (`src/AuthScreen.tsx`) that can switch between the two. Until Firebase Auth
+  is wired in, submitting it with any details opens the demo account, which is
+  remembered for the tab in `sessionStorage`; "Sign out" in the header returns
+  to the landing page.
 - **Dashboard** (`src/DashboardScreen.tsx`): totals, trip cards, recently
   uploaded, create trip, empty states.
 - **Trip** (`src/TripScreen.tsx`): trip header, every photo including the ones
@@ -48,11 +71,28 @@ the team, because the design doc has no Profile page.
 
 ### Data
 
-`src/api/client.ts` currently calls the in-memory mock in `src/api/mock.ts`.
-Its types are frontend view models, not a complete implementation of the
-OpenAPI contract. Backend integration will need response adapters, cursor
-pagination, Firebase tokens, signed-URL expiry handling and the real batch
-registration/upload/completion/status workflow.
+`src/api/client.ts` is the only module screens import for data. Endpoints
+move from the mock (`src/api/mock.ts`) to the Go backend one at a time:
+
+- `src/api/http.ts` sends the request, adds the Firebase ID token when one is
+  set (`setTokenProvider`, used once Firebase Auth lands), and turns the
+  backend's `{ "error": { "code", "message" } }` into an `ApiError`.
+- `src/api/adapters.ts` turns backend JSON into the view models in
+  `src/api/types.ts`, with neutral defaults for fields the backend does not
+  send yet (e.g. a trip's cities and dates).
+- `LIVE` in `client.ts` lists the endpoints the backend serves. Today that is
+  `GET /api/trips` and `POST /api/trips`.
+
+To use the backend, run it (`go run ./cmd/server` in mapmory-backend) and set
+`VITE_API_URL=http://localhost:8080` in `.env.local`. The Vite dev server then
+forwards `/api` to it, so no CORS setup is needed. Without `VITE_API_URL`
+everything uses the mock, which is what the acceptance tests do. In live mode
+a trip created on the backend cannot be opened yet, because
+`GET /api/trips/{id}` still comes from the mock; when the backend adds an
+endpoint, add it to `LIVE` and, if needed, an adapter.
+
+Still to do for full integration: cursor pagination, signed-URL expiry
+handling and the real batch registration/upload/completion/status workflow.
 
 The mock keeps state only until the page reloads. Closing the upload UI or
 navigating away loses its local progress list even if processing continues.
