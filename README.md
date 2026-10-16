@@ -83,6 +83,7 @@ The `.env.local` file is intended for local configuration and should not be comm
 |---|---|
 | `npm run dev` | Start the Vite development server |
 | `npm run build` | Typecheck and build for production |
+| `npm run lint` | Lint the source with oxlint |
 | `npm run test:typecheck` | Run TypeScript checks |
 | `npm run test:acceptance` | Run Playwright acceptance tests |
 | `npm run test:acceptance:ui` | Open Playwright's interactive test runner |
