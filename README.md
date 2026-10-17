@@ -83,6 +83,7 @@ The `.env.local` file is intended for local configuration and should not be comm
 |---|---|
 | `npm run dev` | Start the Vite development server |
 | `npm run build` | Typecheck and build for production |
+| `npm run lint` | Lint the source with oxlint |
 | `npm run test:typecheck` | Run TypeScript checks |
 | `npm run test:acceptance` | Run Playwright acceptance tests |
 | `npm run test:acceptance:ui` | Open Playwright's interactive test runner |
@@ -239,6 +240,19 @@ Photos without usable GPS coordinates remain available in the gallery with the `
 Location correction currently supports place search and manual pin placement using mock data.
 
 The production architecture delegates EXIF extraction, image processing, and place resolution to backend services rather than relying on the browser implementation.
+
+## Development conventions
+
+See [Frontend Coding Conventions](docs/coding-conventions.md)
+for our TypeScript, React, accessibility, testing, and linting policies.
+
+Before opening a pull request, run:
+
+```bash
+npm run lint
+npm run build
+npm run test:typecheck
+```
 
 ## Testing
 
