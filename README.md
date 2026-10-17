@@ -241,6 +241,19 @@ Location correction currently supports place search and manual pin placement usi
 
 The production architecture delegates EXIF extraction, image processing, and place resolution to backend services rather than relying on the browser implementation.
 
+## Development conventions
+
+See [Frontend Coding Conventions](docs/coding-conventions.md)
+for our TypeScript, React, accessibility, testing, and linting policies.
+
+Before opening a pull request, run:
+
+```bash
+npm run lint
+npm run build
+npm run test:typecheck
+```
+
 ## Testing
 
 MapMory uses Playwright for frontend acceptance testing.
