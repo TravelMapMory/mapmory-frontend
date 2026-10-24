@@ -56,6 +56,8 @@ export default function PhotoViewer({ photos, startId, onClose }: PhotoViewerPro
   const hasNext = index < photos.length - 1
 
   return (
+    // The backdrop click is a mouse shortcut; Escape (onCancel) and the Close button are its keyboard equivalents.
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
     <dialog
       ref={ref}
       className="viewer"
