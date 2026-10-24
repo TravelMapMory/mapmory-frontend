@@ -209,3 +209,45 @@ test('full-photo viewer closes with Escape and returns focus to the thumbnail', 
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(thumb).toBeFocused()
 })
+
+// A failed asset request should not leave the viewer displaying a broken-image icon.
+test('full-photo viewer shows a fallback when an image cannot load', async ({ page }) => {
+  // Intercept the asset before the gallery can load or cache it.
+  await page.route('**/rome-st-peters*.jpg', (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: 'text/plain',
+      body: '',
+    }),
+  )
+
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+
+  await page
+    .getByRole('button', {
+      name: 'View photo at Colosseum, Rome',
+      exact: true,
+    })
+    .click()
+
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('ArrowRight')
+
+  const viewer = page.getByRole('dialog', {
+    name: 'No location',
+  })
+
+  await expect(viewer.getByRole('status')).toHaveText(
+    'Photo unavailable',
+  )
+
+  // A failed image must not affect navigation to another photo.
+  await page.keyboard.press('ArrowLeft')
+
+  await expect(
+    page
+      .getByRole('dialog', { name: 'Pantheon, Rome' })
+      .getByRole('img'),
+  ).toBeVisible()
+})

@@ -17,6 +17,30 @@ export function viewerImage(photo: Photo): string | null {
   return photo.display_url ?? photo.thumb_url
 }
 
+/** Try a thumbnail if the display rendition fails; otherwise show a readable fallback. */
+function ViewerPhoto({ photo }: { photo: Photo }) {
+  const initial = viewerImage(photo)
+  const [source, setSource] = useState<string | null>(initial)
+
+  function onImageError() {
+    setSource((current) =>
+      current === photo.display_url && photo.thumb_url && photo.thumb_url !== current
+        ? photo.thumb_url
+        : null,
+    )
+  }
+
+  return source ? (
+    <img
+      src={source}
+      alt={photo.place_name ? `Photo at ${photo.place_name}` : 'Photo without a location'}
+      onError={onImageError}
+    />
+  ) : (
+    <p className="viewer-unavailable" role="status">Photo unavailable</p>
+  )
+}
+
 /**
  * Full-photo viewer (issue #24): a modal over the trip that only shows
  * photos. Correcting a location stays on the trip page, so viewing never
@@ -50,7 +74,6 @@ export default function PhotoViewer({ photos, startId, onClose }: PhotoViewerPro
 
   const photo = photos[Math.min(index, photos.length - 1)]
   if (!photo) return null
-  const image = viewerImage(photo)
   const place = photo.place_name ?? 'No location'
   const hasPrev = index > 0
   const hasNext = index < photos.length - 1
@@ -78,7 +101,7 @@ export default function PhotoViewer({ photos, startId, onClose }: PhotoViewerPro
         </button>
 
         <figure className="viewer-figure">
-          {image ? <img key={photo.id} src={image} alt={photo.place_name ? `Photo at ${photo.place_name}` : 'Photo without a location'} /> : null}
+          <ViewerPhoto key={`${photo.id}:${photo.display_url}:${photo.thumb_url}`} photo={photo} />
           <figcaption className="viewer-caption">
             <span id="viewer-place" className="viewer-place">
               {place}

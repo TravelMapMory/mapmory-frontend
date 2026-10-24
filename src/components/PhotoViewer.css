@@ -74,6 +74,12 @@
   border-radius: var(--r-sm);
 }
 
+.viewer-unavailable {
+  padding: 24px;
+  text-align: center;
+  color: #c9d1dd;
+}
+
 .viewer-caption {
   display: flex;
   flex-direction: column;
