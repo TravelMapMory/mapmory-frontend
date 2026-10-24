@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { toTripDetail, toTripPage, toTripSummary, type ApiTrip } from '../../src/api/adapters'
-import { ApiError, request, setTokenProvider, setUnauthorizedHandler } from '../../src/api/http'
+import { ApiError, request, setTokenProvider } from '../../src/api/http'
 import { authErrorMessage } from '../../src/authErrors'
 
 // Exactly what mapmory-backend's POST /api/trips returns today.
@@ -65,7 +65,6 @@ test.describe('request', () => {
   test.afterEach(() => {
     globalThis.fetch = realFetch
     setTokenProvider(async () => null)
-    setUnauthorizedHandler(() => {})
   })
 
   test('sends JSON with the ID token and drops empty query values', async () => {
@@ -96,22 +95,31 @@ test.describe('request', () => {
   test('a 401 is retried once with a refreshed token', async () => {
     answer([401, unauthorized], [200, { uid: 'u1' }])
     setTokenProvider(async (force) => (force ? 'fresh' : 'stale'))
-    let lost = false
-    setUnauthorizedHandler(() => (lost = true))
     expect(await request('GET', '/api/auth/me')).toEqual({ uid: 'u1' })
     expect([authHeader(0), authHeader(1)]).toEqual(['Bearer stale', 'Bearer fresh'])
-    expect(lost).toBe(false)
   })
 
-  test('a second 401 ends the session without looping', async () => {
+  test('a second 401 reports the backend error without looping or logging out', async () => {
     answer([401, unauthorized])
     setTokenProvider(async () => 'revoked')
-    let lost = 0
-    setUnauthorizedHandler(() => lost++)
     const error = await request('GET', '/api/auth/me').catch((e: unknown) => e)
     expect(error).toMatchObject({ status: 401, code: 'unauthorized' })
     expect(calls).toHaveLength(2)
-    expect(lost).toBe(1)
+  })
+
+  test('a failed forced refresh propagates the error without a second request', async () => {
+    answer([401, unauthorized])
+    setTokenProvider(async (force) => {
+      if (force) throw new Error('refresh failed')
+      return 'expired'
+    })
+    await expect(request('GET', '/api/auth/me')).rejects.toThrow('refresh failed')
+    expect(calls).toHaveLength(1)
+  })
+
+  test('a 204 response does not attempt JSON parsing', async () => {
+    globalThis.fetch = (async () => new Response(null, { status: 204 })) as typeof fetch
+    await expect(request('DELETE', '/api/example')).resolves.toBeUndefined()
   })
 
   test('a signed-out 401 and server errors are not retried as auth failures', async () => {

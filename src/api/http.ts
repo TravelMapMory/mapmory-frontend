@@ -24,15 +24,9 @@ export class ApiError extends Error {
  */
 type TokenProvider = (forceRefresh: boolean) => Promise<string | null>
 let tokenProvider: TokenProvider = async () => null
-/** Called when the backend refuses even a refreshed token: the session is gone. */
-let onUnauthorized: () => void = () => {}
 
 export function setTokenProvider(provider: TokenProvider) {
   tokenProvider = provider
-}
-
-export function setUnauthorizedHandler(handler: () => void) {
-  onUnauthorized = handler
 }
 
 export interface RequestOptions {
@@ -82,13 +76,13 @@ async function send(method: string, path: string, options: RequestOptions, force
  * Sends one request and returns the parsed JSON body. Rejects with ApiError
  * for non-2xx answers, and with the fetch AbortError when `signal` aborts.
  * A 401 on a signed request is retried once with a refreshed token; a second
- * 401 ends the session.
+ * 401 is returned to the caller. A repeated 401 can indicate a server-side
+ * configuration problem, not necessarily an invalid Firebase session.
  */
 export async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
   let { response, sentToken } = await send(method, path, options, false)
   if (response.status === 401 && sentToken) {
     ;({ response, sentToken } = await send(method, path, options, true))
-    if (response.status === 401 && sentToken) onUnauthorized()
   }
   if (!response.ok) throw await readError(response)
   if (response.status === 204) return undefined as T

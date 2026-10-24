@@ -14,7 +14,7 @@ import {
   updateProfile,
   type Auth,
 } from 'firebase/auth'
-import { setTokenProvider, setUnauthorizedHandler } from './api/http'
+import { setTokenProvider } from './api/http'
 
 export { authErrorMessage } from './authErrors'
 
@@ -36,8 +36,6 @@ function firebaseAuth(): Auth {
     const current = auth
     // A fresh token per request; the SDK caches it and renews it before expiry (issue #22).
     setTokenProvider(async (forceRefresh) => (current.currentUser ? current.currentUser.getIdToken(forceRefresh) : null))
-    // The backend still refuses a refreshed token: the session is gone, so sign in again.
-    setUnauthorizedHandler(() => void signOut(current))
   }
   return auth
 }
