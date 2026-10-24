@@ -19,6 +19,7 @@ import {
 import { getTrip, listTripPhotos, patchPhotoLocation } from './api/client'
 import type { LocationPatch, Photo, TripDetail } from './api/types'
 import LocationPicker, { type LatLng } from './components/LocationPicker'
+import PhotoViewer, { viewerImage } from './components/PhotoViewer'
 import UploadPanel from './components/UploadPanel'
 import VisibilityBadge from './components/VisibilityBadge'
 import { formatCaptured, formatDateRange, plural } from './format'
@@ -79,6 +80,21 @@ function Thumb({ photo }: { photo: Photo }) {
     <div className="trip-thumb-empty">
       <ImageOff size={22} aria-hidden />
     </div>
+  )
+}
+
+/** A thumbnail that opens the full-photo viewer, when the photo has an image to show. */
+function ViewableThumb({ photo, onView }: { photo: Photo; onView: (photo: Photo) => void }) {
+  if (!viewerImage(photo)) return <Thumb photo={photo} />
+  return (
+    <button
+      type="button"
+      className="trip-view"
+      aria-label={`View photo${photo.place_name ? ` at ${photo.place_name}` : ''}`}
+      onClick={() => onView(photo)}
+    >
+      <Thumb photo={photo} />
+    </button>
   )
 }
 
@@ -206,7 +222,13 @@ function previousLocated(photos: Photo[], photo: Photo): (LatLng & { label: stri
   return null
 }
 
-function Gallery({ photos, onCorrect }: { photos: Photo[]; onCorrect: (photo: Photo) => void }) {
+interface PhotoListProps {
+  photos: Photo[]
+  onCorrect: (photo: Photo) => void
+  onView: (photo: Photo) => void
+}
+
+function Gallery({ photos, onCorrect, onView }: PhotoListProps) {
   return (
     <ul className="trip-gallery">
       {photos.map((photo) => {
@@ -214,7 +236,7 @@ function Gallery({ photos, onCorrect }: { photos: Photo[]; onCorrect: (photo: Ph
         return (
           <li key={photo.id} className="trip-tile">
             <div className="trip-tile-img">
-              <Thumb photo={photo} />
+              <ViewableThumb photo={photo} onView={onView} />
               {status ? (
                 <span className="trip-tile-badge">
                   <StatusBadge status={status} />
@@ -241,14 +263,19 @@ const dayHeading = new Intl.DateTimeFormat('en-GB', {
   timeZone: 'UTC',
 })
 
-/** Journey log (doc 3.2): the trip day by day, in capture order. */
-function Journey({ photos, onCorrect }: { photos: Photo[]; onCorrect: (photo: Photo) => void }) {
+/** The trip's photos grouped by capture day, days in order and undated photos last. */
+function journeyDays(photos: Photo[]): [string, Photo[]][] {
   const days = new Map<string, Photo[]>()
   for (const photo of photos) {
     const key = photo.capture_time_local?.slice(0, 10) ?? 'undated'
     days.set(key, [...(days.get(key) ?? []), photo])
   }
-  const ordered = [...days].sort(([a], [b]) => (a === 'undated' ? 1 : b === 'undated' ? -1 : a.localeCompare(b)))
+  return [...days].sort(([a], [b]) => (a === 'undated' ? 1 : b === 'undated' ? -1 : a.localeCompare(b)))
+}
+
+/** Journey log (doc 3.2): the trip day by day, in capture order. */
+function Journey({ photos, onCorrect, onView }: PhotoListProps) {
+  const ordered = journeyDays(photos)
   // Days count from the trip's first day, so a day without photos still advances the number.
   const first = ordered[0]?.[0]
   const dayNumber = (day: string) =>
@@ -267,7 +294,7 @@ function Journey({ photos, onCorrect }: { photos: Photo[]; onCorrect: (photo: Ph
               return (
                 <li key={photo.id} className="trip-row">
                   <div className="trip-row-thumb">
-                    <Thumb photo={photo} />
+                    <ViewableThumb photo={photo} onView={onView} />
                   </div>
                   <div className="trip-row-text">
                     <p className="trip-tile-place">{photo.place_name ?? 'No location'}</p>
@@ -296,6 +323,7 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [view, setView] = useState<View>('gallery')
   const [correcting, setCorrecting] = useState<Photo | null>(null)
+  const [viewing, setViewing] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [uploading, setUploading] = useState(Boolean(initialFiles?.length))
 
@@ -477,11 +505,20 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
             ) : null}
           </div>
         ) : view === 'gallery' ? (
-          <Gallery photos={photos} onCorrect={setCorrecting} />
+          <Gallery photos={photos} onCorrect={setCorrecting} onView={(photo) => setViewing(photo.id)} />
         ) : (
-          <Journey photos={photos} onCorrect={setCorrecting} />
+          <Journey photos={photos} onCorrect={setCorrecting} onView={(photo) => setViewing(photo.id)} />
         )}
       </section>
+
+      {viewing ? (
+        <PhotoViewer
+          // The viewer pages in the order the current view shows the photos.
+          photos={(view === 'journey' ? journeyDays(photos).flatMap(([, day]) => day) : photos).filter(viewerImage)}
+          startId={viewing}
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
     </div>
   )
 }
