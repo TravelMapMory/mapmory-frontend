@@ -204,6 +204,8 @@ test('full-photo viewer closes with Escape and returns focus to the thumbnail', 
   await thumb.focus()
   await page.keyboard.press('Enter')
   await expect(page.getByRole('dialog', { name: 'Pantheon, Rome' })).toBeVisible()
+  await expect(page.getByRole('dialog').getByLabel('Keyboard shortcuts')).toContainText('navigate')
+  await expect(page.getByRole('dialog').getByLabel('Keyboard shortcuts')).toContainText('Esc')
   await expect(page.getByRole('button', { name: 'Close photo' })).toBeFocused()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog')).toHaveCount(0)

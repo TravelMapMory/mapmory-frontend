@@ -135,3 +135,15 @@
 .viewer :focus-visible {
   outline-color: #fff;
 }
+
+.viewer-shortcuts {
+  margin: 0;
+  color: #c9d1dd;
+  font-size: 12px;
+  text-align: center;
+}
+
+.viewer-shortcuts kbd {
+  font: inherit;
+  color: #fff;
+}

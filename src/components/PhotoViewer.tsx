@@ -124,6 +124,9 @@ export default function PhotoViewer({ photos, startId, onClose }: PhotoViewerPro
             <ChevronRight size={18} aria-hidden />
           </button>
         </div>
+        <p className="viewer-shortcuts" aria-label="Keyboard shortcuts">
+          <kbd>←</kbd> / <kbd>→</kbd> navigate · <kbd>Esc</kbd> close
+        </p>
       </div>
     </dialog>
   )
