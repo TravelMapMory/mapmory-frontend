@@ -168,7 +168,7 @@ function RecentlyUploaded({ photos }: { photos: Photo[] }) {
                       Needs location
                     </span>
                   )}
-                  <span>Uploaded {formatUploaded(photo.uploaded_at)}</span>
+                  <span>{photo.uploaded_at ? `Uploaded ${formatUploaded(photo.uploaded_at)}` : 'Uploading'}</span>
                 </span>
               </li>
             )
