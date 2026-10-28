@@ -1,0 +1,76 @@
+.trip-edit {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+  max-width: 640px;
+  padding: 20px;
+  background: var(--c-surface);
+  border: 2px solid var(--c-action);
+  border-radius: var(--r-md);
+}
+
+.trip-edit-heading {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.trip-edit-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.trip-edit-field label {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.trip-edit-optional,
+.trip-edit-count {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--c-text-2);
+}
+
+.trip-edit-count {
+  margin: 0;
+  align-self: flex-end;
+}
+
+.trip-edit-input {
+  min-width: 0;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid #8a93a3;
+  border-radius: var(--r-sm);
+  background: var(--c-surface);
+  font: inherit;
+  font-size: 14px;
+  color: var(--c-text);
+}
+
+.trip-edit-input[aria-invalid='true'] {
+  border-color: #b42318;
+}
+
+.trip-edit-notes {
+  height: auto;
+  min-height: 80px;
+  padding: 8px 12px;
+  resize: vertical;
+}
+
+.trip-edit-invalid,
+.trip-edit-error {
+  margin: 0;
+  font-size: 14px;
+  color: #b42318;
+}
+
+.trip-edit-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
