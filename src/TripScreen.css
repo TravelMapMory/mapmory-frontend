@@ -71,6 +71,27 @@
   color: var(--c-text);
 }
 
+.trip-edit-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-action);
+}
+
+.trip-edit-open:hover {
+  text-decoration: underline;
+}
+
+.trip-head-text:has(.trip-edit) {
+  flex: 1 1 100%;
+}
+
 .trip-head-actions {
   display: flex;
   flex-wrap: wrap;

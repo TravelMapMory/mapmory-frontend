@@ -26,10 +26,13 @@ import uspenskiCathedral from '../assets/pins/helsinki-uspenski.jpg'
 import suomenlinna from '../assets/pins/helsinki-suomenlinna.jpg'
 import { readPhotoMetadata, sniffImageKind } from './exif'
 import type { AcceptanceOptions, MockOperation } from './acceptanceOptions'
-import { toPhoto, uploadErrorMessage } from './adapters'
+import { toPhoto, toTripDetail, uploadErrorMessage } from './adapters'
 import type { ApiCreateTrip, ApiDisplayImage, ApiPage, ApiPhoto, ApiTrip } from './contract'
+import { ApiError } from './http'
+import { NOTES_MAX, TITLE_MAX } from './limits'
 import type {
   LabelStatus,
+  UpdateTripInput,
   LocationPatch,
   MapPhoto,
   MapPhotoPage,
@@ -38,6 +41,7 @@ import type {
   Photo,
   Place,
   UploadItem,
+  TripDetail,
 } from './types'
 
 interface TripRow {
@@ -357,6 +361,23 @@ export async function mockGetTrip(id: string, signal?: AbortSignal): Promise<Api
   const row = trips.find((t) => t.id === id)
   if (!row) return Promise.reject(new NotFoundError('Trip'))
   return delay(summarise(row), undefined, signal)
+}
+
+/** Title and notes, validated the way the backend must: a title is required, notes may be cleared. */
+export async function mockUpdateTrip(id: string, input: UpdateTripInput): Promise<TripDetail> {
+  await beforeOperation('updateTrip')
+  const row = trips.find((t) => t.id === id)
+  if (!row) return Promise.reject(new NotFoundError('Trip'))
+  const title = input.title?.trim()
+  if (title !== undefined && (!title || title.length > TITLE_MAX)) {
+    return Promise.reject(new ApiError(400, 'invalid_title', `A trip title needs 1 to ${TITLE_MAX} characters.`))
+  }
+  if (input.notes !== undefined && input.notes.length > NOTES_MAX) {
+    return Promise.reject(new ApiError(400, 'invalid_notes', `Notes can be at most ${NOTES_MAX} characters.`))
+  }
+  if (title !== undefined) row.title = title
+  if (input.notes !== undefined) row.notes = input.notes.trim() || null
+  return delay(toTripDetail(summarise(row)))
 }
 
 /** Every photo of the trip, located or not, in capture order (journey log). */

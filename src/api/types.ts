@@ -88,6 +88,11 @@ export interface CreateTripInput {
   title: string
   notes?: string
 }
+/** `PATCH /api/trips/{id}` body: only the fields that change. Empty notes clear them. */
+export interface UpdateTripInput {
+  title?: string
+  notes?: string
+}
 /** `GET /api/trips/{id}`: the summary plus the cover the owner chose. */
 export interface TripDetail extends TripSummary {
   cover_photo_id: string | null
