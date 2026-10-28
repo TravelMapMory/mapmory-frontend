@@ -166,3 +166,90 @@ test('loading status is shown while reading Dashboard, Map and Trip', async ({ p
   await expect(page.getByText('Loading trip…')).toBeVisible()
   await expect(page.locator('.trip-tile')).toHaveCount(3)
 })
+
+test('full-photo viewer opens from a thumbnail, pages with buttons and arrows, and closes', async ({ page }) => {
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+  const thumb = page.getByRole('button', { name: 'View photo at Colosseum, Rome', exact: true })
+  await thumb.click()
+  const viewer = page.getByRole('dialog', { name: 'Colosseum, Rome' })
+  await expect(viewer).toBeVisible()
+  await expect(viewer.getByRole('img', { name: 'Photo at Colosseum, Rome' })).toBeVisible()
+  await expect(viewer).toContainText('1 of 3')
+  await expect(viewer.getByRole('button', { name: 'Previous' })).toHaveAttribute('aria-disabled', 'true')
+  // Viewing is separate from correcting: no location controls in the viewer.
+  await expect(viewer.getByRole('button', { name: /location|place/i })).toHaveCount(0)
+
+  await viewer.getByRole('button', { name: 'Next' }).click()
+  await expect(page.getByRole('dialog', { name: 'Pantheon, Rome' })).toContainText('2 of 3')
+  await page.keyboard.press('ArrowRight')
+  await expect(page.getByRole('dialog', { name: 'No location' })).toContainText('3 of 3')
+  await expect(page.getByRole('dialog').getByRole('button', { name: 'Next' })).toHaveAttribute('aria-disabled', 'true')
+  await page.keyboard.press('ArrowRight')
+  await expect(page.getByRole('dialog')).toContainText('3 of 3')
+  await page.keyboard.press('ArrowLeft')
+  await expect(page.getByRole('dialog')).toContainText('2 of 3')
+
+  await page.getByRole('button', { name: 'Close photo' }).click()
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(thumb).toBeFocused()
+  await expect(page.locator('.trip-correct')).toHaveCount(0)
+})
+
+test('full-photo viewer closes with Escape and returns focus to the thumbnail', async ({ page }) => {
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+  await page.getByRole('button', { name: 'Journey', exact: true }).click()
+  const thumb = page.getByRole('button', { name: 'View photo at Pantheon, Rome', exact: true })
+  await thumb.focus()
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('dialog', { name: 'Pantheon, Rome' })).toBeVisible()
+  await expect(page.getByRole('dialog').getByLabel('Keyboard shortcuts')).toContainText('navigate')
+  await expect(page.getByRole('dialog').getByLabel('Keyboard shortcuts')).toContainText('Esc')
+  await expect(page.getByRole('button', { name: 'Close photo' })).toBeFocused()
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(thumb).toBeFocused()
+})
+
+// A failed asset request should not leave the viewer displaying a broken-image icon.
+test('full-photo viewer shows a fallback when an image cannot load', async ({ page }) => {
+  // Intercept the asset before the gallery can load or cache it.
+  await page.route('**/rome-st-peters*.jpg', (route) =>
+    route.fulfill({
+      status: 404,
+      contentType: 'text/plain',
+      body: '',
+    }),
+  )
+
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+
+  await page
+    .getByRole('button', {
+      name: 'View photo at Colosseum, Rome',
+      exact: true,
+    })
+    .click()
+
+  await page.keyboard.press('ArrowRight')
+  await page.keyboard.press('ArrowRight')
+
+  const viewer = page.getByRole('dialog', {
+    name: 'No location',
+  })
+
+  await expect(viewer.getByRole('status')).toHaveText(
+    'Photo unavailable',
+  )
+
+  // A failed image must not affect navigation to another photo.
+  await page.keyboard.press('ArrowLeft')
+
+  await expect(
+    page
+      .getByRole('dialog', { name: 'Pantheon, Rome' })
+      .getByRole('img'),
+  ).toBeVisible()
+})

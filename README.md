@@ -115,6 +115,8 @@ Invalid routes and nonexistent trips display a "Page not found" screen. Authenti
 - **Trip details** (`src/TripScreen.tsx`): Trip information, photo gallery, journey view, uploads, and location correction.
 - **Map** (`src/MapScreen.tsx`): Clustered photo markers, trip and date filters, place search, and photo previews.
 
+**Photo viewer controls:** Select a thumbnail in the Gallery or Journey view to open the viewer. Use **← / →** or Previous/Next to move between photos, **Esc** or Close to dismiss it, and **Tab** / **Shift+Tab** to move between controls. Press **Enter** or **Space** to activate a focused button. Clicking the backdrop also closes the viewer. Closing returns keyboard focus to the thumbnail that opened it.
+
 The earlier Profile screen from the Figma mock-up was removed following team agreement because it was not part of the design document.
 
 ## Architecture

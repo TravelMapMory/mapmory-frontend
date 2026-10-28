@@ -25,6 +25,7 @@ opens the last HTML report. Failed tests retain a screenshot and trace.
 | World search | Independent from photo filters, suggestion click, arrows/Enter/Escape, minimum query length, no results, failure/retry, Clear and focus, stale suggestion prevention | `map-controls.spec.ts`, `keyboard-and-layout.spec.ts` |
 | Photos at a place | Country/city separation, photo previous/next and wrap, keyboard arrows, counter, trip previous/next and wrap, single-photo controls, Open trip, Close/Escape | `map-controls.spec.ts`, `acceptance.spec.ts`, `keyboard-and-layout.spec.ts` |
 | Trip navigation/views | Back, Show on map, Gallery/Journey pressed states, Upload toggle, dated/undated sections, empty trip, loading/read failures and retries | `trip-and-correction.spec.ts` |
+| Full-photo viewer | Gallery/Journey thumbnail opening, arrow/button navigation, boundaries, Escape/Close and focus return, unavailable-image state | `trip-and-correction.spec.ts` |
 | Photo state/action presentation | Processing states, ready, missing location, failure; appropriate Change/Set/Review actions | `trip-and-correction.spec.ts` |
 | Location correction | Review next, confirm suggested label, current location, keyboard search, previous-photo location, click/drag pin, Save/Cancel/Escape, save retry, preserved capture metadata, updated totals/map | `trip-and-correction.spec.ts`, `acceptance.spec.ts` |
 | Upload input/progress | JPEG/PNG, missing EXIF, GPS/capture time, invalid dates, malformed image, HEIC, invalid type, exact byte limit, independent mixed results, queued files, progress completion | `upload.spec.ts`, `upload-controls.spec.ts` |
@@ -53,7 +54,7 @@ not HTTP interception or an integration test of Go/Firebase/GCS.
 
 ## Deliberately outside this suite
 
-- Unimplemented title/notes editing and full-photo gallery viewing.
+- Unimplemented title/notes editing; full-resolution image retrieval and signed URL renewal remain outside this suite.
 - Production registration identity, concurrent completion, interrupted processing,
   persistence and expired signed URL renewal. The temporary mock still has the
   documented cross-trip deduplication and concurrent duplicate limitations.

@@ -267,6 +267,20 @@
   object-fit: cover;
 }
 
+.trip-view {
+  display: block;
+  width: 100%;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: inherit;
+  cursor: zoom-in;
+}
+
+.trip-row-thumb .trip-view {
+  border-radius: var(--r-xs);
+}
+
 .trip-thumb-empty {
   display: grid;
   place-items: center;
