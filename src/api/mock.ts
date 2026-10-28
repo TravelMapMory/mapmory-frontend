@@ -22,7 +22,9 @@ import uspenskiCathedral from '../assets/pins/helsinki-uspenski.jpg'
 import suomenlinna from '../assets/pins/helsinki-suomenlinna.jpg'
 import { readPhotoMetadata, sniffImageKind } from './exif'
 import type { AcceptanceOptions, MockOperation } from './acceptanceOptions'
+import { ApiError } from './http'
 import type {
+  CreateShareInput,
   CreateTripInput,
   LocationPatch,
   MapPhoto,
@@ -32,6 +34,9 @@ import type {
   Page,
   Photo,
   Place,
+  Share,
+  SharedCollection,
+  SharedPhoto,
   TripDetail,
   TripSummary,
   UploadItem,
@@ -677,4 +682,167 @@ export async function mockUploadPhotos(
     }
   }
   await Promise.all(Array.from({ length: UPLOAD_CONCURRENCY }, worker))
+}
+
+/** A share row: the owner's view plus the secret token its link carries. */
+interface ShareRow extends Omit<Share, 'url'> {
+  token: string
+}
+
+/** Two demo links, so the recipient view can be shown without creating one first. */
+const shares: ShareRow[] = [
+  {
+    id: 'share-europe',
+    token: 'demo-europe',
+    trip_id: 'trip-europe',
+    mode: 'link',
+    title: 'Highlights from Europe by rail',
+    description: 'Paris, London and Berlin, for the family.',
+    photo_ids: ['p-eu-1', 'p-eu-3', 'p-eu-4'],
+    created_at: '2026-06-21T09:00:00Z',
+    revoked_at: null,
+  },
+  {
+    id: 'share-old',
+    token: 'demo-revoked',
+    trip_id: 'trip-europe',
+    mode: 'link',
+    title: 'Old link',
+    description: null,
+    photo_ids: ['p-eu-1'],
+    created_at: '2026-06-20T12:00:00Z',
+    revoked_at: '2026-06-22T08:00:00Z',
+  },
+]
+
+/*
+ * Links outlive a reload in the real app, so the mock keeps them in this
+ * browser's storage: a link created here can be pasted into the address bar
+ * or another tab. Acceptance tests start each run from the demo links only.
+ */
+const SHARES_KEY = 'mapmory.mock.shares'
+
+function loadShares() {
+  if (acceptance) return
+  try {
+    const saved = JSON.parse(localStorage.getItem(SHARES_KEY) ?? '[]') as ShareRow[]
+    for (const row of saved) {
+      const index = shares.findIndex((s) => s.id === row.id)
+      if (index >= 0) shares[index] = row
+      else shares.push(row)
+    }
+  } catch {
+    // Blocked or corrupt storage: start from the demo links.
+  }
+}
+
+function saveShares() {
+  if (acceptance) return
+  try {
+    localStorage.setItem(SHARES_KEY, JSON.stringify(shares))
+  } catch {
+    // Storage can be blocked; links then last until reload.
+  }
+}
+
+loadShares()
+
+function shareUrl(token: string): string {
+  return `${window.location.origin}/s/${token}`
+}
+
+function toShare({ token, ...row }: ShareRow): Share {
+  return { ...row, url: shareUrl(token) }
+}
+
+/** Only photos with an image can be shared; processing and failed ones have nothing to show. */
+function isShareable(p: Photo): boolean {
+  return (p.state === 'ready' || p.state === 'needs-location') && p.display_url !== null
+}
+
+/** A long random token: the link is the only key to the share, so it must not be guessable. */
+function newToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(18))
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_')
+}
+
+/** The owner's active links for a trip, newest first. Revoked links are history, not shown. */
+export async function mockListShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
+  await beforeOperation('listShares', signal)
+  const items = shares
+    .filter((s) => s.trip_id === tripId && s.revoked_at === null)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map(toShare)
+  return delay(items, undefined, signal)
+}
+
+export async function mockCreateShare(tripId: string, input: CreateShareInput): Promise<Share> {
+  await beforeOperation('createShare')
+  if (!trips.some((t) => t.id === tripId)) throw new ApiError(404, 'not_found', 'Trip not found')
+  const title = input.title.trim()
+  const ids = [...new Set(input.photo_ids)]
+  // Every photo must belong to this trip: a share can never reach into another trip.
+  const valid = ids.every((id) => photos.some((p) => p.id === id && p.trip_id === tripId && isShareable(p)))
+  if (!title || ids.length === 0 || !valid) throw new ApiError(400, 'invalid_request', 'Choose at least one photo of this trip')
+  const row: ShareRow = {
+    id: `share-${Date.now()}`,
+    token: newToken(),
+    trip_id: tripId,
+    mode: 'link',
+    title,
+    description: input.description?.trim() || null,
+    photo_ids: ids,
+    created_at: new Date().toISOString(),
+    revoked_at: null,
+  }
+  shares.push(row)
+  saveShares()
+  return delay(toShare(row))
+}
+
+/** DELETE /api/shares/{id}: the link stops working at once; the photos stay in the trip. */
+export async function mockRevokeShare(id: string): Promise<void> {
+  await beforeOperation('revokeShare')
+  const row = shares.find((s) => s.id === id)
+  if (!row) throw new ApiError(404, 'not_found', 'Share not found')
+  row.revoked_at ??= new Date().toISOString()
+  saveShares()
+  return delay(undefined)
+}
+
+/** The centre of the photo's city: shared views never reveal where exactly a photo was taken. */
+function cityCentre(p: Photo): { lat: number; lng: number } | null {
+  const centre = CITIES.find((c) => c.city === p.city && c.country === p.country)
+  return centre ? { lat: centre.lat, lng: centre.lng } : null
+}
+
+function toSharedPhoto(p: Photo): SharedPhoto {
+  const centre = p.lat !== null ? cityCentre(p) : null
+  return {
+    id: p.id,
+    thumb_url: p.thumb_url,
+    display_url: p.display_url,
+    capture_time_local: p.capture_time_local,
+    city: p.city,
+    country: p.country,
+    display_lat: centre?.lat ?? null,
+    display_lng: centre?.lng ?? null,
+  }
+}
+
+/**
+ * GET /api/s/{token}, callable without signing in. An unknown token is 404;
+ * a revoked one is 410, so the recipient can be told the owner turned it off.
+ */
+export async function mockSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
+  await beforeOperation('sharedCollection', signal)
+  const row = shares.find((s) => s.token === token)
+  if (!row) throw new ApiError(404, 'not_found', 'Share not found')
+  if (row.revoked_at) throw new ApiError(410, 'share_revoked', 'This link was turned off')
+  const shown = photos.filter((p) => row.photo_ids.includes(p.id) && isShareable(p)).sort(byCapture)
+  return delay(
+    { title: row.title, description: row.description, created_at: row.created_at, photos: shown.map(toSharedPhoto) },
+    undefined,
+    signal,
+  )
 }
