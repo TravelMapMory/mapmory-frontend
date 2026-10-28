@@ -152,3 +152,53 @@ export interface UploadItem {
   error: string | null
   photo: Photo | null
 }
+
+/** How a share reaches people (doc 5.3 SHARE.mode). Increment 2 has link shares only. */
+export type ShareMode = 'link' | 'public'
+
+/** A share as its owner manages it. */
+export interface Share {
+  id: string
+  trip_id: string
+  mode: ShareMode
+  title: string
+  description: string | null
+  /** The photos the share shows; the rest of the trip stays private. */
+  photo_ids: string[]
+  /** Recipient address with the secret token. Only the owner ever receives it. */
+  url: string
+  created_at: string
+  revoked_at: string | null
+}
+
+/** `POST /api/trips/{id}/shares` body. */
+export interface CreateShareInput {
+  mode: 'link'
+  title: string
+  description?: string
+  photo_ids: string[]
+}
+
+/**
+ * One photo as a recipient sees it (doc 3.3): a city-level position instead
+ * of the exact one, and nothing about the rest of the trip.
+ */
+export interface SharedPhoto {
+  id: string
+  thumb_url: string | null
+  display_url: string | null
+  capture_time_local: string | null
+  city: string | null
+  country: string | null
+  /** The city's centre, or null when the photo has no city. Never the exact spot. */
+  display_lat: number | null
+  display_lng: number | null
+}
+
+/** `GET /api/s/{token}`: what anyone with the link sees, without signing in. */
+export interface SharedCollection {
+  title: string
+  description: string | null
+  created_at: string
+  photos: SharedPhoto[]
+}

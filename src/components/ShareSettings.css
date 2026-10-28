@@ -1,0 +1,282 @@
+.share {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+}
+
+.share *,
+.share *::before,
+.share *::after {
+  box-sizing: border-box;
+}
+
+.share-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.share-h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.share-h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.share-caption {
+  margin: 0;
+  font-size: 12px;
+  color: var(--c-text-2);
+}
+
+.share-message {
+  margin: 0;
+  padding: 10px 14px;
+  background: var(--c-accent);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: #14532d;
+}
+
+.share-error {
+  margin: 0;
+  font-size: 14px;
+  color: #b42318;
+}
+
+.share-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.share-status p {
+  margin: 0;
+}
+
+.share-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.share-link {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+}
+
+.share-link-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.share-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.share-input {
+  flex: 1 1 240px;
+  min-width: 0;
+  min-height: 36px;
+  padding: 6px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-xs);
+  font: inherit;
+  font-size: 14px;
+  color: var(--c-text);
+  background: var(--c-surface);
+}
+
+.share-textarea {
+  resize: vertical;
+}
+
+.share-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fdf0e1;
+  border: 1px solid #f1d2ad;
+  border-radius: var(--r-xs);
+  font-size: 14px;
+}
+
+.share-confirm p {
+  margin: 0;
+}
+
+.share-confirm-actions,
+.share-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn-danger {
+  background: #b42318;
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #912018;
+}
+
+.share-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--c-border);
+}
+
+.share-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 560px;
+}
+
+.share-field label,
+.share-photos legend {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.share-optional {
+  font-weight: 400;
+  color: var(--c-text-2);
+}
+
+.share-photos {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.share-photos legend {
+  padding: 0;
+  margin-bottom: 4px;
+}
+
+.share-photos-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.share-text-btn {
+  padding: 4px 0;
+  background: none;
+  border: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-action);
+}
+
+.share-text-btn:hover {
+  text-decoration: underline;
+}
+
+.share-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.share-pick {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+
+.share-pick input {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--c-action);
+}
+
+.share-pick img,
+.share-pick-empty {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 2px solid transparent;
+  border-radius: var(--r-xs);
+}
+
+.share-pick-empty {
+  display: grid;
+  place-items: center;
+  background: var(--c-page);
+  color: var(--c-text-2);
+}
+
+.share-pick:has(input:checked) img,
+.share-pick:has(input:checked) .share-pick-empty {
+  border-color: var(--c-action);
+}
+
+.share-pick:not(:has(input:checked)) img {
+  opacity: 0.6;
+}
+
+.share-pick-name {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.share-audience {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--c-page);
+  border-radius: var(--r-xs);
+  font-size: 14px;
+}
+
+.share-audience svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--c-action);
+}
