@@ -6,6 +6,7 @@ import { firebaseEnabled, logOut, watchSignedIn } from './auth'
 import LandingScreen from './LandingScreen'
 import MapScreen from './MapScreen'
 import NotFoundScreen from './NotFoundScreen'
+import SharedScreen from './SharedScreen'
 import TripScreen from './TripScreen'
 import { isOwnerRoute, navigate, routeTitle, useRoute, type Route } from './router'
 import './App.css'
@@ -131,6 +132,10 @@ export default function App() {
         onBack={() => navigate({ name: 'landing' })}
       />
     )
+  }
+  // A shared link is for anyone, signed in or not, and shows no owner navigation.
+  if (route.name === 'shared') {
+    return <SharedScreen key={route.token} token={route.token} onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })} />
   }
   if (route.name === 'not-found') {
     return <NotFoundScreen signedIn={signedIn} onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })} />

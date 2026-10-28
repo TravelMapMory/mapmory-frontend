@@ -11,18 +11,23 @@ import { toPhotoPage, toTripDetail, toTripPage, toTripSummary } from './adapters
 import type { ApiPage, ApiPhoto, ApiTrip } from './contract'
 import { request } from './http'
 import {
+  mockCreateShare,
   mockCreateTrip,
   mockGetTrip,
+  mockListShares,
   mockListTrips,
   mockMapPhotos,
   mockPatchLocation,
+  mockRevokeShare,
   mockSearchPlaces,
+  mockSharedCollection,
   mockSummary,
   mockTripPhotos,
   mockUpdateTrip,
   mockUploadPhotos,
 } from './mock'
 import type {
+  CreateShareInput,
   CreateTripInput,
   UpdateTripInput,
   LocationPatch,
@@ -32,6 +37,8 @@ import type {
   Page,
   Photo,
   Place,
+  Share,
+  SharedCollection,
   TripDetail,
   TripSummary,
   UploadItem,
@@ -48,6 +55,10 @@ type Endpoint =
   | 'searchPlaces'
   | 'patchLocation'
   | 'upload'
+  | 'listShares'
+  | 'createShare'
+  | 'revokeShare'
+  | 'sharedCollection'
 
 /** Endpoints mapmory-backend serves today. */
 const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
@@ -134,4 +145,24 @@ export function uploadPhotos(
   onUpdate: (item: UploadItem) => void,
 ): Promise<void> {
   return mockUploadPhotos(tripId, files, onUpdate)
+}
+
+/**
+ * GET /api/trips/{id}/shares — the trip's active links. Not in doc 5.2 yet:
+ * proposed so the owner can find a link again and revoke it.
+ */
+export function listShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
+  return mockListShares(tripId, signal)
+}
+/** POST /api/trips/{id}/shares */
+export function createShare(tripId: string, input: CreateShareInput): Promise<Share> {
+  return mockCreateShare(tripId, input)
+}
+/** DELETE /api/shares/{id} — the link stops working; the photos stay in the trip. */
+export function revokeShare(id: string): Promise<void> {
+  return mockRevokeShare(id)
+}
+/** GET /api/s/{token} — anyone with the link, no sign-in. 404 unknown, 410 revoked. */
+export function getSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
+  return mockSharedCollection(token, signal)
 }
