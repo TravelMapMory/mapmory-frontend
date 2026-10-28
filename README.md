@@ -15,7 +15,7 @@ MapMory is currently a working frontend prototype with partial backend integrati
 | Feature | Current status |
 |---|---|
 | Landing page and navigation | Implemented |
-| Sign-up and login | Demo account; Firebase Auth pending |
+| Sign-up and login | Firebase email/password authentication when configured; demo mode otherwise |
 | Dashboard | Implemented |
 | Trip creation and listing | Integrated with Go backend |
 | Trip detail retrieval | Integrated with Go backend |
@@ -25,7 +25,7 @@ MapMory is currently a working frontend prototype with partial backend integrati
 | Interactive map | Implemented with mock photo data |
 | Photo sharing | Planned |
 
-The Go backend currently stores trips in memory. Persistent PostgreSQL storage, authentication, and the photo processing pipeline are pending integration.
+The Go backend currently stores trips in memory. Firebase authentication is integrated in the frontend; database-backed application-user resolution is available separately in backend PR #41. Persistent trip storage, ownership enforcement, and the photo processing pipeline remain pending.
 
 ## Getting started
 
@@ -49,15 +49,7 @@ Create your local environment configuration:
 cp .env.example .env.local
 ```
 
-The example configuration contains:
-
-```dotenv
-# Local Go backend
-VITE_API_URL=http://localhost:8080
-
-# Optional Geoapify browser key
-VITE_GEOAPIFY_KEY=
-```
+The example configuration includes `VITE_API_URL` for the Go backend, `VITE_GEOAPIFY_KEY` for map tiles, and Firebase web app settings. To enable real login, configure `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID` and `VITE_FIREBASE_APP_ID` in `.env.local`. These Firebase web settings are public application configuration, not server secrets.
 
 To use the real trip API, start the Go backend in the backend repository:
 
@@ -111,14 +103,14 @@ Each page has its own URL, supporting browser navigation, refreshing, and direct
 
 Opening a protected page while signed out redirects to `/login`. After signing in, users return to their originally requested page.
 
-Currently, authentication uses a demo account stored in `sessionStorage`. Any credentials are accepted until Firebase Auth is integrated.
+With Firebase configured, authentication uses Firebase email/password accounts and Firebase restores the session after reload. Without Firebase configuration, demo sign-in uses `sessionStorage` and accepts any credentials.
 
 Invalid routes and nonexistent trips display a "Page not found" screen. Authentication and server errors are handled separately.
 
 ### Main screens
 
 - **Landing** (`src/LandingScreen.tsx`): Introduces MapMory and provides sign-up and sign-in entry points.
-- **Authentication** (`src/AuthScreen.tsx`): Sign-up and login forms using the temporary demo account.
+- **Authentication** (`src/AuthScreen.tsx`): Firebase email/password sign-up and login, with demo fallback when unconfigured.
 - **Dashboard** (`src/DashboardScreen.tsx`): Trip cards, summaries, recent photos, trip creation, and empty states.
 - **Trip details** (`src/TripScreen.tsx`): Trip information, photo gallery, journey view, uploads, and location correction.
 - **Map** (`src/MapScreen.tsx`): Clustered photo markers, trip and date filters, place search, and photo previews.
@@ -183,15 +175,30 @@ Trip creation returns the new trip's ID, which the frontend uses to navigate to 
 
 Missing trips return HTTP 404 according to the OpenAPI contract, and the frontend displays its not-found screen.
 
-The HTTP client supports attaching Firebase ID tokens through `setTokenProvider`, but real authentication is not yet integrated.
+The HTTP client attaches Firebase ID tokens when Firebase is configured, and retries a 401 once with a refreshed token. A second 401 is returned as an API error rather than automatically signing out a valid Firebase session.
 
 In development, Vite proxies `/api` requests to the backend configured by `VITE_API_URL`, avoiding the need for separate CORS configuration.
 
 Other operations continue to use mock implementations until their backend endpoints are available.
 
+### Firebase identity versus application-user identity
+
+Firebase signs the user in and provides an ID token. The frontend attaches that token to live backend requests, but does **not** store or send a PostgreSQL `users.id` or an `owner_id`. The backend verifies the Firebase identity and must resolve the application-user UUID from the verified UID itself when enforcing ownership. Never trust a user ID supplied by the browser as an ownership assertion.
+
+Backend PR #41 offers `GET /api/auth/me` (Firebase token verification) and, with `MAPMORY_ENABLE_DB_USER_RESOLUTION=true` and PostgreSQL configured, `GET /api/users/me` (returns `{ id, auth_subject }`). These endpoints are useful for integration testing but **neither is called automatically by the frontend**. A successful Firebase login therefore does not by itself prove backend database availability. The current trip routes are still in-memory and do not enforce user ownership.
+
+To verify end-to-end identity resolution, start the backend according to its `docs/application-user-resolution.md`, configure both applications with the **same Firebase project**, log in from the frontend and copy the ID token from an authenticated `/api/trips` request in DevTools (do not share or commit it). From a local terminal, call:
+
+```bash
+curl -i -H "Authorization: Bearer $FIREBASE_ID_TOKEN" http://localhost:8080/api/auth/me
+curl -i -H "Authorization: Bearer $FIREBASE_ID_TOKEN" http://localhost:8080/api/users/me
+```
+
+Export `FIREBASE_ID_TOKEN` in the shell first. The latter endpoint should return the same `id` on repeated requests for the same account. Avoid logging tokens, passwords or refresh tokens.
+
 Remaining integration work includes:
 
-- Firebase authentication and authorization
+- Backend trip ownership enforcement and authorization
 - Persistent trip and photo storage
 - Cursor-based pagination
 - Signed URL upload registration and completion

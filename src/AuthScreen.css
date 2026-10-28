@@ -69,6 +69,11 @@
   color: var(--c-action);
   text-decoration: underline;
 }
+.auth-error {
+  margin: 0;
+  font-size: 14px;
+  color: #b42318;
+}
 .auth-demo {
   margin: 16px 0 0;
   font-size: 12px;

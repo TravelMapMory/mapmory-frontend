@@ -18,11 +18,11 @@ export class ApiError extends Error {
 }
 
 /**
- * Returns the signed-in user's Firebase ID token, or null when signed out.
- * Firebase Auth is not wired in yet, so requests go without a token; the auth
- * code sets the real provider with setTokenProvider() once it lands.
+ * Returns the signed-in user's Firebase ID token, or null when signed out;
+ * `forceRefresh` asks Firebase for a new one. src/auth.ts sets the real
+ * provider; in demo mode requests go without a token.
  */
-type TokenProvider = () => Promise<string | null>
+type TokenProvider = (forceRefresh: boolean) => Promise<string | null>
 let tokenProvider: TokenProvider = async () => null
 
 export function setTokenProvider(provider: TokenProvider) {
@@ -57,13 +57,9 @@ async function readError(response: Response): Promise<ApiError> {
   return new ApiError(response.status, 'http_error', `${response.status} ${response.statusText}`.trim())
 }
 
-/**
- * Sends one request and returns the parsed JSON body. Rejects with ApiError
- * for non-2xx answers, and with the fetch AbortError when `signal` aborts.
- */
-export async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
+async function send(method: string, path: string, options: RequestOptions, forceRefresh: boolean) {
   const headers: Record<string, string> = { Accept: 'application/json' }
-  const token = await tokenProvider()
+  const token = await tokenProvider(forceRefresh)
   if (token) headers.Authorization = `Bearer ${token}`
   if (options.body !== undefined) headers['Content-Type'] = 'application/json'
 
@@ -73,6 +69,21 @@ export async function request<T>(method: string, path: string, options: RequestO
     body: options.body === undefined ? undefined : JSON.stringify(options.body),
     signal: options.signal,
   })
+  return { response, sentToken: Boolean(token) }
+}
+
+/**
+ * Sends one request and returns the parsed JSON body. Rejects with ApiError
+ * for non-2xx answers, and with the fetch AbortError when `signal` aborts.
+ * A 401 on a signed request is retried once with a refreshed token; a second
+ * 401 is returned to the caller. A repeated 401 can indicate a server-side
+ * configuration problem, not necessarily an invalid Firebase session.
+ */
+export async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<T> {
+  let { response, sentToken } = await send(method, path, options, false)
+  if (response.status === 401 && sentToken) {
+    ;({ response, sentToken } = await send(method, path, options, true))
+  }
   if (!response.ok) throw await readError(response)
   if (response.status === 204) return undefined as T
   return (await response.json()) as T
