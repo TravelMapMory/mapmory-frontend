@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Header, { type Screen } from './components/Header'
 import DashboardScreen from './DashboardScreen'
 import AuthScreen from './AuthScreen'
+import { firebaseEnabled, logOut, watchSignedIn } from './auth'
 import LandingScreen from './LandingScreen'
 import MapScreen from './MapScreen'
 import NotFoundScreen from './NotFoundScreen'
@@ -11,7 +12,8 @@ import './App.css'
 
 /**
  * Remembers the demo sign-in for this tab, so a reload does not drop the
- * owner back on the landing page. Firebase Auth will replace this.
+ * owner back on the landing page. With Firebase configured, Firebase keeps
+ * the session instead (src/auth.ts).
  */
 const SESSION_KEY = 'mapmory.signedIn'
 
@@ -37,7 +39,8 @@ function writeSignedIn(value: boolean) {
  * when it is theirs to see. Owner pages send signed-out visitors to log in;
  * the landing and sign-in pages send a signed-in owner to the Dashboard.
  */
-function redirectFor(route: Route, signedIn: boolean): Route | null {
+function redirectFor(route: Route, signedIn: boolean | null): Route | null {
+  if (signedIn === null) return null
   if (!signedIn && isOwnerRoute(route)) return { name: 'login' }
   if (signedIn && (route.name === 'landing' || route.name === 'signup' || route.name === 'login')) {
     return { name: 'dashboard' }
@@ -54,7 +57,8 @@ function redirectFor(route: Route, signedIn: boolean): Route | null {
  */
 export default function App() {
   const route = useRoute()
-  const [signedIn, setSignedIn] = useState(readSignedIn)
+  /** null until Firebase has restored or ruled out a session, so private pages never flash. */
+  const [signedIn, setSignedIn] = useState<boolean | null>(() => (firebaseEnabled ? null : readSignedIn()))
   /** The owner page a signed-out visitor asked for, opened after they log in. */
   const returnTo = useRef<Route | null>(null)
   /** Files chosen on the Dashboard, handed to the trip page once. */
@@ -62,10 +66,19 @@ export default function App() {
 
   const redirect = useMemo(() => redirectFor(route, signedIn), [route, signedIn])
 
+  // Firebase is the external system here: it restores the session, then reports every change.
+  useEffect(() => (firebaseEnabled ? watchSignedIn(setSignedIn) : undefined), [])
+
   useEffect(() => {
     if (!redirect) return
+    let next = redirect
     if (redirect.name === 'login') returnTo.current = route
-    navigate(redirect, { replace: true })
+    else if (redirect.name === 'dashboard' && returnTo.current) {
+      // Just signed in: open the owner page that sent them to log in.
+      next = returnTo.current
+      returnTo.current = null
+    }
+    navigate(next, { replace: true })
   }, [redirect, route])
 
   useEffect(() => {
@@ -77,15 +90,14 @@ export default function App() {
     if (pendingUpload && !(route.name === 'trip' && route.tripId === pendingUpload.tripId)) setPendingUpload(null)
   }, [route, pendingUpload])
 
+  // Signing in leaves the log-in page through the redirect above.
   function signIn() {
-    writeSignedIn(true)
+    if (!firebaseEnabled) writeSignedIn(true)
     setSignedIn(true)
-    const next = returnTo.current ?? { name: 'dashboard' }
-    returnTo.current = null
-    navigate(next, { replace: true })
   }
-  function signOut() {
-    writeSignedIn(false)
+  async function signOut() {
+    if (firebaseEnabled) await logOut()
+    else writeSignedIn(false)
     setSignedIn(false)
     navigate({ name: 'landing' })
   }
@@ -104,8 +116,8 @@ export default function App() {
     navigate({ name: 'trip', tripId })
   }
 
-  // Render nothing for the one frame before a redirect lands.
-  if (redirect) return null
+  // Render nothing while Firebase restores the session, and for the one frame before a redirect lands.
+  if (signedIn === null || redirect) return null
 
   if (route.name === 'landing') {
     return <LandingScreen onSignIn={() => navigate({ name: 'login' })} onSignUp={() => navigate({ name: 'signup' })} />

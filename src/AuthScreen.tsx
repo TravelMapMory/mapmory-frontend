@@ -1,5 +1,6 @@
-import { useId, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { ArrowLeft, MapPin } from 'lucide-react'
+import { authErrorMessage, firebaseEnabled, logIn, signUp } from './auth'
 import './LandingScreen.css'
 import './AuthScreen.css'
 
@@ -8,14 +9,14 @@ export type AuthMode = 'signup' | 'login'
 export interface AuthScreenProps {
   mode: AuthMode
   onModeChange: (mode: AuthMode) => void
-  /** Called on submit. Until Firebase Auth lands any input opens the demo account. */
+  /** Called once signed in. Without Firebase configured any input opens the demo account. */
   onSignedIn: () => void
   onBack: () => void
 }
 
 /**
  * Sign up and log in share one card; the link under the form switches mode.
- * The fields are not checked yet: Firebase Auth will own validation.
+ * Firebase Auth checks the details; its errors are shown in plain words.
  */
 export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: AuthScreenProps) {
   const id = useId()
@@ -23,9 +24,30 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
   const title = signup ? 'Create your account' : 'Log in to MapMory'
   const submitLabel = signup ? 'Create account' : 'Log in'
 
-  function submit(event: FormEvent) {
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    onSignedIn()
+    if (!firebaseEnabled) return onSignedIn()
+    if (busy) return
+    const form = new FormData(event.currentTarget)
+    const field = (name: string) => String(form.get(name) ?? '')
+    setBusy(true)
+    setError('')
+    try {
+      if (signup) await signUp(field('name'), field('email'), field('password'))
+      else await logIn(field('email'), field('password'))
+      onSignedIn()
+    } catch (failure) {
+      setError(authErrorMessage(failure))
+      setBusy(false)
+    }
+  }
+
+  function switchMode() {
+    setError('')
+    onModeChange(signup ? 'login' : 'signup')
   }
 
   return (
@@ -61,7 +83,7 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
             ) : null}
             <div className="auth-field">
               <label htmlFor={`${id}-email`}>Email</label>
-              <input id={`${id}-email`} name="email" type="email" autoComplete="email" />
+              <input id={`${id}-email`} name="email" type="email" autoComplete="email" required={firebaseEnabled} />
             </div>
             <div className="auth-field">
               <label htmlFor={`${id}-password`}>Password</label>
@@ -70,20 +92,28 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
                 name="password"
                 type="password"
                 autoComplete={signup ? 'new-password' : 'current-password'}
+                required={firebaseEnabled}
               />
             </div>
-            <button type="submit" className="btn btn-action auth-submit">
-              {submitLabel}
+            {error ? (
+              <p className="auth-error" role="alert">
+                {error}
+              </p>
+            ) : null}
+            <button type="submit" className="btn btn-action auth-submit" disabled={busy}>
+              {busy ? 'Please wait…' : submitLabel}
             </button>
           </form>
 
           <p className="auth-switch">
             {signup ? 'Already have an account?' : 'New to MapMory?'}{' '}
-            <button type="button" className="auth-link" onClick={() => onModeChange(signup ? 'login' : 'signup')}>
+            <button type="button" className="auth-link" onClick={switchMode}>
               {signup ? 'Log in' : 'Create an account'}
             </button>
           </p>
-          <p className="auth-demo">Demo: sign-in is not connected yet, so any details open the sample account.</p>
+          {firebaseEnabled ? null : (
+            <p className="auth-demo">Demo: sign-in is not connected yet, so any details open the sample account.</p>
+          )}
         </section>
       </main>
     </div>
