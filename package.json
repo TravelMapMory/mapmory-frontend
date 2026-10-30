@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
-    "test:acceptance": "playwright test",
+    "test:acceptance": "playwright test --project=checks --project=desktop --project=tablet --project=phone",
     "test:acceptance:ui": "playwright test --ui",
     "test:typecheck": "tsc --noEmit -p tsconfig.tests.json",
     "test:integration": "playwright test --project=integration",

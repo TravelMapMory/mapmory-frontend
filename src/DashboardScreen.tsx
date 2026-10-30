@@ -298,10 +298,10 @@ export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhoto
               </div>
             </section>
           ) : (
-          <p className="dash-empty-line">
-            Photo statistics will be available once photo
-            integration is complete.
-          </p>
+            <p className="dash-empty-line">
+              Photo statistics will be available once photo
+              integration is complete.
+            </p>
           )}
 
           <section className="dash-section" aria-labelledby="dash-trips">
