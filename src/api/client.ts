@@ -56,7 +56,12 @@ function live(endpoint: Endpoint): boolean {
 }
 
 /** GET /api/me/summary */
-export function getSummary(signal?: AbortSignal): Promise<MeSummary> {
+export async function getSummary(signal?: AbortSignal): Promise<MeSummary | null> {
+  if (live('summary')) {
+    return request<MeSummary>('GET', '/api/me/summary', { signal })
+  }
+  // Real trips without a summary API must not display demo statistics or photos.
+  if (live('listTrips')) return null
   return mockSummary(signal)
 }
 
