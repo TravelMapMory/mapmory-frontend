@@ -25,6 +25,7 @@ opens the last HTML report. Failed tests retain a screenshot and trace.
 | World search | Independent from photo filters, suggestion click, arrows/Enter/Escape, minimum query length, no results, failure/retry, Clear and focus, stale suggestion prevention | `map-controls.spec.ts`, `keyboard-and-layout.spec.ts` |
 | Photos at a place | Country/city separation, photo previous/next and wrap, keyboard arrows, counter, trip previous/next and wrap, single-photo controls, Open trip, Close/Escape | `map-controls.spec.ts`, `acceptance.spec.ts`, `keyboard-and-layout.spec.ts` |
 | Trip navigation/views | Back, Show on map, Gallery/Journey pressed states, Upload toggle, dated/undated sections, empty trip, loading/read failures and retries | `trip-and-correction.spec.ts` |
+| Photo ordering | Capture order with upload-time and id tie-breaks, input-order independence, malformed and missing dates as undated, undated gallery group, journey days, viewer follows Gallery and Journey order, "time zone unknown" only without an offset, Recently uploaded newest first | `photo-order.spec.ts`, `checks/photo-order.spec.ts` |
 | Full-photo viewer | Gallery/Journey thumbnail opening, arrow/button navigation, boundaries, Escape/Close and focus return, unavailable-image state | `trip-and-correction.spec.ts` |
 | Photo state/action presentation | Processing states, ready, missing location, failure; appropriate Change/Set/Review actions | `trip-and-correction.spec.ts` |
 | Location correction | Review next, confirm suggested label, current location, keyboard search, previous-photo location, click/drag pin, Save/Cancel/Escape, save retry, preserved capture metadata, updated totals/map | `trip-and-correction.spec.ts`, `acceptance.spec.ts` |
@@ -47,7 +48,8 @@ are enabled. The Playwright server supplies that flag; normal development and
 production builds do not enable these scenarios.
 
 Scenarios: empty collection, empty trip, all unlocated, same city in two countries
-with multiple trips, long content, every photo state, and all-undated photos.
+with multiple trips, long content, every photo state, all-undated photos, and
+ordering edge cases (equal capture times, a missing offset, a malformed date).
 `failNext` causes a named read/save to fail once, before mutation. Optional latency
 makes loading/saving states observable. This is function-level mock injection,
 not HTTP interception or an integration test of Go/Firebase/GCS.
