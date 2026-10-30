@@ -20,6 +20,7 @@ import stPeters from '../assets/pins/rome-st-peters.jpg'
 import helsinkiCathedral from '../assets/pins/helsinki.jpg'
 import uspenskiCathedral from '../assets/pins/helsinki-uspenski.jpg'
 import suomenlinna from '../assets/pins/helsinki-suomenlinna.jpg'
+import { compareByCapture, sortByUpload } from '../photoOrder'
 import { readPhotoMetadata, sniffImageKind } from './exif'
 import type { AcceptanceOptions, MockOperation } from './acceptanceOptions'
 import type {
@@ -220,6 +221,18 @@ switch (acceptance?.scenario) {
   case 'undated':
     photos.forEach((p) => Object.assign(p, { capture_time_local: null, capture_utc_offset: null }))
     break
+  // Frontend #25: equal capture times, a missing offset, a malformed date and no date, stored out of order.
+  case 'ordering':
+    photos.splice(0, photos.length,
+      photo('o-undated', 'trip-rome', 'suomenlinna', '', '2026-09-28T17:35:04Z', { capture_time_local: null, capture_utc_offset: null }),
+      photo('o-late', 'trip-rome', 'colosseum', '2026-09-21T10:00:00', '2026-09-28T17:35:05Z'),
+      photo('o-same-z', 'trip-rome', 'bigBen', '2026-09-20T12:00:00', '2026-09-28T17:35:00Z'),
+      photo('o-bad', 'trip-rome', 'helsinkiCathedral', '2026-02-30T10:00:00', '2026-09-28T17:35:03Z'),
+      photo('o-tie-b', 'trip-rome', 'pantheon', '2026-09-20T09:00:00', '2026-09-28T17:35:02Z', { capture_utc_offset: null }),
+      photo('o-same-y', 'trip-rome', 'eiffelTower', '2026-09-20T12:00:00', '2026-09-28T17:35:00Z'),
+      photo('o-tie-a', 'trip-rome', 'treviFountain', '2026-09-20T09:00:00', '2026-09-28T17:35:01Z'),
+    )
+    break
 }
 
 async function beforeOperation(operation: MockOperation, signal?: AbortSignal): Promise<void> {
@@ -239,13 +252,8 @@ function isLocated(p: Photo): boolean {
 function distinct(values: (string | null)[]): string[] {
   return [...new Set(values.filter((v): v is string => v !== null))]
 }
-// Capture order; photos without a capture time go last, as in the journey log.
-function byCapture(a: Pick<Photo, 'capture_time_local'>, b: Pick<Photo, 'capture_time_local'>): number {
-  if (a.capture_time_local === b.capture_time_local) return 0
-  if (a.capture_time_local === null) return 1
-  if (b.capture_time_local === null) return -1
-  return a.capture_time_local.localeCompare(b.capture_time_local)
-}
+// The API returns photos in the order photoOrder.ts defines (frontend #25).
+const byCapture = compareByCapture
 function summarise(trip: TripRow): TripSummary {
   const own = photos.filter((p) => p.trip_id === trip.id)
   const located = own.filter(isLocated).sort(byCapture)
@@ -296,7 +304,7 @@ export async function mockSummary(signal?: AbortSignal): Promise<MeSummary> {
     country_count: distinct(located.map((p) => p.country)).length,
     city_count: distinct(located.map((p) => p.city)).length,
     to_review_count: photos.filter((p) => p.state === 'needs-location' || p.label_status === 'suggested').length,
-    recently_uploaded: [...photos].sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at)).slice(0, 8),
+    recently_uploaded: sortByUpload(photos).slice(0, 8),
   }, undefined, signal)
 }
 export async function mockListTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {

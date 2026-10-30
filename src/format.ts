@@ -52,3 +52,11 @@ export function formatCaptured(local: string | null): string | null {
   const date = parseCaptureTime(local)
   return date ? captured.format(date) : null
 }
+
+/**
+ * Says when the camera recorded no UTC offset, so a wall-clock time is never
+ * mistaken for one in a known zone. The offset itself is never invented.
+ */
+export function zoneNote(local: string | null, offset: string | null): string {
+  return parseCaptureTime(local) && !offset ? ' · time zone unknown' : ''
+}

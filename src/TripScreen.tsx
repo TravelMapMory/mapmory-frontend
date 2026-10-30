@@ -22,7 +22,8 @@ import LocationPicker, { type LatLng } from './components/LocationPicker'
 import PhotoViewer, { viewerImage } from './components/PhotoViewer'
 import UploadPanel from './components/UploadPanel'
 import VisibilityBadge from './components/VisibilityBadge'
-import { formatCaptured, formatDateRange, plural } from './format'
+import { formatCaptured, formatDateRange, plural, zoneNote } from './format'
+import { captureDay, captureTime, sortByCapture } from './photoOrder'
 import './TripScreen.css'
 
 export interface TripScreenProps {
@@ -168,7 +169,10 @@ function CorrectionPanel({
         </h2>
         <dl className="trip-facts">
           <dt>Taken</dt>
-          <dd>{formatCaptured(photo.capture_time_local) ?? 'No capture time in the file'}</dd>
+          <dd>
+            {formatCaptured(photo.capture_time_local) ?? 'No capture time in the file'}
+            {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
+          </dd>
           <dt>GPS</dt>
           <dd>
             {located
@@ -228,7 +232,7 @@ interface PhotoListProps {
   onView: (photo: Photo) => void
 }
 
-function Gallery({ photos, onCorrect, onView }: PhotoListProps) {
+function GalleryTiles({ photos, onCorrect, onView }: PhotoListProps) {
   return (
     <ul className="trip-gallery">
       {photos.map((photo) => {
@@ -245,13 +249,30 @@ function Gallery({ photos, onCorrect, onView }: PhotoListProps) {
             </div>
             <div className="trip-tile-body">
               <p className="trip-tile-place">{photo.place_name ?? 'No location'}</p>
-              <p className="trip-caption">{formatCaptured(photo.capture_time_local) ?? 'No capture time'}</p>
+              <p className="trip-caption">
+                {formatCaptured(photo.capture_time_local) ?? 'No capture time'}
+                {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
+              </p>
               <PhotoActions photo={photo} onCorrect={onCorrect} />
             </div>
           </li>
         )
       })}
     </ul>
+  )
+}
+
+/** Photos in capture order; undated ones (already last) get their own group when dated ones exist too. */
+function Gallery({ photos, onCorrect, onView }: PhotoListProps) {
+  const dated = photos.filter((p) => captureTime(p) !== null)
+  const undated = photos.filter((p) => captureTime(p) === null)
+  if (dated.length === 0 || undated.length === 0) return <GalleryTiles photos={photos} onCorrect={onCorrect} onView={onView} />
+  return (
+    <>
+      <GalleryTiles photos={dated} onCorrect={onCorrect} onView={onView} />
+      <h3 className="trip-day-title trip-undated-title">No capture date</h3>
+      <GalleryTiles photos={undated} onCorrect={onCorrect} onView={onView} />
+    </>
   )
 }
 
@@ -267,7 +288,7 @@ const dayHeading = new Intl.DateTimeFormat('en-GB', {
 function journeyDays(photos: Photo[]): [string, Photo[]][] {
   const days = new Map<string, Photo[]>()
   for (const photo of photos) {
-    const key = photo.capture_time_local?.slice(0, 10) ?? 'undated'
+    const key = captureDay(photo) ?? 'undated'
     days.set(key, [...(days.get(key) ?? []), photo])
   }
   return [...days].sort(([a], [b]) => (a === 'undated' ? 1 : b === 'undated' ? -1 : a.localeCompare(b)))
@@ -299,7 +320,8 @@ function Journey({ photos, onCorrect, onView }: PhotoListProps) {
                   <div className="trip-row-text">
                     <p className="trip-tile-place">{photo.place_name ?? 'No location'}</p>
                     <p className="trip-caption">
-                      {photo.capture_time_local ? photo.capture_time_local.slice(11, 16) : 'Time unknown'}
+                      {captureTime(photo)?.slice(11, 16) ?? 'Time unknown'}
+                      {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
                     </p>
                     {status ? <StatusBadge status={status} /> : null}
                   </div>
@@ -331,7 +353,8 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
     async (signal?: AbortSignal) => {
       try {
         const [trip, page] = await Promise.all([getTrip(tripId, signal), listTripPhotos(tripId, signal)])
-        setLoad({ status: 'ready', trip, photos: page.items })
+        // The API sends capture order already; sorting again keeps the order whatever the source.
+        setLoad({ status: 'ready', trip, photos: sortByCapture(page.items) })
       } catch (error) {
         if (!signal?.aborted) {
           const missing = error instanceof NotFoundError || (error instanceof ApiError && error.status === 404)

@@ -246,6 +246,10 @@
   list-style: none;
 }
 
+.trip-undated-title {
+  margin: 8px 0 0;
+}
+
 .trip-tile {
   display: flex;
   flex-direction: column;
