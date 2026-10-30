@@ -10,6 +10,8 @@
     "test:acceptance": "playwright test",
     "test:acceptance:ui": "playwright test --ui",
     "test:typecheck": "tsc --noEmit -p tsconfig.tests.json",
+    "test:integration": "playwright test --project=integration",
+    "test:boundaries": "playwright test --config=playwright.summary.config.ts --project=boundaries",
     "lint": "oxlint"
   },
   "dependencies": {
