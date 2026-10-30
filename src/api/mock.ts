@@ -7,6 +7,10 @@
  *
  * Every photo has its own picture, and its coordinates are those of the
  * landmark the picture shows (see CREDITS.md for each image).
+ *
+ * Endpoints the contract defines (trips, trip photos) answer in contract
+ * shapes, so client.ts runs the same adapters as for the real backend; the
+ * rest still answer in view-model shapes until the contract covers them.
  */
 import eiffelTower from '../assets/pins/paris.jpg'
 import parisSkyline from '../assets/pins/paris-wide.jpg'
@@ -22,18 +26,17 @@ import uspenskiCathedral from '../assets/pins/helsinki-uspenski.jpg'
 import suomenlinna from '../assets/pins/helsinki-suomenlinna.jpg'
 import { readPhotoMetadata, sniffImageKind } from './exif'
 import type { AcceptanceOptions, MockOperation } from './acceptanceOptions'
+import { toPhoto, uploadErrorMessage } from './adapters'
+import type { ApiCreateTrip, ApiDisplayImage, ApiPage, ApiPhoto, ApiTrip } from './contract'
 import type {
-  CreateTripInput,
+  LabelStatus,
   LocationPatch,
   MapPhoto,
   MapPhotoPage,
   MapPhotoQuery,
   MeSummary,
-  Page,
   Photo,
   Place,
-  TripDetail,
-  TripSummary,
   UploadItem,
 } from './types'
 
@@ -70,6 +73,19 @@ const LANDMARKS = {
 
 type LandmarkKey = keyof typeof LANDMARKS
 
+/** A stored photo: the contract's Photo with the place labels the mock always knows. */
+type PhotoRow = ApiPhoto & {
+  country: string | null
+  city: string | null
+  place_name: string | null
+  label_status: LabelStatus
+}
+
+/** Bundled images never expire, unlike the signed URLs the backend returns. */
+function image(url: string): ApiDisplayImage {
+  return { url, expires_at: '9999-12-31T23:59:59Z' }
+}
+
 // Builds a ready, located photo; `overrides` covers the unusual ones
 function photo(
   id: string,
@@ -77,25 +93,28 @@ function photo(
   place: LandmarkKey,
   captured: string,
   uploaded: string,
-  overrides: Partial<Photo> = {},
-): Photo {
+  overrides: Partial<PhotoRow> = {},
+): PhotoRow {
   const p = LANDMARKS[place]
   return {
     id,
     trip_id,
+    batch_id: `batch-${trip_id}`,
+    client_file_id: id,
     state: 'ready',
-    thumb_url: p.img,
-    display_url: p.img,
+    error_code: null,
+    display_image: image(p.img),
     capture_time_local: captured,
     capture_utc_offset: '+02:00',
     uploaded_at: uploaded,
+    exif_lat: p.lat,
+    exif_lng: p.lng,
     lat: p.lat,
     lng: p.lng,
     country: p.country,
     city: p.city,
     place_name: `${p.name}, ${p.city}`,
     label_status: 'confirmed',
-    location_source: 'exif',
     ...overrides,
   }
 }
@@ -124,7 +143,7 @@ const trips: TripRow[] = [
   },
 ]
 
-const photos: Photo[] = [
+const photos: PhotoRow[] = [
   photo('p-eu-1', 'trip-europe', 'eiffelTower', '2026-06-01T09:12:00', '2026-06-20T10:05:00Z'),
   photo('p-eu-2', 'trip-europe', 'montparnasse', '2026-06-02T19:40:00', '2026-06-20T10:05:10Z'),
   photo('p-eu-3', 'trip-europe', 'bigBen', '2026-06-04T04:50:00', '2026-06-20T10:05:20Z', {
@@ -153,19 +172,22 @@ const photos: Photo[] = [
   {
     id: 'p-rom-3',
     trip_id: 'trip-rome',
+    batch_id: 'batch-trip-rome',
+    client_file_id: 'p-rom-3',
     state: 'needs-location',
-    thumb_url: stPeters,
-    display_url: stPeters,
+    error_code: null,
+    display_image: image(stPeters),
     capture_time_local: null,
     capture_utc_offset: null,
     uploaded_at: '2026-09-28T17:36:00Z',
+    exif_lat: null,
+    exif_lng: null,
     lat: null,
     lng: null,
     country: null,
     city: null,
     place_name: null,
     label_status: 'pending',
-    location_source: null,
   },
 ]
 
@@ -185,7 +207,7 @@ switch (acceptance?.scenario) {
     trips.unshift({ id: 'trip-empty', title: 'Empty trip', notes: null, created_at: '2026-10-01T00:00:00Z', cover_photo_id: null })
     break
   case 'unlocated':
-    photos.forEach((p) => Object.assign(p, { lat: null, lng: null, city: null, country: null, place_name: null, state: 'needs-location', label_status: 'pending', location_source: null }))
+    photos.forEach((p) => Object.assign(p, { lat: null, lng: null, exif_lat: null, exif_lng: null, city: null, country: null, place_name: null, state: 'needs-location', label_status: 'pending' }))
     break
   case 'places':
     trips.splice(0, trips.length,
@@ -196,7 +218,7 @@ switch (acceptance?.scenario) {
       photo('a1', 'trip-a', 'eiffelTower', '2026-06-01T09:00:00', '2026-09-01T00:00:00Z'),
       photo('a2', 'trip-a', 'eiffelTower', '2026-06-02T09:00:00', '2026-09-01T00:00:01Z'),
       photo('b1', 'trip-b', 'eiffelTower', '2026-06-03T09:00:00', '2026-09-02T00:00:00Z'),
-      photo('us1', 'trip-b', 'eiffelTower', '2026-06-04T09:00:00', '2026-09-02T00:00:01Z', { country: 'United States', lat: 33.6609, lng: -95.5555, place_name: 'Paris, United States' }),
+      photo('us1', 'trip-b', 'eiffelTower', '2026-06-04T09:00:00', '2026-09-02T00:00:01Z', { country: 'United States', lat: 33.6609, lng: -95.5555, exif_lat: 33.6609, exif_lng: -95.5555, place_name: 'Paris, United States' }),
     )
     break
   case 'long-content':
@@ -209,10 +231,12 @@ switch (acceptance?.scenario) {
     const states: Photo['state'][] = ['pending', 'uploading', 'processing', 'ready', 'needs-location', 'failed']
     photos.splice(0, photos.length, ...states.map((state, i) => photo(`state-${state}`, 'trip-rome', 'colosseum', `2026-09-${20 + i}T09:00:00`, `2026-09-28T17:35:0${i}Z`, {
       state,
-      thumb_url: state === 'ready' || state === 'needs-location' ? colosseum : null,
-      display_url: state === 'ready' || state === 'needs-location' ? colosseum : null,
+      error_code: state === 'failed' ? 'invalid_image' : null,
+      display_image: state === 'ready' || state === 'needs-location' ? image(colosseum) : null,
       lat: state === 'ready' ? 41.8902 : null,
       lng: state === 'ready' ? 12.4922 : null,
+      exif_lat: state === 'ready' ? 41.8902 : null,
+      exif_lng: state === 'ready' ? 12.4922 : null,
       label_status: state === 'needs-location' ? 'pending' : 'confirmed',
     })))
     break
@@ -233,7 +257,7 @@ async function beforeOperation(operation: MockOperation, signal?: AbortSignal): 
 }
 
 // Doc 3.3: only photos with usable coordinates are map pins.
-function isLocated(p: Photo): boolean {
+function isLocated(p: PhotoRow): boolean {
   return p.lat !== null && p.lng !== null
 }
 function distinct(values: (string | null)[]): string[] {
@@ -246,21 +270,21 @@ function byCapture(a: Pick<Photo, 'capture_time_local'>, b: Pick<Photo, 'capture
   if (b.capture_time_local === null) return -1
   return a.capture_time_local.localeCompare(b.capture_time_local)
 }
-function summarise(trip: TripRow): TripSummary {
+function summarise(trip: TripRow): ApiTrip {
   const own = photos.filter((p) => p.trip_id === trip.id)
   const located = own.filter(isLocated).sort(byCapture)
   const dated = own.map((p) => p.capture_time_local).filter((t): t is string => t !== null).sort()
   // Owner's cover, else the first ready photo, else the placeholder.
   const cover =
-    own.find((p) => p.id === trip.cover_photo_id && p.thumb_url) ??
-    own.find((p) => p.state === 'ready' && p.thumb_url)
+    own.find((p) => p.id === trip.cover_photo_id && p.display_image) ??
+    own.find((p) => p.state === 'ready' && p.display_image)
 
   return {
     id: trip.id,
     title: trip.title,
-    notes: trip.notes,
+    notes: trip.notes ?? '',
     created_at: trip.created_at,
-    cover_url: cover?.display_url ?? null,
+    cover: cover?.display_image ? { photo_id: cover.id, image: cover.display_image } : null,
     photo_count: own.length,
     located_count: located.length,
     cities: distinct(located.map((p) => p.city)),
@@ -296,20 +320,23 @@ export async function mockSummary(signal?: AbortSignal): Promise<MeSummary> {
     country_count: distinct(located.map((p) => p.country)).length,
     city_count: distinct(located.map((p) => p.city)).length,
     to_review_count: photos.filter((p) => p.state === 'needs-location' || p.label_status === 'suggested').length,
-    recently_uploaded: [...photos].sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at)).slice(0, 8),
+    recently_uploaded: [...photos]
+      .sort((a, b) => (b.uploaded_at ?? '').localeCompare(a.uploaded_at ?? ''))
+      .slice(0, 8)
+      .map(toPhoto),
   }, undefined, signal)
 }
-export async function mockListTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {
+export async function mockListTrips(signal?: AbortSignal): Promise<ApiPage<ApiTrip>> {
   await beforeOperation('listTrips', signal)
   const items = [...trips].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(summarise)
   return delay({ items, next_cursor: null }, undefined, signal)
 }
-export async function mockCreateTrip(input: CreateTripInput): Promise<TripSummary> {
+export async function mockCreateTrip(input: ApiCreateTrip): Promise<ApiTrip> {
   await beforeOperation('createTrip')
   const row: TripRow = {
     id: `trip-${Date.now()}`,
     title: input.title,
-    notes: input.notes ?? null,
+    notes: input.notes || null,
     created_at: new Date().toISOString(),
     cover_photo_id: null,
   }
@@ -325,15 +352,15 @@ export class NotFoundError extends Error {
   }
 }
 
-export async function mockGetTrip(id: string, signal?: AbortSignal): Promise<TripDetail> {
+export async function mockGetTrip(id: string, signal?: AbortSignal): Promise<ApiTrip> {
   await beforeOperation('getTrip', signal)
   const row = trips.find((t) => t.id === id)
   if (!row) return Promise.reject(new NotFoundError('Trip'))
-  return delay({ ...summarise(row), cover_photo_id: row.cover_photo_id }, undefined, signal)
+  return delay(summarise(row), undefined, signal)
 }
 
 /** Every photo of the trip, located or not, in capture order (journey log). */
-export async function mockTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
+export async function mockTripPhotos(id: string, signal?: AbortSignal): Promise<ApiPage<ApiPhoto>> {
   await beforeOperation('tripPhotos', signal)
   const items = photos.filter((p) => p.trip_id === id).sort(byCapture)
   return delay({ items, next_cursor: null }, undefined, signal)
@@ -373,8 +400,8 @@ export async function mockMapPhotos(query: MapPhotoQuery, signal?: AbortSignal):
     trip_title: titles.get(p.trip_id) ?? '',
     lat: p.lat as number,
     lng: p.lng as number,
-    thumb_url: p.thumb_url,
-    display_url: p.display_url,
+    thumb_url: p.display_image?.url ?? null,
+    display_url: p.display_image?.url ?? null,
     capture_time_local: p.capture_time_local,
     city: p.city,
     country: p.country,
@@ -560,7 +587,7 @@ export async function mockPatchLocation(id: string, patch: LocationPatch, signal
   const index = photos.findIndex((p) => p.id === id)
   if (index < 0) return Promise.reject(new NotFoundError('Photo'))
   const current = photos[index]
-  let next: Photo
+  let next: PhotoRow
   if ('confirm_label' in patch) {
     if (current.lat === null) return Promise.reject(new Error('Photo has no location to confirm'))
     next = { ...current, label_status: 'confirmed' }
@@ -572,13 +599,13 @@ export async function mockPatchLocation(id: string, patch: LocationPatch, signal
       // The owner chose this spot, so a label found for it is not a mere suggestion.
       label_status: labels.place_name ? 'confirmed' : 'pending',
       state: current.state === 'needs-location' ? 'ready' : current.state,
+      // The EXIF pair stays as imported, so the adapter reports this position as manual.
       lat: patch.lat,
       lng: patch.lng,
-      location_source: 'manual',
     }
   }
   photos[index] = next
-  return delay(next, undefined, signal)
+  return delay(toPhoto(next), undefined, signal)
 }
 
 /** Doc 6.1: JPEG and PNG only from Increment 1, at most 25 MB per file. */
@@ -598,7 +625,7 @@ async function processFile(
   let item: UploadItem = { client_file_id, file_name: file.name, state: 'pending', error: null, photo: null }
   const existing = photos.find((p) => p.id === registered.get(client_file_id))
   if (existing) {
-    report({ ...item, state: existing.state, photo: existing })
+    report({ ...item, state: existing.state, photo: toPhoto(existing) })
     return
   }
   const fail = (error: string) => report({ ...item, state: 'failed', error })
@@ -613,7 +640,7 @@ async function processFile(
     return
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    fail('The file is larger than 25 MB.')
+    fail(uploadErrorMessage('file_too_large'))
     return
   }
 
@@ -621,7 +648,7 @@ async function processFile(
   report(item)
   const kind = sniffImageKind(new Uint8Array(await file.slice(0, 8).arrayBuffer()))
   if (!kind) {
-    fail('This is not a JPEG or PNG image.')
+    fail(uploadErrorMessage('unsupported_type'))
     return
   }
   // The worker decodes every image (doc 7.1); a file that cannot be decoded fails with a reason.
@@ -629,7 +656,7 @@ async function processFile(
     const bitmap = await createImageBitmap(file)
     bitmap.close()
   } catch {
-    fail('The image could not be read. The file may be damaged.')
+    fail(uploadErrorMessage('invalid_image'))
     return
   }
   const meta = await readPhotoMetadata(file, kind)
@@ -639,24 +666,26 @@ async function processFile(
   const labels: Labels = located
     ? resolveLabels(meta.lat as number, meta.lng as number)
     : { city: null, country: null, place_name: null, label_status: 'pending' }
-  const url = URL.createObjectURL(file)
-  const row: Photo = {
+  const row: PhotoRow = {
     id: `p-${client_file_id}`,
     trip_id: tripId,
+    batch_id: `batch-${tripId}`,
+    client_file_id,
     state: located ? 'ready' : 'needs-location',
-    thumb_url: url,
-    display_url: url,
+    error_code: null,
+    display_image: image(URL.createObjectURL(file)),
     capture_time_local: meta.captureLocal,
     capture_utc_offset: meta.captureOffset,
     uploaded_at: new Date().toISOString(),
+    exif_lat: meta.lat,
+    exif_lng: meta.lng,
     lat: meta.lat,
     lng: meta.lng,
     ...labels,
-    location_source: located ? 'exif' : null,
   }
   photos.push(row)
   registered.set(client_file_id, row.id)
-  report({ ...item, state: row.state, photo: row })
+  report({ ...item, state: row.state, photo: toPhoto(row) })
 }
 
 /**

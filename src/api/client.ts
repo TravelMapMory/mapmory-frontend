@@ -7,7 +7,8 @@
  * otherwise it keeps using the mock. Add an endpoint to LIVE once the backend
  * serves it; when all are live, the mock can go.
  */
-import { toTripDetail, toTripPage, toTripSummary, type ApiTrip } from './adapters'
+import { toPhotoPage, toTripDetail, toTripPage, toTripSummary } from './adapters'
+import type { ApiPage, ApiPhoto, ApiTrip } from './contract'
 import { request } from './http'
 import {
   mockCreateTrip,
@@ -55,31 +56,41 @@ function live(endpoint: Endpoint): boolean {
 }
 
 /** GET /api/me/summary */
-export function getSummary(signal?: AbortSignal): Promise<MeSummary> {
+export async function getSummary(signal?: AbortSignal): Promise<MeSummary | null> {
+  if (live('summary')) {
+    return request<MeSummary>('GET', '/api/me/summary', { signal })
+  }
+  // Real trips without a summary API must not display demo statistics or photos.
+  if (live('listTrips')) return null
   return mockSummary(signal)
 }
 
 /** GET /api/trips */
 export async function listTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {
-  if (!live('listTrips')) return mockListTrips(signal)
-  return toTripPage(await request<Page<ApiTrip>>('GET', '/api/trips', { signal }))
+  const page = live('listTrips') ? await request<ApiPage<ApiTrip>>('GET', '/api/trips', { signal }) : await mockListTrips(signal)
+  return toTripPage(page)
 }
 
 /** POST /api/trips */
 export async function createTrip(input: CreateTripInput): Promise<TripSummary> {
-  if (!live('createTrip')) return mockCreateTrip(input)
-  return toTripSummary(await request<ApiTrip>('POST', '/api/trips', { body: input }))
+  const trip = live('createTrip') ? await request<ApiTrip>('POST', '/api/trips', { body: input }) : await mockCreateTrip(input)
+  return toTripSummary(trip)
 }
 /** GET /api/trips/{id} */
 export async function getTrip(id: string, signal?: AbortSignal): Promise<TripDetail> {
-  if (!live('getTrip')) return mockGetTrip(id, signal)
-  return toTripDetail(await request<ApiTrip>('GET', `/api/trips/${encodeURIComponent(id)}`, { signal }))
+  const trip = live('getTrip')
+    ? await request<ApiTrip>('GET', `/api/trips/${encodeURIComponent(id)}`, { signal })
+    : await mockGetTrip(id, signal)
+  return toTripDetail(trip)
 }
 /** GET /api/trips/{id}/photos — all photos, including ones without a location. */
-export function listTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
-  // Photos are not served by the backend yet. Never mix demo photos with a real trip.
-  if (live('getTrip')) return Promise.resolve({ items: [], next_cursor: null })
-  return mockTripPhotos(id, signal)
+export async function listTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
+  if (live('tripPhotos')) {
+    return toPhotoPage(await request<ApiPage<ApiPhoto>>('GET', `/api/trips/${encodeURIComponent(id)}/photos`, { signal }))
+  }
+  // A real trip whose photos the backend does not serve yet: never mix in demo photos.
+  if (live('getTrip')) return { items: [], next_cursor: null }
+  return toPhotoPage(await mockTripPhotos(id, signal))
 }
 /** GET /api/map/photos — the owner's located photos in the bbox, at most 2,000. */
 export function getMapPhotos(query: MapPhotoQuery, signal?: AbortSignal): Promise<MapPhotoPage> {
