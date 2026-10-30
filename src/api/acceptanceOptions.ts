@@ -4,7 +4,7 @@ export type MockOperation =
   | 'tripPhotos' | 'mapPhotos' | 'searchPlaces' | 'patchLocation'
   | 'listShares' | 'createShare' | 'revokeShare' | 'sharedCollection'
 export interface AcceptanceOptions {
-  scenario?: 'default' | 'empty' | 'empty-trip' | 'unlocated' | 'places' | 'long-content' | 'photo-states' | 'undated'
+  scenario?: 'default' | 'empty' | 'empty-trip' | 'unlocated' | 'places' | 'long-content' | 'photo-states' | 'undated' | 'ordering'
   failures?: Partial<Record<MockOperation, number>>
   delayMs?: number
 }
