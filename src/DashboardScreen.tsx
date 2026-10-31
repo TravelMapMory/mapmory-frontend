@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react'
 import { Building2, Camera, Earth, FolderPlus, MapPinOff, Plus, Upload } from 'lucide-react'
 import { createTrip, getSummary, listTrips } from './api/client'
+import { TITLE_MAX } from './api/limits'
 import type { MeSummary, Photo, TripSummary } from './api/types'
 import StatTile from './components/StatTile'
 import TripCard from './components/TripCard'
@@ -67,7 +68,7 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: (trip: TripSummary
           value={title}
           onChange={(event) => setTitle(event.target.value)}
           placeholder="e.g. Summer in Lisbon"
-          maxLength={120}
+          maxLength={TITLE_MAX}
           required
           autoFocus
         />
