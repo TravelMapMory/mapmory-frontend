@@ -50,7 +50,12 @@ type Endpoint =
   | 'upload'
 
 /** Endpoints mapmory-backend serves today. */
-const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip', 'getTrip'])
+const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
+  'listTrips',
+  'createTrip',
+  'getTrip',
+  'updateTrip',
+])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
 
