@@ -772,7 +772,7 @@ const shares: ShareRow[] = [
 const SHARES_KEY = 'mapmory.mock.shares'
 
 function loadShares() {
-  if (acceptance) return
+  if (acceptance || import.meta.env.VITE_API_URL) return
   try {
     const saved = JSON.parse(localStorage.getItem(SHARES_KEY) ?? '[]') as ShareRow[]
     for (const row of saved) {
@@ -786,7 +786,7 @@ function loadShares() {
 }
 
 function saveShares() {
-  if (acceptance) return
+  if (acceptance || import.meta.env.VITE_API_URL) return
   try {
     localStorage.setItem(SHARES_KEY, JSON.stringify(shares))
   } catch {
@@ -831,14 +831,7 @@ export async function mockCreateShare(tripId: string, input: CreateShareInput): 
   const title = input.title.trim()
   const ids = [...new Set(input.photo_ids)]
   // Every photo must belong to this trip: a share can never reach into another trip.
-  const valid = ids.every((id) =>
-    photos.some(
-      (p) =>
-        p.id === id &&
-        p.trip_id === tripId &&
-        isShareable(toPhoto(p)),
-    ),
-  )
+  const valid = ids.every((id) => photos.some((p) => p.id === id && p.trip_id === tripId && isShareable(toPhoto(p))))
   if (!title || ids.length === 0 || !valid) throw new ApiError(400, 'invalid_request', 'Choose at least one photo of this trip')
   const row: ShareRow = {
     id: `share-${Date.now()}`,
@@ -895,18 +888,9 @@ export async function mockSharedCollection(token: string, signal?: AbortSignal):
   const row = shares.find((s) => s.token === token)
   if (!row) throw new ApiError(404, 'not_found', 'Share not found')
   if (row.revoked_at) throw new ApiError(410, 'share_revoked', 'This link was turned off')
-  const shown = photos
-    .filter((p) => row.photo_ids.includes(p.id))
-    .map(toPhoto)
-    .filter(isShareable)
-    .sort(byCapture)
+  const shown = photos.filter((p) => row.photo_ids.includes(p.id)).map(toPhoto).filter(isShareable).sort(byCapture)
   return delay(
-    {
-      title: row.title,
-      description: row.description,
-      created_at: row.created_at,
-      photos: shown.map(toSharedPhoto),
-    },
+    { title: row.title, description: row.description, created_at: row.created_at, photos: shown.map(toSharedPhoto) },
     undefined,
     signal,
   )

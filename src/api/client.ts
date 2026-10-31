@@ -9,7 +9,7 @@
  */
 import { toPhotoPage, toTripDetail, toTripPage, toTripSummary } from './adapters'
 import type { ApiPage, ApiPhoto, ApiTrip } from './contract'
-import { request } from './http'
+import { ApiError, request } from './http'
 import {
   mockCreateShare,
   mockCreateTrip,
@@ -61,14 +61,16 @@ type Endpoint =
   | 'sharedCollection'
 
 /** Endpoints mapmory-backend serves today. */
-const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
-  'listTrips',
-  'createTrip',
-  'getTrip',
-  'updateTrip',
-])
+const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip', 'getTrip', 'updateTrip'])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
+
+/** Sharing is a mock-only capability until the backend supports public links. */
+export const sharingAvailable = !backendEnabled
+
+function mockSharingUnavailable(): ApiError {
+  return new ApiError(503, 'not_implemented', 'Persistent sharing is not available yet.')
+}
 
 function live(endpoint: Endpoint): boolean {
   return backendEnabled && LIVE.has(endpoint)
@@ -147,22 +149,23 @@ export function uploadPhotos(
   return mockUploadPhotos(tripId, files, onUpdate)
 }
 
-/**
- * GET /api/trips/{id}/shares — the trip's active links. Not in doc 5.2 yet:
- * proposed so the owner can find a link again and revoke it.
- */
+/** Sharing remains mock-backed only until the persistent share API exists. */
 export function listShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
+  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
   return mockListShares(tripId, signal)
 }
-/** POST /api/trips/{id}/shares */
+
 export function createShare(tripId: string, input: CreateShareInput): Promise<Share> {
+  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
   return mockCreateShare(tripId, input)
 }
-/** DELETE /api/shares/{id} — the link stops working; the photos stay in the trip. */
+
 export function revokeShare(id: string): Promise<void> {
+  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
   return mockRevokeShare(id)
 }
-/** GET /api/s/{token} — anyone with the link, no sign-in. 404 unknown, 410 revoked. */
+
 export function getSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
+  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
   return mockSharedCollection(token, signal)
 }
