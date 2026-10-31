@@ -24,7 +24,7 @@ import stPeters from '../assets/pins/rome-st-peters.jpg'
 import helsinkiCathedral from '../assets/pins/helsinki.jpg'
 import uspenskiCathedral from '../assets/pins/helsinki-uspenski.jpg'
 import suomenlinna from '../assets/pins/helsinki-suomenlinna.jpg'
-import { compareByCapture, sortByUpload } from '../photoOrder'
+import { captureDay, compareByCapture, sortByUpload } from '../photoOrder'
 import { readPhotoMetadata, sniffImageKind } from './exif'
 import type { AcceptanceOptions, MockOperation } from './acceptanceOptions'
 import { toPhoto, toTripDetail, uploadErrorMessage } from './adapters'
@@ -290,7 +290,7 @@ const byCapture = compareByCapture
 function summarise(trip: TripRow): ApiTrip {
   const own = photos.filter((p) => p.trip_id === trip.id)
   const located = own.filter(isLocated).sort(byCapture)
-  const dated = own.map((p) => p.capture_time_local).filter((t): t is string => t !== null).sort()
+  const dated = own.map(captureDay).filter((day): day is string => day !== null).sort()
   // Owner's cover, else the first ready photo, else the placeholder.
   const cover =
     own.find((p) => p.id === trip.cover_photo_id && p.display_image) ??
@@ -306,8 +306,8 @@ function summarise(trip: TripRow): ApiTrip {
     located_count: located.length,
     cities: distinct(located.map((p) => p.city)),
     countries: distinct(located.map((p) => p.country)),
-    start_date: dated[0]?.slice(0, 10) ?? null,
-    end_date: dated[dated.length - 1]?.slice(0, 10) ?? null,
+    start_date: dated[0] ?? null,
+    end_date: dated[dated.length - 1] ?? null,
     visibility: 'private',
   }
 }
