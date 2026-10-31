@@ -98,19 +98,33 @@
 }
 
 .share-input {
-  flex: 1 1 240px;
+  display: block;
+  width: 100%;
   min-width: 0;
-  min-height: 36px;
-  padding: 6px 10px;
+  min-height: 40px;
+  padding: 9px 12px;
   border: 1px solid var(--c-border);
   border-radius: var(--r-xs);
+  background: var(--c-surface);
+  color: var(--c-text);
   font: inherit;
   font-size: 14px;
-  color: var(--c-text);
-  background: var(--c-surface);
+  line-height: 20px;
+}
+
+/* The copy-link row needs flexible width; form inputs do not. */
+.share-link-row > .share-input {
+  flex: 1 1 240px;
+  width: auto;
+}
+
+.share-input:focus-visible {
+  outline: 2px solid var(--c-action);
+  outline-offset: 2px;
 }
 
 .share-textarea {
+  min-height: 80px;
   resize: vertical;
 }
 
@@ -148,16 +162,24 @@
 .share-form {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding-top: 14px;
+  align-items: stretch;
+  gap: 16px;
+  min-width: 0;
+  padding-top: 16px;
   border-top: 1px solid var(--c-border);
 }
 
 .share-field {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  width: 100%;
   max-width: 560px;
+  min-width: 0;
+}
+
+.share-field > .share-input {
+  flex: none;
 }
 
 .share-field label,
@@ -174,7 +196,7 @@
 .share-photos {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
   margin: 0;
   padding: 0;
@@ -204,6 +226,11 @@
 
 .share-text-btn:hover {
   text-decoration: underline;
+}
+
+.share-text-btn:focus-visible {
+  outline: 2px solid var(--c-action);
+  outline-offset: 3px;
 }
 
 .share-grid {
