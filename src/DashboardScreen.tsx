@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useId, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Building2, Camera, Earth, FolderPlus, MapPinOff, Plus, Upload } from 'lucide-react'
-import { createTrip, getSummary, listTrips } from './api/client'
+import { createTrip, getSummary, listAllTrips, listTrips } from './api/client'
+import { loadPages, mergePage, type FetchPage } from './api/paging'
+import LoadMore from './components/LoadMore'
+import { useLoadMore } from './useLoadMore'
 import type { MeSummary, Photo, TripSummary } from './api/types'
 import StatTile from './components/StatTile'
 import TripCard from './components/TripCard'
-import { formatUploaded } from './format'
+import { formatUploaded, plural } from './format'
 import { sortByUpload } from './photoOrder'
 import UploadDropZone from './components/UploadDropZone'
 import './DashboardScreen.css'
@@ -20,7 +23,7 @@ export interface DashboardScreenProps {
 type Load =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'ready'; summary: MeSummary; trips: TripSummary[] }
+  | { status: 'ready'; summary: MeSummary; trips: TripSummary[]; nextCursor: string | null }
 
 /**
  * Inline "Create trip" form. A trip only needs a title (notes can be added
@@ -90,15 +93,33 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: (trip: TripSummary
  */
 function UploadForm({
   trips,
+  complete,
   onUpload,
   onCancel,
 }: {
+  /** The trips the Dashboard has loaded so far. */
   trips: TripSummary[]
+  /** False when more pages exist; the picker then loads every trip itself. */
+  complete: boolean
   onUpload: (tripId: string, files: File[]) => void
   onCancel: () => void
 }) {
   const [tripId, setTripId] = useState(trips[0]?.id ?? '')
+  const [options, setOptions] = useState(trips)
+  const [partial, setPartial] = useState(false)
   const tripField = useId()
+
+  // Any trip can receive photos, not only the ones on the first page of cards.
+  useEffect(() => {
+    if (complete) return
+    const controller = new AbortController()
+    listAllTrips(controller.signal)
+      .then((page) => setOptions(page.items))
+      .catch(() => {
+        if (!controller.signal.aborted) setPartial(true)
+      })
+    return () => controller.abort()
+  }, [complete])
 
   return (
     <form
@@ -115,12 +136,13 @@ function UploadForm({
             Trip
           </label>
           <select id={tripField} className="dash-create-input" value={tripId} onChange={(e) => setTripId(e.target.value)}>
-            {trips.map((t) => (
+            {options.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.title}
               </option>
             ))}
           </select>
+          {partial ? <p className="dash-caption">Only your newest trips are listed. Reopen this form to try again.</p> : null}
         </div>
         <button type="button" className="btn btn-secondary dash-upload-cancel" onClick={onCancel}>
           Cancel
@@ -191,15 +213,38 @@ export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhoto
   const [creating, setCreating] = useState(false)
   const [choosingUpload, setChoosingUpload] = useState(false)
 
-  const refresh = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const [summary, trips] = await Promise.all([getSummary(signal), listTrips(signal)])
-      setLoad({ status: 'ready', summary, trips: trips.items })
-    } catch {
-      // A cancelled load (unmount, or StrictMode's dev re-run) is not an error.
-      if (!signal?.aborted) setLoad({ status: 'error' })
-    }
-  }, [])
+  const fetchTrips = useCallback<FetchPage<TripSummary>>((cursor, signal) => listTrips(signal, cursor), [])
+  const { state: moreState, loadMore, cancel: cancelMore } = useLoadMore(fetchTrips, null)
+  // How many trip cards are on screen, so a reload keeps the pages already opened.
+  const shown = useRef(0)
+  useEffect(() => {
+    shown.current = load.status === 'ready' ? load.trips.length : 0
+  }, [load])
+
+  const refresh = useCallback(
+    async (signal?: AbortSignal) => {
+      cancelMore()
+      try {
+        const [summary, trips] = await Promise.all([getSummary(signal), loadPages(fetchTrips, shown.current, signal)])
+        setLoad({ status: 'ready', summary, trips: trips.items, nextCursor: trips.next_cursor })
+      } catch {
+        // A cancelled load (unmount, or StrictMode's dev re-run) is not an error.
+        if (!signal?.aborted) setLoad({ status: 'error' })
+      }
+    },
+    [fetchTrips, cancelMore],
+  )
+
+  const loadMoreTrips = useCallback(() => {
+    if (load.status !== 'ready' || !load.nextCursor) return
+    void loadMore(load.nextCursor, (page) =>
+      setLoad((current) =>
+        current.status === 'ready'
+          ? { ...current, trips: mergePage(current.trips, page.items), nextCursor: page.next_cursor }
+          : current,
+      ),
+    )
+  }, [load, loadMore])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -253,7 +298,12 @@ export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhoto
       ) : null}
 
       {choosingUpload && onUploadPhotos && load.status === 'ready' ? (
-        <UploadForm trips={load.trips} onUpload={onUploadPhotos} onCancel={() => setChoosingUpload(false)} />
+        <UploadForm
+          trips={load.trips}
+          complete={load.nextCursor === null}
+          onUpload={onUploadPhotos}
+          onCancel={() => setChoosingUpload(false)}
+        />
       ) : null}
 
       {load.status === 'loading' ? (
@@ -325,6 +375,15 @@ export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhoto
                 ))}
               </div>
             )}
+            {load.nextCursor ? (
+              <LoadMore
+                summary={`Showing ${plural(load.trips.length, 'trip')}`}
+                label="Load more trips"
+                errorText="More trips could not be loaded."
+                state={moreState}
+                onLoadMore={loadMoreTrips}
+              />
+            ) : null}
           </section>
 
           <RecentlyUploaded photos={load.summary.recently_uploaded} />

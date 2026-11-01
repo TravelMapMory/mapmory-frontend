@@ -307,10 +307,27 @@ export async function mockSummary(signal?: AbortSignal): Promise<MeSummary> {
     recently_uploaded: sortByUpload(photos).slice(0, 8),
   }, undefined, signal)
 }
-export async function mockListTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {
+/** Page sizes the real API is expected to use; tests shrink them through `pageSize`. */
+const TRIP_PAGE_SIZE = 20
+const PHOTO_PAGE_SIZE = 50
+
+/**
+ * Cuts one page out of an ordered list. The cursor is opaque to the client;
+ * here it is the offset of the next item. A cursor the server did not issue
+ * is rejected, as the real API must do.
+ */
+function pageOf<T>(items: T[], cursor: string | null | undefined, defaultSize: number): Page<T> {
+  const size = acceptance?.pageSize ?? defaultSize
+  const start = cursor ? Number(cursor) : 0
+  if (!Number.isInteger(start) || start < 0) throw new Error('Invalid cursor')
+  const end = start + size
+  return { items: items.slice(start, end), next_cursor: end < items.length ? String(end) : null }
+}
+
+export async function mockListTrips(signal?: AbortSignal, cursor?: string | null): Promise<Page<TripSummary>> {
   await beforeOperation('listTrips', signal)
   const items = [...trips].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(summarise)
-  return delay({ items, next_cursor: null }, undefined, signal)
+  return delay(pageOf(items, cursor, TRIP_PAGE_SIZE), undefined, signal)
 }
 export async function mockCreateTrip(input: CreateTripInput): Promise<TripSummary> {
   await beforeOperation('createTrip')
@@ -340,11 +357,11 @@ export async function mockGetTrip(id: string, signal?: AbortSignal): Promise<Tri
   return delay({ ...summarise(row), cover_photo_id: row.cover_photo_id }, undefined, signal)
 }
 
-/** Every photo of the trip, located or not, in capture order (journey log). */
-export async function mockTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
+/** One page of the trip's photos, located or not, in capture order (journey log). */
+export async function mockTripPhotos(id: string, signal?: AbortSignal, cursor?: string | null): Promise<Page<Photo>> {
   await beforeOperation('tripPhotos', signal)
   const items = photos.filter((p) => p.trip_id === id).sort(byCapture)
-  return delay({ items, next_cursor: null }, undefined, signal)
+  return delay(pageOf(items, cursor, PHOTO_PAGE_SIZE), undefined, signal)
 }
 
 const MAP_LIMIT = 2000

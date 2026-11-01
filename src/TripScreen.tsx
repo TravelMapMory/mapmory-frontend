@@ -17,6 +17,9 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { getTrip, listTripPhotos, patchPhotoLocation } from './api/client'
+import { loadPages, mergePage, type FetchPage } from './api/paging'
+import LoadMore from './components/LoadMore'
+import { useLoadMore } from './useLoadMore'
 import type { LocationPatch, Photo, TripDetail } from './api/types'
 import LocationPicker, { type LatLng } from './components/LocationPicker'
 import PhotoViewer, { viewerImage } from './components/PhotoViewer'
@@ -38,7 +41,7 @@ type Load =
   | { status: 'loading' }
   | { status: 'error' }
   | { status: 'not-found' }
-  | { status: 'ready'; trip: TripDetail; photos: Photo[] }
+  | { status: 'ready'; trip: TripDetail; photos: Photo[]; nextCursor: string | null }
 
 type View = 'gallery' | 'journey'
 
@@ -349,12 +352,25 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
   const [message, setMessage] = useState('')
   const [uploading, setUploading] = useState(Boolean(initialFiles?.length))
 
+  const fetchPhotos = useCallback<FetchPage<Photo>>(
+    (cursor, signal) => listTripPhotos(tripId, signal, cursor),
+    [tripId],
+  )
+  const { state: moreState, loadMore, cancel: cancelMore } = useLoadMore(fetchPhotos, tripId)
+  // How many photos are on screen, so a reload brings back the pages the owner had opened.
+  const shown = useRef(0)
+  useEffect(() => {
+    shown.current = load.status === 'ready' ? load.photos.length : 0
+  }, [load])
+
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
+      // A page still loading belongs to the old list; drop it rather than merge it into the new one.
+      cancelMore()
       try {
-        const [trip, page] = await Promise.all([getTrip(tripId, signal), listTripPhotos(tripId, signal)])
+        const [trip, page] = await Promise.all([getTrip(tripId, signal), loadPages(fetchPhotos, shown.current, signal)])
         // The API sends capture order already; sorting again keeps the order whatever the source.
-        setLoad({ status: 'ready', trip, photos: sortByCapture(page.items) })
+        setLoad({ status: 'ready', trip, photos: sortByCapture(page.items), nextCursor: page.next_cursor })
       } catch (error) {
         if (!signal?.aborted) {
           const missing = error instanceof NotFoundError || (error instanceof ApiError && error.status === 404)
@@ -362,8 +378,19 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
         }
       }
     },
-    [tripId],
+    [tripId, fetchPhotos, cancelMore],
   )
+
+  const loadMorePhotos = useCallback(() => {
+    if (load.status !== 'ready' || !load.nextCursor) return
+    void loadMore(load.nextCursor, (page) =>
+      setLoad((current) =>
+        current.status === 'ready'
+          ? { ...current, photos: sortByCapture(mergePage(current.photos, page.items)), nextCursor: page.next_cursor }
+          : current,
+      ),
+    )
+  }, [load, loadMore])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -532,6 +559,16 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
         ) : (
           <Journey photos={photos} onCorrect={setCorrecting} onView={(photo) => setViewing(photo.id)} />
         )}
+
+        {load.nextCursor ? (
+          <LoadMore
+            summary={`Showing ${photos.length} of ${plural(trip.photo_count, 'photo')}`}
+            label="Load more photos"
+            errorText="More photos could not be loaded."
+            state={moreState}
+            onLoadMore={loadMorePhotos}
+          />
+        ) : null}
       </section>
 
       {viewing ? (
@@ -540,6 +577,9 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
           photos={(view === 'journey' ? journeyDays(photos).flatMap(([, day]) => day) : photos).filter(viewerImage)}
           startId={viewing}
           onClose={() => setViewing(null)}
+          hasMore={load.nextCursor !== null}
+          moreState={moreState}
+          onLoadMore={loadMorePhotos}
         />
       ) : null}
     </div>

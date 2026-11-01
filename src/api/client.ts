@@ -9,6 +9,7 @@
  */
 import { toTripDetail, toTripPage, toTripSummary, type ApiTrip } from './adapters'
 import { request } from './http'
+import { loadAllPages } from './paging'
 import {
   mockCreateTrip,
   mockGetTrip,
@@ -59,10 +60,19 @@ export function getSummary(signal?: AbortSignal): Promise<MeSummary> {
   return mockSummary(signal)
 }
 
-/** GET /api/trips */
-export async function listTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {
-  if (!live('listTrips')) return mockListTrips(signal)
-  return toTripPage(await request<Page<ApiTrip>>('GET', '/api/trips', { signal }))
+/** `?cursor=…` for the next page, or nothing for the first. */
+function cursorQuery(cursor?: string | null): string {
+  return cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''
+}
+
+/** GET /api/trips — one page, newest first; pass the previous page's `next_cursor` for the next. */
+export async function listTrips(signal?: AbortSignal, cursor?: string | null): Promise<Page<TripSummary>> {
+  if (!live('listTrips')) return mockListTrips(signal, cursor)
+  return toTripPage(await request<Page<ApiTrip>>('GET', `/api/trips${cursorQuery(cursor)}`, { signal }))
+}
+/** Every trip, following the cursor to the end; for pickers that must list them all. */
+export function listAllTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {
+  return loadAllPages((cursor, s) => listTrips(s, cursor), signal)
 }
 
 /** POST /api/trips */
@@ -75,11 +85,11 @@ export async function getTrip(id: string, signal?: AbortSignal): Promise<TripDet
   if (!live('getTrip')) return mockGetTrip(id, signal)
   return toTripDetail(await request<ApiTrip>('GET', `/api/trips/${encodeURIComponent(id)}`, { signal }))
 }
-/** GET /api/trips/{id}/photos — all photos, including ones without a location. */
-export function listTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
+/** GET /api/trips/{id}/photos — one page of the trip's photos, including ones without a location. */
+export function listTripPhotos(id: string, signal?: AbortSignal, cursor?: string | null): Promise<Page<Photo>> {
   // Photos are not served by the backend yet. Never mix demo photos with a real trip.
   if (live('getTrip')) return Promise.resolve({ items: [], next_cursor: null })
-  return mockTripPhotos(id, signal)
+  return mockTripPhotos(id, signal, cursor)
 }
 /** GET /api/map/photos — the owner's located photos in the bbox, at most 2,000. */
 export function getMapPhotos(query: MapPhotoQuery, signal?: AbortSignal): Promise<MapPhotoPage> {

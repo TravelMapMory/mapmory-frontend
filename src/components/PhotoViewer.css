@@ -80,6 +80,20 @@
   color: #c9d1dd;
 }
 
+.viewer-gone {
+  padding: 32px 24px;
+  text-align: center;
+  color: #c9d1dd;
+}
+
+.viewer-gone p,
+.viewer-more-error {
+  margin: 0;
+  font-size: 14px;
+  color: #c9d1dd;
+  text-align: center;
+}
+
 .viewer-caption {
   display: flex;
   flex-direction: column;

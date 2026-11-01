@@ -4,4 +4,6 @@ export interface AcceptanceOptions {
   scenario?: 'default' | 'empty' | 'empty-trip' | 'unlocated' | 'places' | 'long-content' | 'photo-states' | 'undated' | 'ordering'
   failures?: Partial<Record<MockOperation, number>>
   delayMs?: number
+  /** Overrides the mock's page size for every list, so paging can be tested with the seed data. */
+  pageSize?: number
 }
