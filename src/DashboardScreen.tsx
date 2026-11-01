@@ -6,6 +6,7 @@ import type { MeSummary, Photo, TripSummary } from './api/types'
 import StatTile from './components/StatTile'
 import TripCard from './components/TripCard'
 import { formatUploaded } from './format'
+import { sortByUpload } from './photoOrder'
 import UploadDropZone from './components/UploadDropZone'
 import './DashboardScreen.css'
 
@@ -155,7 +156,7 @@ function RecentlyUploaded({ photos }: { photos: Photo[] }) {
         <p className="dash-empty-line">Photos you upload will appear here.</p>
       ) : (
         <ul className="dash-recent">
-          {photos.map((photo) => {
+          {sortByUpload(photos).map((photo) => {
             const place = photo.city ?? photo.place_name
             return (
               <li key={photo.id} className="dash-recent-item">

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { Photo } from '../api/types'
-import { formatCaptured } from '../format'
+import { formatCaptured, zoneNote } from '../format'
 import './PhotoViewer.css'
 
 export interface PhotoViewerProps {
@@ -106,7 +106,10 @@ export default function PhotoViewer({ photos, startId, onClose }: PhotoViewerPro
             <span id="viewer-place" className="viewer-place">
               {place}
             </span>
-            <span>{formatCaptured(photo.capture_time_local) ?? 'No capture time'}</span>
+            <span>
+              {formatCaptured(photo.capture_time_local) ?? 'No capture time'}
+              {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
+            </span>
           </figcaption>
         </figure>
 
