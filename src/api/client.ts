@@ -120,7 +120,18 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
 /** GET /api/trips/{id}/photos — all photos, including ones without a location. */
 export async function listTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
   if (live('tripPhotos')) {
-    return toPhotoPage(await request<ApiPage<ApiPhoto>>('GET', `/api/trips/${encodeURIComponent(id)}/photos`, { signal }))
+    // The screens order the whole trip by capture time, so load every page.
+    const items: ApiPhoto[] = []
+    let cursor: string | null = null
+    do {
+      const page: ApiPage<ApiPhoto> = await request<ApiPage<ApiPhoto>>('GET', `/api/trips/${encodeURIComponent(id)}/photos`, {
+        query: { limit: 100, cursor },
+        signal,
+      })
+      items.push(...page.items)
+      cursor = page.next_cursor
+    } while (cursor)
+    return toPhotoPage({ items, next_cursor: null })
   }
   // A real trip whose photos the backend does not serve yet: never mix in demo photos.
   if (live('getTrip')) return { items: [], next_cursor: null }
