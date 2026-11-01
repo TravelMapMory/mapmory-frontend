@@ -19,10 +19,12 @@ import {
   mockSearchPlaces,
   mockSummary,
   mockTripPhotos,
+  mockUpdateTrip,
   mockUploadPhotos,
 } from './mock'
 import type {
   CreateTripInput,
+  UpdateTripInput,
   LocationPatch,
   MapPhotoPage,
   MapPhotoQuery,
@@ -40,6 +42,7 @@ type Endpoint =
   | 'listTrips'
   | 'createTrip'
   | 'getTrip'
+  | 'updateTrip'
   | 'tripPhotos'
   | 'mapPhotos'
   | 'searchPlaces'
@@ -47,7 +50,12 @@ type Endpoint =
   | 'upload'
 
 /** Endpoints mapmory-backend serves today. */
-const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip', 'getTrip'])
+const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
+  'listTrips',
+  'createTrip',
+  'getTrip',
+  'updateTrip',
+])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
 
@@ -82,6 +90,15 @@ export async function getTrip(id: string, signal?: AbortSignal): Promise<TripDet
     ? await request<ApiTrip>('GET', `/api/trips/${encodeURIComponent(id)}`, { signal })
     : await mockGetTrip(id, signal)
   return toTripDetail(trip)
+}
+/**
+ * PATCH /api/trips/{id} — the owner's title and notes. Proposed for the
+ * contract (backend #46); 400 for an empty title, 404 for a trip that is
+ * missing or not the caller's.
+ */
+export async function updateTrip(id: string, input: UpdateTripInput): Promise<TripDetail> {
+  if (!live('updateTrip')) return mockUpdateTrip(id, input)
+  return toTripDetail(await request<ApiTrip>('PATCH', `/api/trips/${encodeURIComponent(id)}`, { body: input }))
 }
 /** GET /api/trips/{id}/photos — all photos, including ones without a location. */
 export async function listTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {

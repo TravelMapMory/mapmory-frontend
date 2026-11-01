@@ -13,6 +13,7 @@ import {
   Map as MapIcon,
   MapPin,
   MapPinOff,
+  Pencil,
   Upload,
   type LucideIcon,
 } from 'lucide-react'
@@ -20,6 +21,7 @@ import { getTrip, listTripPhotos, patchPhotoLocation } from './api/client'
 import type { LocationPatch, Photo, TripDetail } from './api/types'
 import LocationPicker, { type LatLng } from './components/LocationPicker'
 import PhotoViewer, { viewerImage } from './components/PhotoViewer'
+import TripDetailsForm from './components/TripDetailsForm'
 import UploadPanel from './components/UploadPanel'
 import VisibilityBadge from './components/VisibilityBadge'
 import { formatCaptured, formatDateRange, plural } from './format'
@@ -326,6 +328,21 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
   const [viewing, setViewing] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const [uploading, setUploading] = useState(Boolean(initialFiles?.length))
+  const [editing, setEditing] = useState(false)
+  const editButton = useRef<HTMLButtonElement>(null)
+  const returnFocus = useRef(false)
+
+  // Closing the details form (save or cancel) puts focus back on Edit details.
+  useEffect(() => {
+    if (editing || !returnFocus.current) return
+    returnFocus.current = false
+    editButton.current?.focus()
+  }, [editing])
+
+  function closeEditor() {
+    returnFocus.current = true
+    setEditing(false)
+  }
 
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
@@ -417,7 +434,34 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
               .filter(Boolean)
               .join('  ·  ')}
           </p>
-          {trip.notes ? <p className="trip-notes">{trip.notes}</p> : null}
+          {editing ? (
+            <TripDetailsForm
+              trip={trip}
+              onCancel={closeEditor}
+              onSaved={(saved) => {
+                // Keep the photos; the trip response carries the new title, notes and aggregates.
+                setLoad((current) => (current.status === 'ready' ? { ...current, trip: saved } : current))
+                setMessage('Trip details saved.')
+                closeEditor()
+              }}
+            />
+          ) : (
+            <>
+              {trip.notes ? <p className="trip-notes">{trip.notes}</p> : null}
+              <button
+                ref={editButton}
+                type="button"
+                className="trip-edit-open"
+                onClick={() => {
+                  setMessage('')
+                  setEditing(true)
+                }}
+              >
+                <Pencil size={14} aria-hidden />
+                Edit details
+              </button>
+            </>
+          )}
         </div>
         <div className="trip-head-actions">
           <button type="button" className="btn btn-primary" onClick={() => onShowOnMap(trip.id)}>
