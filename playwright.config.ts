@@ -17,9 +17,29 @@ export default defineConfig({
   },
   projects: [
     { name: 'checks', testMatch: '**/checks/*.spec.ts' },
-    { name: 'desktop', testMatch: '**/e2e/*.spec.ts', use: { viewport: { width: 1440, height: 900 } } },
-    { name: 'tablet', testMatch: '**/e2e/*.spec.ts', use: { viewport: { width: 768, height: 1024 } } },
-    { name: 'phone', testMatch: '**/e2e/*.spec.ts', use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+    {
+      name: 'integration',
+      testMatch: '**/integration/*.spec.ts',
+    },
+    {
+      name: 'desktop',
+      testMatch: '**/e2e/*.spec.ts',
+      use: { viewport: { width: 1440, height: 900 } },
+    },
+    {
+      name: 'tablet',
+      testMatch: '**/e2e/*.spec.ts',
+      use: { viewport: { width: 768, height: 1024 } },
+    },
+    {
+      name: 'phone',
+      testMatch: '**/e2e/*.spec.ts',
+      use: {
+        viewport: { width: 390, height: 844 },
+        isMobile: true,
+        hasTouch: true,
+      },
+    },
   ],
   webServer: {
     command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',

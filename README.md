@@ -16,7 +16,7 @@ MapMory is currently a working frontend prototype with partial backend integrati
 |---|---|
 | Landing page and navigation | Implemented |
 | Sign-up and login | Firebase email/password authentication when configured; demo mode otherwise |
-| Dashboard | Implemented |
+| Dashboard | Live trip cards, creation, and navigation; photo statistics and recent uploads remain unavailable in live mode until their backend APIs are integrated |
 | Trip creation and listing | Integrated with Go backend |
 | Trip detail retrieval | Integrated with Go backend |
 | Photo uploads | Mock implementation |
@@ -25,7 +25,11 @@ MapMory is currently a working frontend prototype with partial backend integrati
 | Interactive map | Implemented with mock photo data |
 | Photo sharing | Planned |
 
-The Go backend currently stores trips in memory. Firebase authentication is integrated in the frontend; database-backed application-user resolution is available separately in backend PR #41. Persistent trip storage, ownership enforcement, and the photo processing pipeline remain pending.
+The frontend supports incremental integration with the Go backend. With `VITE_API_URL` configured, trip creation, listing, and retrieval use the backend.
+
+Backend PR #41 established PostgreSQL-backed application-user resolution. The subsequent `feat/trip-persistence` branch provides persistent, owner-scoped trip operations, verified locally against PostgreSQL and Firebase authentication.
+
+Other frontend functionality remains partially mock-backed. Photo uploads, processing, location correction, map data, and sharing are not yet integrated with the persistent backend. The current integration status describes the feature branches and should be updated as they are merged.
 
 ## Getting started
 
@@ -79,6 +83,8 @@ The `.env.local` file is intended for local configuration and should not be comm
 | `npm run test:typecheck` | Run TypeScript checks |
 | `npm run test:acceptance` | Run Playwright acceptance tests |
 | `npm run test:acceptance:ui` | Open Playwright's interactive test runner |
+| `npm run test:integration` | Test live trip APIs against the Go backend   |
+| `npm run test:boundaries`  | Verify mock/live Dashboard summary selection |
 
 Use `npm ci` to install the versions recorded in `package-lock.json` without modifying the lockfile.
 
@@ -181,11 +187,32 @@ In development, Vite proxies `/api` requests to the backend configured by `VITE_
 
 Other operations continue to use mock implementations until their backend endpoints are available.
 
+### Mock and live data boundaries
+
+The frontend enables backend operations incrementally. Configuring `VITE_API_URL` does not mean that every feature uses the real backend.
+
+Currently, `listTrips`, `createTrip`, and `getTrip` use the Go API. Other features remain mock-backed or unavailable in live mode.
+
+In particular:
+
+- Trip listing, creation, and retrieval use persistent, owner-scoped records when the backend runs in database mode.
+- Real trips return an empty photo collection until the photo-listing endpoint is implemented.
+- Dashboard photo statistics and recently uploaded photos are unavailable in live mode until `GET /api/me/summary` is implemented.
+- Map data, photo uploads, place search, and location correction still have mock implementations and must not be interpreted as persistent user data.
+
+Mock mode remains useful for isolated UI development and acceptance testing. Live integration tests should explicitly verify that demonstration data is not presented as authenticated user data.
+
 ### Firebase identity versus application-user identity
 
 Firebase signs the user in and provides an ID token. The frontend attaches that token to live backend requests, but does **not** store or send a PostgreSQL `users.id` or an `owner_id`. The backend verifies the Firebase identity and must resolve the application-user UUID from the verified UID itself when enforcing ownership. Never trust a user ID supplied by the browser as an ownership assertion.
 
-Backend PR #41 offers `GET /api/auth/me` (Firebase token verification) and, with `MAPMORY_ENABLE_DB_USER_RESOLUTION=true` and PostgreSQL configured, `GET /api/users/me` (returns `{ id, auth_subject }`). These endpoints are useful for integration testing but **neither is called automatically by the frontend**. A successful Firebase login therefore does not by itself prove backend database availability. The current trip routes are still in-memory and do not enforce user ownership.
+Backend PR #41 offers `GET /api/auth/me` (Firebase token verification) and, with `MAPMORY_ENABLE_DB_USER_RESOLUTION=true` and PostgreSQL configured, `GET /api/users/me` (returns `{ id, auth_subject }`). These endpoints are useful for integration testing but **neither is called automatically by the frontend**. A successful Firebase login therefore does not by itself prove backend database availability.
+
+The backend's `feat/trip-persistence` branch provides PostgreSQL-backed trip operations with owner-scoped access when `MAPMORY_ENABLE_DB_USER_RESOLUTION=true`. The frontend passes Firebase ID tokens and does not supply or control the internal owner UUID.
+
+Integration testing has confirmed that trips survive backend restarts and that two distinct Firebase users cannot list or retrieve one another's private trips.
+
+These guarantees depend on using the database-backed implementation; the older in-memory fallback does not provide equivalent persistence or ownership enforcement.
 
 To verify end-to-end identity resolution, start the backend according to its `docs/application-user-resolution.md`, configure both applications with the **same Firebase project**, log in from the frontend and copy the ID token from an authenticated `/api/trips` request in DevTools (do not share or commit it). From a local terminal, call:
 
@@ -198,8 +225,7 @@ Export `FIREBASE_ID_TOKEN` in the shell first. The latter endpoint should return
 
 Remaining integration work includes:
 
-- Backend trip ownership enforcement and authorization
-- Persistent trip and photo storage
+- Persistent photo storage and photo ownership APIs
 - Cursor-based pagination
 - Signed URL upload registration and completion
 - Asynchronous photo processing and status recovery
@@ -325,6 +351,57 @@ These tests do not establish complete browser compatibility, accessibility compl
 
 Test screenshots, traces, and reports are generated locally and ignored by Git.
 
+### API integration and boundary tests
+
+Additional Playwright suites verify the frontend's integration with the Go backend and the separation between persistent and demonstration data.
+
+#### Live API integration
+
+The integration suite exercises the actual Go backend using Firebase ID tokens. It covers:
+
+- Trip creation, retrieval, and listing, including response adaptation.
+- Authentication, input validation, and error responses.
+- Bidirectional trip ownership isolation between two distinct Firebase users.
+
+Start backend `feat/trip-persistence` with PostgreSQL and `MAPMORY_ENABLE_DB_USER_RESOLUTION=true`. Set the following environment variables:
+
+| Variable | Purpose |
+|---|---|
+| `MAPMORY_TEST_API_URL` | Local backend URL, e.g. `http://127.0.0.1:8080` |
+| `MAPMORY_TEST_ID_TOKEN` | Firebase ID token for test account A |
+| `MAPMORY_TEST_OTHER_ID_TOKEN` | Firebase ID token for test account B |
+
+Run:
+
+```bash
+npm run test:integration
+```
+
+Tests requiring missing credentials are reported as skipped. The ownership test verifies that both tokens resolve to different application users before checking trip access in both directions.
+
+**Use a disposable development database.** The tests create persistent trips, and the backend does not yet provide a trip deletion endpoint. Never commit or publish Firebase tokens.
+
+#### Mock/live boundary regression
+
+The boundary suite verifies that the frontend does not mix demonstration Dashboard data with real trip records.
+
+It checks that:
+
+- Mock mode retains demonstration statistics and recent photos.
+- When trip endpoints are live but the summary API is unavailable, `getSummary()` returns `null` without requesting the unimplemented endpoint.
+
+Run:
+
+```bash
+npm run test:boundaries
+```
+
+The dedicated Playwright configuration starts two isolated Vite servers with different API settings. No running Go backend or Firebase credentials are required.
+
+These suites complement the existing mock-based acceptance tests. Live API tests verify HTTP contracts and authorization, while boundary tests verify frontend data-source selection. Neither replaces full browser-based end-to-end testing.
+
+Manual integration testing has also confirmed that trips persist after restarting the backend and remain isolated between Firebase accounts.
+
 ## Docker and deployment
 
 The frontend can be built into a Docker image that serves its static assets using nginx.
@@ -357,15 +434,12 @@ This supports platforms such as Google Cloud Run.
 
 MapMory is still under active development. Important limitations include:
 
-- Authentication currently uses a demo account without real access control.
-- Backend trips are stored in memory and disappear when the server restarts.
-- Photo uploads and processing remain mock implementations.
-- Mock upload identity and retry behavior do not represent production guarantees.
-- Browser-side EXIF parsing and place resolution are incomplete.
-- Map clustering and viewport loading are not optimized for large datasets.
-- Sharing functionality has not been integrated.
-
-See [Known Limitations](docs/limitations.md) for detailed implementation caveats and deferred work.
+- Firebase authentication is supported when configured; demo authentication is available for isolated UI development.
+- PostgreSQL-backed trip persistence and ownership enforcement are available on backend `feat/trip-persistence`, but the older in-memory backend mode remains available.
+- Live backend integration currently covers trip creation, listing, and retrieval.
+- Dashboard photo statistics and recent uploads are unavailable in live mode until the summary API is implemented.
+- The map and several photo-related workflows still use mock data.
+- Photo uploads, processing, location correction, and sharing are not yet integrated with persistent backend services.
 
 ## References and credits
 

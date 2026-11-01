@@ -20,6 +20,7 @@ test('a backend trip becomes a private trip card with neutral aggregates', () =>
     notes: null,
     created_at: '2026-10-14T10:00:00Z',
     cover_url: null,
+    cover_expires_at: null,
     photo_count: 0,
     located_count: 0,
     cities: [],
@@ -42,7 +43,12 @@ test('a cover image and later contract fields pass through, and page order is ke
   const page = toTripPage({ items: [backendTrip, withCover], next_cursor: 'next' })
   expect(page.items.map((trip) => trip.id)).toEqual([backendTrip.id, 'b'])
   expect(page.next_cursor).toBe('next')
-  expect(page.items[1]).toMatchObject({ notes: 'Temples', cover_url: 'https://example.test/c.jpg', cities: ['Kyoto'] })
+  expect(page.items[1]).toMatchObject({
+    notes: 'Temples',
+    cover_url: 'https://example.test/c.jpg',
+    cover_expires_at: '2026-10-14T11:00:00Z',
+    cities: ['Kyoto'],
+  })
 })
 
 test.describe('request', () => {

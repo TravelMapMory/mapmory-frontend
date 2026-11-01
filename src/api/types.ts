@@ -1,8 +1,9 @@
 /*
- * Response shapes for the REST API in design doc 5.2, with field names taken
- * from the data model in 5.3. The backend does not serve these yet, so
- * `mock.ts` produces them; once an endpoint exists, only its function in
- * `client.ts` changes.
+ * View models: what the screens read, with field names taken from the data
+ * model in doc 5.3. The backend's own shapes are in `contract.ts`, and
+ * `adapters.ts` converts them, so a contract change stays out of the screens.
+ * Endpoints the contract does not define yet (summary, map, places, location
+ * correction) are still served in these shapes by `mock.ts`.
  */
 
 // photo lifecycle (doc 3.3). Only `ready` photos have display images
@@ -14,20 +15,24 @@ export type LocationSource = 'exif' | 'manual'
 
 /**
  * One photo as the owner sees it. `thumb_url` and `display_url` are the
- * short-lived signed GCS URLs the API derives from `thumb_key`/`display_key`;
+ * short-lived signed GCS URLs the API derives from `thumb_key`/`display_key`.
  */
 export interface Photo {
   id: string
   trip_id: string
   state: PhotoState
+  /** Why processing failed, e.g. "invalid_image"; null unless `state` is failed. */
+  error_code: string | null
   thumb_url: string | null
   display_url: string | null
+  /** When the image URLs stop working; refetch the photo after it. */
+  image_expires_at: string | null
   /** ISO local time without offset, like "2026-06-12T18:40:00". */
   capture_time_local: string | null
   /** e.g. "+02:00"; null when the camera recorded none. */
   capture_utc_offset: string | null
-  /** ISO UTC timestamp. */
-  uploaded_at: string
+  /** ISO UTC timestamp; null until the upload is complete. */
+  uploaded_at: string | null
   lat: number | null
   lng: number | null
   country: string | null
@@ -47,6 +52,8 @@ export interface TripSummary {
   created_at: string
   /** Owner's chosen cover, else the first suitable photo, else null. */
   cover_url: string | null
+  /** When `cover_url` stops working; refetch the trip after it. */
+  cover_expires_at: string | null
   /** All photos, including ones without GPS. */
   photo_count: number
   /** Photos that can be map pins. */

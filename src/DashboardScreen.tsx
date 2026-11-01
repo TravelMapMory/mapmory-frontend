@@ -19,7 +19,11 @@ export interface DashboardScreenProps {
 type Load =
   | { status: 'loading' }
   | { status: 'error' }
-  | { status: 'ready'; summary: MeSummary; trips: TripSummary[] }
+  | {
+      status: 'ready'
+      summary: MeSummary | null
+      trips: TripSummary[]
+    }
 
 /**
  * Inline "Create trip" form. A trip only needs a title (notes can be added
@@ -168,7 +172,7 @@ function RecentlyUploaded({ photos }: { photos: Photo[] }) {
                       Needs location
                     </span>
                   )}
-                  <span>Uploaded {formatUploaded(photo.uploaded_at)}</span>
+                  <span>{photo.uploaded_at ? `Uploaded ${formatUploaded(photo.uploaded_at)}` : 'Uploading'}</span>
                 </span>
               </li>
             )
@@ -180,10 +184,9 @@ function RecentlyUploaded({ photos }: { photos: Photo[] }) {
 }
 
 /**
- * The owner's Dashboard (doc 3.2): totals, trip cards and recently uploaded
- * photos, with Create trip and Upload photos. All numbers come from the API;
- * the screen never recomputes them, so a correction made anywhere shows up
- * here on the next load.
+ * The owner's Dashboard (doc 3.2): trip cards, totals, and recent photos.
+ * Summary data is displayed only when available; the screen never
+ * recomputes statistics from trip records.
  */
 export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhotos }: DashboardScreenProps) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -279,20 +282,27 @@ export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhoto
 
       {load.status === 'ready' ? (
         <>
-          <section aria-label="Travel totals">
-            <div className="dash-stats">
-              <StatTile label="Photos" value={load.summary.photo_count} icon={Camera} hint="Including photos without GPS" />
-              <StatTile label="Countries" value={load.summary.country_count} icon={Earth} hint="From located photos" />
-              <StatTile label="Cities" value={load.summary.city_count} icon={Building2} hint="From located photos" />
-              <StatTile
-                label="Locations to review"
-                value={load.summary.to_review_count}
-                icon={MapPinOff}
-                hint={load.summary.to_review_count > 0 ? 'Missing or suggested places' : 'All confirmed'}
-                attention={load.summary.to_review_count > 0}
-              />
-            </div>
-          </section>
+          {load.summary ? (
+            <section aria-label="Travel totals">
+              <div className="dash-stats">
+                <StatTile label="Photos" value={load.summary.photo_count} icon={Camera} hint="Including photos without GPS" />
+                <StatTile label="Countries" value={load.summary.country_count} icon={Earth} hint="From located photos" />
+                <StatTile label="Cities" value={load.summary.city_count} icon={Building2} hint="From located photos" />
+                <StatTile
+                  label="Locations to review"
+                  value={load.summary.to_review_count}
+                  icon={MapPinOff}
+                  hint={load.summary.to_review_count > 0 ? 'Missing or suggested places' : 'All confirmed'}
+                  attention={load.summary.to_review_count > 0}
+                />
+              </div>
+            </section>
+          ) : (
+            <p className="dash-empty-line">
+              Photo statistics will be available once photo
+              integration is complete.
+            </p>
+          )}
 
           <section className="dash-section" aria-labelledby="dash-trips">
             <div className="dash-section-head">
@@ -326,7 +336,17 @@ export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhoto
             )}
           </section>
 
-          <RecentlyUploaded photos={load.summary.recently_uploaded} />
+          {load.summary ? (
+            <RecentlyUploaded photos={load.summary.recently_uploaded} />
+          ) : (
+            <section className="dash-section">
+              <h2 className="dash-h2">Recently uploaded</h2>
+              <p className="dash-empty-line">
+                Recent photos will appear here once photo
+                integration is available.
+              </p>
+            </section>
+          )}
         </>
       ) : null}
     </div>
