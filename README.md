@@ -61,6 +61,10 @@ To use the real trip API, start the Go backend in the backend repository:
 go run ./cmd/server
 ```
 
+With the backend in database mode and `MAPMORY_PHOTO_BUCKET` set, photo upload and the trip photo list also use the real API: the browser registers the files, PUTs each one straight to its signed Cloud Storage URL and asks the backend to process it. Photo location correction and sharing are not available against the backend yet.
+
+Without access to the shared Firebase project, sign in against the [Firebase Auth emulator](https://firebase.google.com/docs/emulator-suite/connect_auth) instead: run `npx firebase-tools emulators:start --only auth --project demo-mapmory`, set `VITE_FIREBASE_AUTH_EMULATOR_URL=http://127.0.0.1:9099`, any non-empty `VITE_FIREBASE_API_KEY` and `VITE_FIREBASE_PROJECT_ID=demo-mapmory`, and start the backend with `FIREBASE_PROJECT_ID=demo-mapmory FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`. Emulator accounts exist only while the emulator runs.
+
 To run the frontend entirely with mock data, remove or comment out `VITE_API_URL` in `.env.local`.
 
 Start the development server:

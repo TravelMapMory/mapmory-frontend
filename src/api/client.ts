@@ -7,8 +7,8 @@
  * otherwise it keeps using the mock. Add an endpoint to LIVE once the backend
  * serves it; when all are live, the mock can go.
  */
-import { toPhotoPage, toTripDetail, toTripPage, toTripSummary } from './adapters'
-import type { ApiPage, ApiPhoto, ApiTrip } from './contract'
+import { toPhotoPage, toTripDetail, toTripPage, toTripSummary, toUploadItem, uploadErrorMessage } from './adapters'
+import type { ApiPage, ApiPhoto, ApiRegisteredBatch, ApiRegisterUpload, ApiTrip } from './contract'
 import { ApiError, request } from './http'
 import {
   mockCreateShare,
@@ -61,12 +61,16 @@ type Endpoint =
   | 'sharedCollection'
 
 /** Endpoints mapmory-backend serves today. */
-const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip', 'getTrip', 'updateTrip'])
+const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip', 'getTrip', 'updateTrip', 'upload', 'tripPhotos'])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
 
 /** Sharing is a mock-only capability until the backend supports public links. */
 export const sharingAvailable = !backendEnabled
+
+function locationCorrectionUnavailable(): ApiError {
+  return new ApiError(503, 'not_implemented', 'Correcting a photo location is not available yet.')
+}
 
 function mockSharingUnavailable(): ApiError {
   return new ApiError(503, 'not_implemented', 'Persistent sharing is not available yet.')
@@ -132,6 +136,8 @@ export function searchPlaces(q: string, signal?: AbortSignal): Promise<Place[]> 
 }
 /** PATCH /api/photos/{id}/location */
 export function patchPhotoLocation(id: string, patch: LocationPatch): Promise<Photo> {
+  // Real photos are not in the mock; correction waits for backend #43.
+  if (live('tripPhotos')) return Promise.reject(locationCorrectionUnavailable())
   return mockPatchLocation(id, patch)
 }
 /**
@@ -146,7 +152,73 @@ export function uploadPhotos(
   files: { client_file_id: string; file: File }[],
   onUpdate: (item: UploadItem) => void,
 ): Promise<void> {
+  if (live('upload')) return liveUploadPhotos(tripId, files, onUpdate)
   return mockUploadPhotos(tripId, files, onUpdate)
+}
+
+/**
+ * Registers the batch, PUTs each accepted file to its signed Cloud Storage
+ * URL (the browser sends no Firebase token there), then asks the backend to
+ * process it. Rejected files and failed uploads are reported per file, so
+ * one bad file never stops the others.
+ */
+async function liveUploadPhotos(
+  tripId: string,
+  files: { client_file_id: string; file: File }[],
+  report: (item: UploadItem) => void,
+): Promise<void> {
+  const items = new Map<string, UploadItem>()
+  const update = (id: string, change: Partial<UploadItem>) => {
+    const item = { ...items.get(id)!, ...change }
+    items.set(id, item)
+    report(item)
+  }
+  for (const { client_file_id, file } of files) {
+    items.set(client_file_id, { client_file_id, file_name: file.name, state: 'pending', error: null, photo: null })
+    report(items.get(client_file_id)!)
+  }
+
+  const body: ApiRegisterUpload = {
+    files: files.map(({ client_file_id, file }) => ({
+      client_file_id,
+      size_bytes: file.size,
+      content_type: file.type || 'application/octet-stream',
+    })),
+  }
+  let batch: ApiRegisteredBatch
+  try {
+    batch = await request<ApiRegisteredBatch>('POST', `/api/trips/${encodeURIComponent(tripId)}/batches`, { body })
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Registration failed.'
+    for (const { client_file_id } of files) update(client_file_id, { state: 'failed', error: message })
+    return
+  }
+  for (const rejected of batch.rejected_files) {
+    update(rejected.client_file_id, { state: 'failed', error: uploadErrorMessage(rejected.error.code) })
+  }
+
+  const byId = new Map(files.map((f) => [f.client_file_id, f.file]))
+  const queue = [...batch.accepted_files]
+  const worker = async () => {
+    for (let next = queue.shift(); next; next = queue.shift()) {
+      const { client_file_id, upload } = next
+      update(client_file_id, { state: 'uploading' })
+      try {
+        const response = await fetch(upload.url, { method: upload.method, headers: upload.headers, body: byId.get(client_file_id) })
+        if (!response.ok) throw new Error(`Cloud Storage answered ${response.status}.`)
+        update(client_file_id, { state: 'processing' })
+        const photo = await request<ApiPhoto>(
+          'POST',
+          `/api/batches/${encodeURIComponent(batch.batch_id)}/files/${encodeURIComponent(client_file_id)}/complete`,
+        )
+        const item = toUploadItem(photo, items.get(client_file_id)!.file_name)
+        update(client_file_id, item)
+      } catch (error) {
+        update(client_file_id, { state: 'failed', error: error instanceof Error ? error.message : 'Upload failed.' })
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: 3 }, worker))
 }
 
 /** Sharing remains mock-backed only until the persistent share API exists. */
