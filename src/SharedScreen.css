@@ -1,0 +1,173 @@
+/* Styles for SharedScreen.tsx; the top bar comes from LandingScreen.css. */
+.shared-body {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px 48px 48px;
+  color: var(--c-text);
+}
+
+.shared-body *,
+.shared-body *::before,
+.shared-body *::after {
+  box-sizing: border-box;
+}
+
+.shared-head {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.shared-eyebrow {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-2);
+}
+
+.shared-title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 34px;
+  color: var(--c-primary);
+  overflow-wrap: anywhere;
+}
+
+.shared-h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.shared-text {
+  max-width: 640px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.shared-meta,
+.shared-caption {
+  margin: 0;
+  font-size: 12px;
+  color: var(--c-text-2);
+}
+
+.shared-meta {
+  font-size: 14px;
+}
+
+.shared-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shared-map {
+  height: 360px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+}
+
+.shared-map--grey .leaflet-tile-pane {
+  filter: grayscale(1) brightness(1.06) contrast(0.92);
+}
+
+.shared-photos {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.shared-photos-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.shared-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.shared-tile {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+}
+
+.shared-tile img,
+.shared-tile-empty {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+}
+
+.shared-tile-empty {
+  display: grid;
+  place-items: center;
+  background: var(--c-page);
+  color: var(--c-text-2);
+}
+
+.shared-tile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 12px;
+}
+
+.shared-tile-place {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.shared-unavailable {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 480px;
+  margin: 48px auto 0;
+  text-align: center;
+}
+
+.shared-unavailable-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: var(--c-accent);
+  border-radius: var(--r-md);
+  color: var(--c-primary);
+}
+
+@media (max-width: 600px) {
+  .shared-body {
+    padding: 16px 16px 32px;
+  }
+
+  .shared-map {
+    height: 280px;
+  }
+}

@@ -9,20 +9,25 @@
  */
 import { toPhotoPage, toTripDetail, toTripPage, toTripSummary } from './adapters'
 import type { ApiPage, ApiPhoto, ApiTrip } from './contract'
-import { request } from './http'
+import { ApiError, request } from './http'
 import {
+  mockCreateShare,
   mockCreateTrip,
   mockGetTrip,
+  mockListShares,
   mockListTrips,
   mockMapPhotos,
   mockPatchLocation,
+  mockRevokeShare,
   mockSearchPlaces,
+  mockSharedCollection,
   mockSummary,
   mockTripPhotos,
   mockUpdateTrip,
   mockUploadPhotos,
 } from './mock'
 import type {
+  CreateShareInput,
   CreateTripInput,
   UpdateTripInput,
   LocationPatch,
@@ -32,6 +37,8 @@ import type {
   Page,
   Photo,
   Place,
+  Share,
+  SharedCollection,
   TripDetail,
   TripSummary,
   UploadItem,
@@ -48,16 +55,22 @@ type Endpoint =
   | 'searchPlaces'
   | 'patchLocation'
   | 'upload'
+  | 'listShares'
+  | 'createShare'
+  | 'revokeShare'
+  | 'sharedCollection'
 
 /** Endpoints mapmory-backend serves today. */
-const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
-  'listTrips',
-  'createTrip',
-  'getTrip',
-  'updateTrip',
-])
+const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip', 'getTrip', 'updateTrip'])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
+
+/** Sharing is a mock-only capability until the backend supports public links. */
+export const sharingAvailable = !backendEnabled
+
+function mockSharingUnavailable(): ApiError {
+  return new ApiError(503, 'not_implemented', 'Persistent sharing is not available yet.')
+}
 
 function live(endpoint: Endpoint): boolean {
   return backendEnabled && LIVE.has(endpoint)
@@ -134,4 +147,25 @@ export function uploadPhotos(
   onUpdate: (item: UploadItem) => void,
 ): Promise<void> {
   return mockUploadPhotos(tripId, files, onUpdate)
+}
+
+/** Sharing remains mock-backed only until the persistent share API exists. */
+export function listShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
+  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
+  return mockListShares(tripId, signal)
+}
+
+export function createShare(tripId: string, input: CreateShareInput): Promise<Share> {
+  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
+  return mockCreateShare(tripId, input)
+}
+
+export function revokeShare(id: string): Promise<void> {
+  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
+  return mockRevokeShare(id)
+}
+
+export function getSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
+  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
+  return mockSharedCollection(token, signal)
 }

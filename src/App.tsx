@@ -6,6 +6,8 @@ import { firebaseEnabled, logOut, watchSignedIn } from './auth'
 import LandingScreen from './LandingScreen'
 import MapScreen from './MapScreen'
 import NotFoundScreen from './NotFoundScreen'
+import SharedScreen from './SharedScreen'
+import { sharingAvailable } from './api/client'
 import TripScreen from './TripScreen'
 import { isOwnerRoute, navigate, routeTitle, useRoute, type Route } from './router'
 import './App.css'
@@ -131,6 +133,12 @@ export default function App() {
         onBack={() => navigate({ name: 'landing' })}
       />
     )
+  }
+  if (route.name === 'shared') {
+    if (!sharingAvailable) {
+      return <NotFoundScreen signedIn={signedIn} onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })} />
+    }
+    return <SharedScreen key={route.token} token={route.token} onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })} />
   }
   if (route.name === 'not-found') {
     return <NotFoundScreen signedIn={signedIn} onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })} />

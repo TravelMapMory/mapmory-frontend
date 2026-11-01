@@ -14,14 +14,16 @@ import {
   MapPin,
   MapPinOff,
   Pencil,
+  Share2,
   Upload,
   type LucideIcon,
 } from 'lucide-react'
-import { getTrip, listTripPhotos, patchPhotoLocation } from './api/client'
+import { getTrip, listTripPhotos, patchPhotoLocation, sharingAvailable } from './api/client'
 import type { LocationPatch, Photo, TripDetail } from './api/types'
 import LocationPicker, { type LatLng } from './components/LocationPicker'
 import PhotoViewer, { viewerImage } from './components/PhotoViewer'
 import TripDetailsForm from './components/TripDetailsForm'
+import ShareSettings from './components/ShareSettings'
 import UploadPanel from './components/UploadPanel'
 import VisibilityBadge from './components/VisibilityBadge'
 import { formatCaptured, formatDateRange, plural } from './format'
@@ -343,6 +345,7 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
     returnFocus.current = true
     setEditing(false)
   }
+  const [sharing, setSharing] = useState(false)
 
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
@@ -477,8 +480,21 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
             <Upload size={16} aria-hidden />
             Upload photos
           </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={!sharingAvailable}
+            aria-expanded={sharingAvailable ? sharing : undefined}
+            title={!sharingAvailable ? 'Sharing will be available when persistent photo sharing is supported.' : undefined}
+            onClick={() => setSharing((open) => !open)}
+          >
+            <Share2 size={16} aria-hidden />
+            {sharingAvailable ? 'Share' : 'Share (coming soon)'}
+          </button>
         </div>
       </header>
+
+      {sharingAvailable && sharing ? <ShareSettings trip={trip} photos={photos} /> : null}
 
       <p className="visually-hidden" role="status">
         {message}

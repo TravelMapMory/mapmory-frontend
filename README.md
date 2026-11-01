@@ -450,3 +450,15 @@ The planned production stack includes PostgreSQL, Google Cloud Storage with sign
 Icons are provided by `lucide-react`, with status information represented through both text and iconography.
 
 Sample photographs in `src/assets/pins/` are sourced from Wikimedia Commons. Their authors and licenses are documented in [CREDITS.md](CREDITS.md).
+
+### Link sharing availability
+
+Link sharing is currently **mock-only**. In persistent mode, the Share button remains visible but disabled as **Share (coming soon)**. With `VITE_API_URL` unset, the owner can create
+and revoke demonstration links, and `/s/{token}` displays mock recipient content.
+These links live in the browser's local storage; they are not persistent backend shares.
+
+With `VITE_API_URL` set, the Share action is hidden on trip pages, `/s/{token}`
+shows the not-found page, and the four sharing client functions reject with
+`not_implemented` rather than reading demo records. The backend photo and public
+sharing APIs must be implemented before enabling sharing in persistent mode.
+The `tests/boundaries/sharing-boundary.spec.ts` tests cover this separation.
