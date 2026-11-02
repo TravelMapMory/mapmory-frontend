@@ -1,7 +1,7 @@
 import UploadDropZone from './UploadDropZone'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import { CircleAlert, CircleCheck, Clock, LoaderCircle, MapPinOff, RotateCcw, type LucideIcon } from 'lucide-react'
-import { uploadPhotos } from '../api/client'
+import { restoreUploads, uploadPhotos } from '../api/client'
 import type { Photo, PhotoState, UploadItem } from '../api/types'
 import { formatCaptured, plural } from '../format'
 import './UploadPanel.css'
@@ -86,6 +86,20 @@ export default function UploadPanel({ tripId, photos, initialFiles, onBatchDone,
     },
     [tripId, onBatchDone],
   )
+
+  // After a reload, show what the backend knows about this browser's unfinished uploads.
+  useEffect(() => {
+    const controller = new AbortController()
+    restoreUploads(tripId, controller.signal)
+      .then((restored) => {
+        if (restored.length === 0) return
+        setItems((current) => [...restored.filter((r) => !current.some((i) => i.client_file_id === r.client_file_id)), ...current])
+      })
+      .catch(() => {
+        // Recovery is best effort; new uploads still work.
+      })
+    return () => controller.abort()
+  }, [tripId])
 
   // Files handed over from the Dashboard start uploading straight away, once.
   const startedInitial = useRef(false)

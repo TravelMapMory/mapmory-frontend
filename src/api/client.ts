@@ -8,7 +8,8 @@
  * serves it; when all are live, the mock can go.
  */
 import { toPhotoPage, toTripDetail, toTripPage, toTripSummary, toUploadItem, uploadErrorMessage } from './adapters'
-import type { ApiPage, ApiPhoto, ApiRegisteredBatch, ApiRegisterUpload, ApiTrip } from './contract'
+import type { ApiBatch, ApiPage, ApiPhoto, ApiRegisteredBatch, ApiRegisterUpload, ApiTrip } from './contract'
+import { addRegistration, hasOpenRegistrations, loadRegistrations, updateRegistration } from './uploadRegistry'
 import { ApiError, request } from './http'
 import {
   mockCreateShare,
@@ -167,11 +168,112 @@ export function uploadPhotos(
   return mockUploadPhotos(tripId, files, onUpdate)
 }
 
+/** A signed upload URL is only used while it has at least this long left. */
+const UPLOAD_URL_MARGIN_MS = 60_000
+const UPLOAD_CONCURRENCY = 3
+const INTERRUPTED = 'The upload was interrupted. Choose the file again to finish it.'
+
+function isFinal(state: UploadItem['state']): boolean {
+  return state === 'ready' || state === 'needs-location' || state === 'failed'
+}
+
+function messageOf(error: unknown, fallback: string): string {
+  return error instanceof Error && error.message ? error.message : fallback
+}
+
 /**
- * Registers the batch, PUTs each accepted file to its signed Cloud Storage
+ * Registers files with POST /api/trips/{id}/batches and remembers each
+ * accepted one. Rejected files are returned with their reason.
+ */
+async function registerFiles(
+  tripId: string,
+  files: { client_file_id: string; file: File }[],
+): Promise<ApiRegisteredBatch> {
+  const body: ApiRegisterUpload = {
+    files: files.map(({ client_file_id, file }) => ({
+      client_file_id,
+      size_bytes: file.size,
+      content_type: file.type || 'application/octet-stream',
+    })),
+  }
+  const batch = await request<ApiRegisteredBatch>('POST', `/api/trips/${encodeURIComponent(tripId)}/batches`, { body })
+  const names = new Map(files.map((f) => [f.client_file_id, f.file.name]))
+  for (const accepted of batch.accepted_files) {
+    addRegistration(tripId, accepted.client_file_id, {
+      batch_id: batch.batch_id,
+      photo_id: accepted.photo_id,
+      file_name: names.get(accepted.client_file_id) ?? accepted.client_file_id,
+      upload: accepted.upload,
+      registered_at: new Date().toISOString(),
+      finished: false,
+    })
+  }
+  return batch
+}
+
+/** GET /api/batches/{id} until the photo leaves processing, for a concurrent /complete. */
+async function waitForPhoto(batchId: string, clientFileId: string): Promise<ApiPhoto> {
+  for (let attempt = 0; attempt < 30; attempt++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    const batch = await request<ApiBatch>('GET', `/api/batches/${encodeURIComponent(batchId)}`)
+    const photo = batch.photos.find((p) => p.client_file_id === clientFileId)
+    if (photo && isFinal(photo.state)) return photo
+  }
+  throw new Error('The photo is still being processed. Try again in a minute.')
+}
+
+/**
+ * Sends one registered file: PUT to its signed URL while the URL is still
+ * valid, then /complete. /complete never reprocesses a finished photo, so
+ * repeating this after any failure is safe. Only when the URL has expired
+ * and the bytes never arrived is the file registered again.
+ */
+async function sendFile(
+  tripId: string,
+  clientFileId: string,
+  file: File,
+  update: (change: Partial<UploadItem>) => void,
+): Promise<void> {
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const registration = loadRegistrations(tripId)[clientFileId]
+    const urlUsable = Date.parse(registration.upload.expires_at) - Date.now() > UPLOAD_URL_MARGIN_MS
+    if (urlUsable) {
+      update({ state: 'uploading', error: null })
+      const { method, url, headers } = registration.upload
+      const response = await fetch(url, { method, headers, body: file })
+      if (!response.ok) throw new Error(`The upload to Cloud Storage failed (${response.status}). Try again.`)
+    }
+    update({ state: 'processing', error: null })
+    const path = `/api/batches/${encodeURIComponent(registration.batch_id)}/files/${encodeURIComponent(clientFileId)}/complete`
+    let photo: ApiPhoto
+    try {
+      photo = await request<ApiPhoto>('POST', path)
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'processing_in_progress') {
+        photo = await waitForPhoto(registration.batch_id, clientFileId)
+      } else if (error instanceof ApiError && error.code === 'upload_missing' && !urlUsable && attempt === 0) {
+        // The old URL expired before the bytes arrived: register the file again.
+        updateRegistration(tripId, clientFileId, null)
+        const batch = await registerFiles(tripId, [{ client_file_id: clientFileId, file }])
+        const rejected = batch.rejected_files[0]
+        if (rejected) throw new Error(uploadErrorMessage(rejected.error.code), { cause: error })
+        continue
+      } else {
+        throw error
+      }
+    }
+    updateRegistration(tripId, clientFileId, { finished: isFinal(photo.state) })
+    update(toUploadItem(photo, registration.file_name))
+    return
+  }
+}
+
+/**
+ * Registers new files, PUTs each accepted file to its signed Cloud Storage
  * URL (the browser sends no Firebase token there), then asks the backend to
- * process it. Rejected files and failed uploads are reported per file, so
- * one bad file never stops the others.
+ * process it. A file this browser already registered for the trip is not
+ * registered again (see uploadRegistry.ts). Rejected files and failures are
+ * reported per file, so one bad file never stops the others.
  */
 async function liveUploadPhotos(
   tripId: string,
@@ -189,47 +291,76 @@ async function liveUploadPhotos(
     report(items.get(client_file_id)!)
   }
 
-  const body: ApiRegisterUpload = {
-    files: files.map(({ client_file_id, file }) => ({
-      client_file_id,
-      size_bytes: file.size,
-      content_type: file.type || 'application/octet-stream',
-    })),
-  }
-  let batch: ApiRegisteredBatch
-  try {
-    batch = await request<ApiRegisteredBatch>('POST', `/api/trips/${encodeURIComponent(tripId)}/batches`, { body })
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Registration failed.'
-    for (const { client_file_id } of files) update(client_file_id, { state: 'failed', error: message })
-    return
-  }
-  for (const rejected of batch.rejected_files) {
-    update(rejected.client_file_id, { state: 'failed', error: uploadErrorMessage(rejected.error.code) })
+  const known = loadRegistrations(tripId)
+  const fresh = files.filter((f) => !known[f.client_file_id])
+  if (fresh.length > 0) {
+    try {
+      const batch = await registerFiles(tripId, fresh)
+      for (const rejected of batch.rejected_files) {
+        update(rejected.client_file_id, { state: 'failed', error: uploadErrorMessage(rejected.error.code) })
+      }
+    } catch (error) {
+      for (const { client_file_id } of fresh) update(client_file_id, { state: 'failed', error: messageOf(error, 'Registration failed.') })
+    }
   }
 
-  const byId = new Map(files.map((f) => [f.client_file_id, f.file]))
-  const queue = [...batch.accepted_files]
+  const registered = loadRegistrations(tripId)
+  const queue = files.filter((f) => registered[f.client_file_id])
   const worker = async () => {
     for (let next = queue.shift(); next; next = queue.shift()) {
-      const { client_file_id, upload } = next
-      update(client_file_id, { state: 'uploading' })
+      const id = next.client_file_id
       try {
-        const response = await fetch(upload.url, { method: upload.method, headers: upload.headers, body: byId.get(client_file_id) })
-        if (!response.ok) throw new Error(`Cloud Storage answered ${response.status}.`)
-        update(client_file_id, { state: 'processing' })
-        const photo = await request<ApiPhoto>(
-          'POST',
-          `/api/batches/${encodeURIComponent(batch.batch_id)}/files/${encodeURIComponent(client_file_id)}/complete`,
-        )
-        const item = toUploadItem(photo, items.get(client_file_id)!.file_name)
-        update(client_file_id, item)
+        await sendFile(tripId, id, next.file, (change) => update(id, change))
       } catch (error) {
-        update(client_file_id, { state: 'failed', error: error instanceof Error ? error.message : 'Upload failed.' })
+        update(id, { state: 'failed', error: messageOf(error, 'The upload failed. Try again.') })
       }
     }
   }
-  await Promise.all(Array.from({ length: 3 }, worker))
+  await Promise.all(Array.from({ length: UPLOAD_CONCURRENCY }, worker))
+}
+
+/** Whether this browser has uploads for the trip that did not finish, e.g. before a reload. */
+export function hasUnfinishedUploads(tripId: string): boolean {
+  return live('upload') && hasOpenRegistrations(tripId)
+}
+
+/**
+ * Upload rows to show again after a reload: the backend state of every file
+ * this browser registered for the trip but did not see finish (issue #31).
+ * A file whose bytes never arrived needs to be chosen again; the same file
+ * then resumes its registration instead of creating a new photo.
+ */
+export async function restoreUploads(tripId: string, signal?: AbortSignal): Promise<UploadItem[]> {
+  if (!live('upload')) return []
+  const open = Object.entries(loadRegistrations(tripId)).filter(([, entry]) => !entry.finished)
+  const batchIds = [...new Set(open.map(([, entry]) => entry.batch_id))]
+  const batches = new Map<string, ApiBatch | null>()
+  for (const id of batchIds) {
+    try {
+      batches.set(id, await request<ApiBatch>('GET', `/api/batches/${encodeURIComponent(id)}`, { signal }))
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 404) batches.set(id, null)
+      else throw error
+    }
+  }
+  const items: UploadItem[] = []
+  for (const [clientFileId, entry] of open) {
+    const photo = batches.get(entry.batch_id)?.photos.find((p) => p.client_file_id === clientFileId)
+    if (!photo) {
+      updateRegistration(tripId, clientFileId, null)
+      continue
+    }
+    if (isFinal(photo.state)) {
+      updateRegistration(tripId, clientFileId, { finished: true })
+      items.push(toUploadItem(photo, entry.file_name))
+    } else if (photo.state === 'processing') {
+      items.push({ ...toUploadItem(photo, entry.file_name), state: 'processing' })
+    } else {
+      // No photo attached: the panel would otherwise show the gallery's pending state.
+      items.push({ client_file_id: clientFileId, file_name: entry.file_name, state: 'failed', error: INTERRUPTED, photo: null })
+    }
+  }
+  return items
 }
 
 /** Sharing remains mock-backed only until the persistent share API exists. */
