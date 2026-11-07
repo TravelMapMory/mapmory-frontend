@@ -6,6 +6,7 @@
  */
 import { initializeApp } from 'firebase/app'
 import {
+  connectAuthEmulator,
   createUserWithEmailAndPassword,
   getAuth,
   onAuthStateChanged,
@@ -33,6 +34,10 @@ function firebaseAuth(): Auth {
       appId: env.VITE_FIREBASE_APP_ID,
     })
     auth = getAuth(app)
+    // Local development without the shared project: the Firebase Auth emulator.
+    if (env.VITE_FIREBASE_AUTH_EMULATOR_URL) {
+      connectAuthEmulator(auth, env.VITE_FIREBASE_AUTH_EMULATOR_URL, { disableWarnings: true })
+    }
     const current = auth
     // A fresh token per request; the SDK caches it and renews it before expiry (issue #22).
     setTokenProvider(async (forceRefresh) => (current.currentUser ? current.currentUser.getIdToken(forceRefresh) : null))

@@ -26,6 +26,8 @@ jobs:
         run: npx playwright install --with-deps chromium
       - name: Acceptance tests
         run: npm run test:acceptance
+      - name: Mock/live boundary tests
+        run: npm run test:boundaries
       - name: Docker build
         run: docker build -t mapmory-frontend:ci .
 
