@@ -118,21 +118,18 @@ export async function updateTrip(id: string, input: UpdateTripInput): Promise<Tr
   if (!live('updateTrip')) return mockUpdateTrip(id, input)
   return toTripDetail(await request<ApiTrip>('PATCH', `/api/trips/${encodeURIComponent(id)}`, { body: input }))
 }
-/** GET /api/trips/{id}/photos — all photos, including ones without a location. */
-export async function listTripPhotos(id: string, signal?: AbortSignal): Promise<Page<Photo>> {
+/**
+ * GET /api/trips/{id}/photos — one page of the trip's photos, including ones
+ * without a location. Pass the previous page's next_cursor to get the next one.
+ */
+export async function listTripPhotos(id: string, signal?: AbortSignal, cursor?: string | null): Promise<Page<Photo>> {
   if (live('tripPhotos')) {
-    // The screens order the whole trip by capture time, so load every page.
-    const items: ApiPhoto[] = []
-    let cursor: string | null = null
-    do {
-      const page: ApiPage<ApiPhoto> = await request<ApiPage<ApiPhoto>>('GET', `/api/trips/${encodeURIComponent(id)}/photos`, {
-        query: { limit: 100, cursor },
+    return toPhotoPage(
+      await request<ApiPage<ApiPhoto>>('GET', `/api/trips/${encodeURIComponent(id)}/photos`, {
+        query: { limit: 100, cursor: cursor ?? null },
         signal,
-      })
-      items.push(...page.items)
-      cursor = page.next_cursor
-    } while (cursor)
-    return toPhotoPage({ items, next_cursor: null })
+      }),
+    )
   }
   // A real trip whose photos the backend does not serve yet: never mix in demo photos.
   if (live('getTrip')) return { items: [], next_cursor: null }
