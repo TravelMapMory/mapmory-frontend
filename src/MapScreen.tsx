@@ -4,6 +4,7 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { MapPinOff } from 'lucide-react'
 import { getMapPhotos, listTrips } from './api/client'
 import type { BBox, MapPhoto, MapPhotoQuery, TripSummary } from './api/types'
+import MapModeSwitch from './components/MapModeSwitch'
 import PhotoClusters from './components/PhotoClusters'
 import PlaceTrips from './components/PlaceTrips'
 import PlaceSearch from './components/PlaceSearch'
@@ -40,6 +41,8 @@ export interface MapScreenProps {
   /** Trip chosen with "Show on map" on the Dashboard or trip page, or null for all photos. */
   tripId?: string | null
   onOpenTrip?: (tripId: string) => void
+  /** Switches to Map · Public. */
+  onPublicMap?: () => void
 }
 
 /**
@@ -52,7 +55,7 @@ export interface MapScreenProps {
  * change fetches without a bounding box and frames the result; only when the
  * server reports the result as truncated does panning refetch per viewport.
  */
-export default function MapScreen({ tripId = null, onOpenTrip }: MapScreenProps) {
+export default function MapScreen({ tripId = null, onOpenTrip, onPublicMap }: MapScreenProps) {
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [trips, setTrips] = useState<TripSummary[]>([])
   const [filters, setFilters] = useState<Filters>({ tripId: tripId ?? '', from: '', to: '', q: '' })
@@ -203,6 +206,8 @@ export default function MapScreen({ tripId = null, onOpenTrip }: MapScreenProps)
           if (event.key === 'Escape' && selected) setSelected(null)
         }}
       >
+        {onPublicMap ? <MapModeSwitch mode="mine" onChange={onPublicMap} /> : null}
+
         <div className="mp-head">
           <h1 className="mp-title">My photos</h1>
           <p className="mp-caption">Only photos with a location appear on the map.</p>

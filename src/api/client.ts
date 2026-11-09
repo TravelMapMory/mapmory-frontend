@@ -10,6 +10,8 @@
 import { toPhotoPage, toTripDetail, toTripPage, toTripSummary } from './adapters'
 import type { ApiPage, ApiPhoto, ApiTrip } from './contract'
 import { ApiError, request } from './http'
+import { PUBLIC_CLUSTER_LIMIT } from './limits'
+import { normalizeBBox } from './publicGrid'
 import {
   mockCreateShare,
   mockCreateTrip,
@@ -18,6 +20,8 @@ import {
   mockListTrips,
   mockMapPhotos,
   mockPatchLocation,
+  mockPublicMap,
+  mockPublicShare,
   mockRevokeShare,
   mockSearchPlaces,
   mockSharedCollection,
@@ -37,6 +41,8 @@ import type {
   Page,
   Photo,
   Place,
+  PublicMapPage,
+  PublicMapQuery,
   Share,
   SharedCollection,
   TripDetail,
@@ -59,6 +65,8 @@ type Endpoint =
   | 'createShare'
   | 'revokeShare'
   | 'sharedCollection'
+  | 'publicMap'
+  | 'publicShare'
 
 /** Endpoints mapmory-backend serves today. */
 const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip', 'getTrip', 'updateTrip'])
@@ -168,4 +176,42 @@ export function revokeShare(id: string): Promise<void> {
 export function getSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
   if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
   return mockSharedCollection(token, signal)
+}
+
+/** A public endpoint the backend does not serve yet: real visitors must never see demo photos. */
+function publicUnavailable(): ApiError {
+  return new ApiError(503, 'not_implemented', 'The public map is not available yet.')
+}
+
+/**
+ * GET /api/public/map?bbox=west,south,east,north&zoom=z, callable without
+ * signing in. The server groups public photos into grid cells for the zoom
+ * and returns at most 200 clusters; the browser trims to that too, so a
+ * misbehaving server cannot flood the map.
+ */
+export async function getPublicMap(query: PublicMapQuery, signal?: AbortSignal): Promise<PublicMapPage> {
+  const bbox = normalizeBBox(query.bbox)
+  const zoom = Math.round(query.zoom)
+  let page: PublicMapPage
+  if (live('publicMap')) {
+    page = await request<PublicMapPage>('GET', '/api/public/map', {
+      query: { bbox: bbox.map((v) => v.toFixed(5)).join(','), zoom },
+      signal,
+    })
+  } else if (backendEnabled) {
+    throw publicUnavailable()
+  } else {
+    page = await mockPublicMap({ bbox, zoom }, signal)
+  }
+  if (page.clusters.length <= PUBLIC_CLUSTER_LIMIT) return page
+  return { clusters: page.clusters.slice(0, PUBLIC_CLUSTER_LIMIT), truncated: true }
+}
+
+/** GET /api/public/shares/{id}: the photos of one public share, placed by city. */
+export async function getPublicShare(id: string, signal?: AbortSignal): Promise<SharedCollection> {
+  if (live('publicShare')) {
+    return request<SharedCollection>('GET', `/api/public/shares/${encodeURIComponent(id)}`, { signal })
+  }
+  if (backendEnabled) throw publicUnavailable()
+  return mockPublicShare(id, signal)
 }

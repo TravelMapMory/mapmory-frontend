@@ -4,8 +4,10 @@ import DashboardScreen from './DashboardScreen'
 import AuthScreen from './AuthScreen'
 import { firebaseEnabled, logOut, watchSignedIn } from './auth'
 import LandingScreen from './LandingScreen'
+import PublicHeader from './components/PublicHeader'
 import MapScreen from './MapScreen'
 import NotFoundScreen from './NotFoundScreen'
+import PublicMapScreen from './PublicMapScreen'
 import SharedScreen from './SharedScreen'
 import { sharingAvailable } from './api/client'
 import TripScreen from './TripScreen'
@@ -110,6 +112,9 @@ export default function App() {
   function showOnMap(tripId: string) {
     navigate({ name: 'map', tripId })
   }
+  function openPublicShare(shareId: string) {
+    navigate({ name: 'public-share', shareId })
+  }
   function openTrip(tripId: string) {
     navigate({ name: 'trip', tripId })
   }
@@ -122,7 +127,13 @@ export default function App() {
   if (signedIn === null || redirect) return null
 
   if (route.name === 'landing') {
-    return <LandingScreen onSignIn={() => navigate({ name: 'login' })} onSignUp={() => navigate({ name: 'signup' })} />
+    return (
+      <LandingScreen
+        onSignIn={() => navigate({ name: 'login' })}
+        onSignUp={() => navigate({ name: 'signup' })}
+        onExplore={() => navigate({ name: 'public-map' })}
+      />
+    )
   }
   if (route.name === 'signup' || route.name === 'login') {
     return (
@@ -138,14 +149,42 @@ export default function App() {
     if (!sharingAvailable) {
       return <NotFoundScreen signedIn={signedIn} onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })} />
     }
-    return <SharedScreen key={route.token} token={route.token} onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })} />
+    return (
+      <SharedScreen
+        key={route.token}
+        source={{ kind: 'link', token: route.token }}
+        onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })}
+      />
+    )
+  }
+  // A public share is its own page for everyone; it never leads into the owner's account.
+  if (route.name === 'public-share') {
+    return (
+      <SharedScreen
+        key={route.shareId}
+        source={{ kind: 'public', shareId: route.shareId }}
+        onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })}
+        onBackToMap={() => navigate({ name: 'public-map' })}
+      />
+    )
+  }
+  // Signed-out visitors get the public map without the owner's navigation bar.
+  if (route.name === 'public-map' && !signedIn) {
+    return (
+      <div className="app">
+        <PublicHeader onHome={() => navigate({ name: 'landing' })} onSignIn={() => navigate({ name: 'login' })} />
+        <main className="app-body">
+          <PublicMapScreen onOpenShare={openPublicShare} />
+        </main>
+      </div>
+    )
   }
   if (route.name === 'not-found') {
     return <NotFoundScreen signedIn={signedIn} onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })} />
   }
 
   // A trip page belongs to the Dashboard, so that tab stays current there.
-  const tab: Screen = route.name === 'map' ? 'map' : 'dashboard'
+  const tab: Screen = route.name === 'map' || route.name === 'public-map' ? 'map' : 'dashboard'
 
   return (
     <div className="app">
@@ -155,7 +194,15 @@ export default function App() {
           <DashboardScreen onShowOnMap={showOnMap} onOpenTrip={openTrip} onUploadPhotos={uploadTo} />
         ) : null}
         {route.name === 'map' ? (
-          <MapScreen key={route.tripId ?? 'all'} tripId={route.tripId} onOpenTrip={openTrip} />
+          <MapScreen
+            key={route.tripId ?? 'all'}
+            tripId={route.tripId}
+            onOpenTrip={openTrip}
+            onPublicMap={() => navigate({ name: 'public-map' })}
+          />
+        ) : null}
+        {route.name === 'public-map' ? (
+          <PublicMapScreen onOpenShare={openPublicShare} onMyPhotos={() => navigate({ name: 'map', tripId: null })} />
         ) : null}
         {route.name === 'trip' ? (
           <TripScreen

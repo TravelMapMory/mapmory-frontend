@@ -31,6 +31,7 @@ import { toPhoto, toTripDetail, uploadErrorMessage } from './adapters'
 import type { ApiCreateTrip, ApiDisplayImage, ApiPage, ApiPhoto, ApiTrip } from './contract'
 import { ApiError } from './http'
 import { NOTES_MAX, TITLE_MAX } from './limits'
+import { clusterPublicPoints, coarsePosition, type PublicPoint } from './publicGrid'
 import type {
   CreateShareInput,
   LabelStatus,
@@ -41,6 +42,8 @@ import type {
   MeSummary,
   Photo,
   Place,
+  PublicMapPage,
+  PublicMapQuery,
   Share,
   SharedCollection,
   SharedPhoto,
@@ -264,6 +267,17 @@ switch (acceptance?.scenario) {
       photo('o-same-y', 'trip-rome', 'eiffelTower', '2026-09-20T12:00:00', '2026-09-28T17:35:00Z'),
       photo('o-tie-a', 'trip-rome', 'treviFountain', '2026-09-20T09:00:00', '2026-09-28T17:35:01Z'),
     )
+    break
+  // The 200-cluster cap: a public photo on every whole degree across Europe, none with a city.
+  case 'public-many':
+    trips.push({ id: 'trip-world', title: 'Grid survey', notes: null, created_at: '2026-10-01T00:00:00Z', cover_photo_id: null })
+    for (let lat = 20; lat <= 72; lat++) {
+      for (let lng = -40; lng <= 60; lng++) {
+        photos.push(photo(`grid-${lat}-${lng}`, 'trip-world', 'colosseum', '2026-10-01T09:00:00', '2026-10-01T10:00:00Z', {
+          lat, lng, exif_lat: lat, exif_lng: lng, city: null, country: null, place_name: null,
+        }))
+      }
+    }
     break
 }
 
@@ -744,6 +758,8 @@ export async function mockUploadPhotos(
 /** A share row: the owner's view plus the secret token its link carries. */
 interface ShareRow extends Omit<Share, 'url'> {
   token: string
+  /** Doc 3.5: a reported public share is hidden from the public map until the team reviews it. */
+  reported_at?: string | null
 }
 
 /** Two demo links, so the recipient view can be shown without creating one first. */
@@ -770,7 +786,80 @@ const shares: ShareRow[] = [
     created_at: '2026-06-20T12:00:00Z',
     revoked_at: '2026-06-22T08:00:00Z',
   },
+  // Public shares (doc 4.2) for the public map. Kane's share dialog will create these;
+  // until then they are seeded. Each one shows only its own photos.
+  {
+    id: 'share-pub-europe',
+    token: 'public-europe',
+    trip_id: 'trip-europe',
+    mode: 'public',
+    title: 'Paris and Berlin highlights',
+    description: 'Two capitals from an Interrail summer.',
+    photo_ids: ['p-eu-1', 'p-eu-2', 'p-eu-4'],
+    created_at: '2026-06-22T10:00:00Z',
+    revoked_at: null,
+  },
+  {
+    id: 'share-pub-helsinki',
+    token: 'public-helsinki',
+    trip_id: 'trip-helsinki',
+    mode: 'public',
+    title: 'Helsinki by the sea',
+    description: null,
+    photo_ids: ['p-hel-1', 'p-hel-2'],
+    created_at: '2026-09-15T08:00:00Z',
+    revoked_at: null,
+  },
+  {
+    id: 'share-pub-rome',
+    token: 'public-rome',
+    trip_id: 'trip-rome',
+    mode: 'public',
+    title: 'The Colosseum in the morning',
+    description: null,
+    photo_ids: ['p-rom-1'],
+    created_at: '2026-09-29T09:00:00Z',
+    revoked_at: null,
+  },
+  // A reported and an unpublished public share: neither may reach the public map.
+  {
+    id: 'share-pub-reported',
+    token: 'public-reported',
+    trip_id: 'trip-europe',
+    mode: 'public',
+    title: 'Trevi Fountain at dusk',
+    description: null,
+    photo_ids: ['p-eu-6'],
+    created_at: '2026-06-23T10:00:00Z',
+    revoked_at: null,
+    reported_at: '2026-06-24T10:00:00Z',
+  },
+  {
+    id: 'share-pub-unpublished',
+    token: 'public-unpublished',
+    trip_id: 'trip-europe',
+    mode: 'public',
+    title: 'London in the rain',
+    description: null,
+    photo_ids: ['p-eu-3'],
+    created_at: '2026-06-23T11:00:00Z',
+    revoked_at: '2026-06-25T10:00:00Z',
+  },
 ]
+
+if (acceptance?.scenario === 'public-many') {
+  shares.push({
+    id: 'share-pub-grid',
+    token: 'public-grid',
+    trip_id: 'trip-world',
+    mode: 'public',
+    title: 'Grid survey',
+    description: null,
+    photo_ids: photos.filter((p) => p.trip_id === 'trip-world').map((p) => p.id),
+    created_at: '2026-10-01T11:00:00Z',
+    revoked_at: null,
+  })
+}
 
 /*
  * Links outlive a reload in the real app, so the mock keeps them in this
@@ -826,8 +915,9 @@ function newToken(): string {
 /** The owner's active links for a trip, newest first. Revoked links are history, not shown. */
 export async function mockListShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
   await beforeOperation('listShares', signal)
+  // Share settings manage links only; public shares arrive with the public share mode.
   const items = shares
-    .filter((s) => s.trip_id === tripId && s.revoked_at === null)
+    .filter((s) => s.trip_id === tripId && s.mode === 'link' && s.revoked_at === null)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .map(toShare)
   return delay(items, undefined, signal)
@@ -868,7 +958,8 @@ export async function mockRevokeShare(id: string): Promise<void> {
 }
 
 /** The centre of the photo's city: shared views never reveal where exactly a photo was taken. */
-function cityCentre(p: Photo): { lat: number; lng: number } | null {
+function cityCentre(p: { city: string | null; country: string | null }): { lat: number; lng: number } | null {
+  if (!p.city) return null
   const centre = CITIES.find((c) => c.city === p.city && c.country === p.country)
   return centre ? { lat: centre.lat, lng: centre.lng } : null
 }
@@ -896,6 +987,54 @@ export async function mockSharedCollection(token: string, signal?: AbortSignal):
   const row = shares.find((s) => s.token === token)
   if (!row) throw new ApiError(404, 'not_found', 'Share not found')
   if (row.revoked_at) throw new ApiError(410, 'share_revoked', 'This link was turned off')
+  const shown = photos.filter((p) => row.photo_ids.includes(p.id)).map(toPhoto).filter(isShareable).sort(byCapture)
+  return delay(
+    { title: row.title, description: row.description, created_at: row.created_at, photos: shown.map(toSharedPhoto) },
+    undefined,
+    signal,
+  )
+}
+
+/** Shown on the public map and at /public/{id}: public, not unpublished, not hidden by a report. */
+function isListedPublic(row: ShareRow): boolean {
+  return row.mode === 'public' && row.revoked_at === null && !row.reported_at
+}
+
+/**
+ * GET /api/public/map, callable without signing in (doc 5.2). Only photos of
+ * listed public shares count, each at its coarse position; private photos of
+ * the same trips never do. At most 200 clusters for the visible area.
+ */
+export async function mockPublicMap(query: PublicMapQuery, signal?: AbortSignal): Promise<PublicMapPage> {
+  await beforeOperation('publicMap', signal)
+  const points: PublicPoint[] = []
+  for (const row of shares.filter(isListedPublic)) {
+    const ids = new Set(row.photo_ids)
+    for (const p of photos) {
+      if (!ids.has(p.id) || p.lat === null || p.lng === null || !isShareable(toPhoto(p))) continue
+      points.push({
+        photo_id: p.id,
+        share_id: row.id,
+        share_title: row.title,
+        thumb_url: p.display_image?.url ?? null,
+        ...coarsePosition(p.lat, p.lng, cityCentre(p)),
+        city: p.city,
+        country: p.country,
+      })
+    }
+  }
+  return delay(clusterPublicPoints(points, query), 150, signal)
+}
+
+/**
+ * GET /api/public/shares/{id}: a listed public share's photos, placed by
+ * city. Unpublished, reported and non-public shares are all 404, so the
+ * answer never tells a visitor which of those it was.
+ */
+export async function mockPublicShare(id: string, signal?: AbortSignal): Promise<SharedCollection> {
+  await beforeOperation('publicShare', signal)
+  const row = shares.find((s) => s.id === id)
+  if (!row || !isListedPublic(row)) throw new ApiError(404, 'not_found', 'Share not found')
   const shown = photos.filter((p) => row.photo_ids.includes(p.id)).map(toPhoto).filter(isShareable).sort(byCapture)
   return delay(
     { title: row.title, description: row.description, created_at: row.created_at, photos: shown.map(toSharedPhoto) },
