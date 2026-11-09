@@ -20,6 +20,8 @@ async function keyboardControls(page: import('@playwright/test').Page) {
 }
 
 test('every enabled form and navigation control can be reached by Tab with visible focus', async ({ page }) => {
+  // Tabs to every control on five screens in turn, so it grows with each control added.
+  test.slow()
   await boot(page)
   await expect(page.locator('.trip-card')).toHaveCount(3)
   await keyboardControls(page)

@@ -34,6 +34,8 @@ opens the last HTML report. Failed tests retain a screenshot and trace.
 | Upload actions/lifetime | Retry, Set location updates row/gallery, drag/drop, append file selection, close/reopen during processing, reload clears mock uploads | `upload.spec.ts`, `upload-controls.spec.ts` |
 | Keyboard/layout | Tab reachability and visible rings, keyboard actions, overflow/control bounds on normal/expanded/long-content screens, overlapping photo controls | `acceptance.spec.ts`, `keyboard-and-layout.spec.ts`, `dashboard.spec.ts` |
 | Metadata/place helpers | Invalid dates, leap days, wall-clock preservation, country/city keys | `checks/metadata-and-places.spec.ts` |
+| Map · Public | Signed-out entry from the landing page without owner navigation or collection filter, only listed public shares (reported, unpublished and private photos absent), city-level clusters, place panel with shares, Escape/Close, keyboard pin activation, multi-city cluster zooms in, Find a place reloads the area, empty area, read retry, 200-cluster cap note (desktop), unlisted shares unreachable by id, public share page and return to the same area, owner My photos/Public switch | `public-map.spec.ts` |
+| Public map grouping | City-centre or 0.01° positions, antimeridian and wide boxes, bbox filtering, zoom-sized cells, stable ids and order, 200-cluster cap keeps the fullest cells, a photo in two shares counted once, at most five shares per cluster, label ties | `checks/public-grid.spec.ts` |
 
 Every E2E test rejects uncaught browser errors. External tile/image requests are
 blocked so provider availability cannot change the outcome. Consequently these
@@ -49,8 +51,9 @@ are enabled. The Playwright server supplies that flag; normal development and
 production builds do not enable these scenarios.
 
 Scenarios: empty collection, empty trip, all unlocated, same city in two countries
-with multiple trips, long content, every photo state, all-undated photos, and
-ordering edge cases (equal capture times, a missing offset, a malformed date).
+with multiple trips, long content, every photo state, all-undated photos,
+ordering edge cases (equal capture times, a missing offset, a malformed date), and
+`public-many` (a public photo on every whole degree across Europe, for the 200-cluster cap).
 `failNext` causes a named read/save to fail once, before mutation. Optional latency
 makes loading/saving states observable. This is function-level mock injection,
 not HTTP interception or an integration test of Go/Firebase/GCS.
