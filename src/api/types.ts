@@ -185,7 +185,8 @@ export interface Share {
 
 /** `POST /api/trips/{id}/shares` body. */
 export interface CreateShareInput {
-  mode: 'link'
+  /** `public` also puts the photos on the regional public map (doc 4.2). */
+  mode: ShareMode
   title: string
   description?: string
   photo_ids: string[]

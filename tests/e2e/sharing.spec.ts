@@ -121,3 +121,26 @@ test('a failed link list offers retry', async ({ page }) => {
   await page.getByRole('button', { name: 'Try again' }).click()
   await expect(page.getByRole('listitem', { name: 'Highlights from Europe by rail' })).toBeVisible()
 })
+
+test('a public share asks for consent, is marked Public and opens without an account', async ({ page }) => {
+  await boot(page)
+  await openShare(page, 'Rome with family')
+  await page.getByRole('button', { name: 'New link' }).click()
+  // Link is the default audience; public is an explicit choice.
+  await expect(page.getByRole('radio', { name: 'Anyone with the link' })).toBeChecked()
+  await page.getByRole('radio', { name: /Public, also on the public map/ }).check()
+  await expect(page.getByText('Only share photos of people who agreed to be shown publicly.', { exact: false })).toBeVisible()
+  await page.getByLabel('Title').fill('Rome in public')
+  await page.getByRole('button', { name: 'Publish' }).click()
+
+  const share = page.getByRole('listitem', { name: 'Rome in public' })
+  await expect(share).toContainText('Public')
+  await expect(share).toContainText('3 photos')
+  const url = await share.getByRole('textbox').inputValue()
+  await checkLayout(page)
+
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await visit(page, url)
+  await expect(page.getByRole('heading', { name: 'Rome in public' })).toBeVisible()
+  await expect(page.locator('.shared-tile')).toHaveCount(3)
+})

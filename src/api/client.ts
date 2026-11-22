@@ -12,6 +12,8 @@ import {
   toPhoto,
   toPhotoPage,
   toPlace,
+  toShare,
+  toSharedCollection,
   toSummary,
   toTripDetail,
   toTripPage,
@@ -26,6 +28,9 @@ import type {
   ApiPage,
   ApiPhoto,
   ApiPlaceSearch,
+  ApiShare,
+  ApiShareList,
+  ApiSharedCollection,
   ApiRegisteredBatch,
   ApiRegisterUpload,
   ApiTrip,
@@ -103,16 +108,18 @@ const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
   'mapPhotos',
   'searchPlaces',
   'patchLocation',
+  'listShares',
+  'createShare',
+  'revokeShare',
+  'sharedCollection',
+  'publicMap',
+  'publicShare',
 ])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
 
-/** Sharing is a mock-only capability until the backend supports public links. */
-export const sharingAvailable = !backendEnabled
-
-function mockSharingUnavailable(): ApiError {
-  return new ApiError(503, 'not_implemented', 'Persistent sharing is not available yet.')
-}
+/** Sharing works in the demo and against the backend (backend #19, #24, #25). */
+export const sharingAvailable = true
 
 function live(endpoint: Endpoint): boolean {
   return backendEnabled && LIVE.has(endpoint)
@@ -410,24 +417,30 @@ export async function restoreUploads(tripId: string, signal?: AbortSignal): Prom
 }
 
 /** Sharing remains mock-backed only until the persistent share API exists. */
-export function listShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
-  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
-  return mockListShares(tripId, signal)
+/** GET /api/trips/{id}/shares: the trip's live shares, newest first. */
+export async function listShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
+  if (!live('listShares')) return mockListShares(tripId, signal)
+  const list = await request<ApiShareList>('GET', `/api/trips/${encodeURIComponent(tripId)}/shares`, { signal })
+  return list.items.map((share) => toShare(share, window.location.origin))
 }
 
-export function createShare(tripId: string, input: CreateShareInput): Promise<Share> {
-  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
-  return mockCreateShare(tripId, input)
+/** POST /api/trips/{id}/shares */
+export async function createShare(tripId: string, input: CreateShareInput): Promise<Share> {
+  if (!live('createShare')) return mockCreateShare(tripId, input)
+  const share = await request<ApiShare>('POST', `/api/trips/${encodeURIComponent(tripId)}/shares`, { body: input })
+  return toShare(share, window.location.origin)
 }
 
-export function revokeShare(id: string): Promise<void> {
-  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
-  return mockRevokeShare(id)
+/** DELETE /api/shares/{id}: the link stops working at once; the photos stay in the trip. */
+export async function revokeShare(id: string): Promise<void> {
+  if (!live('revokeShare')) return mockRevokeShare(id)
+  await request<void>('DELETE', `/api/shares/${encodeURIComponent(id)}`)
 }
 
-export function getSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
-  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
-  return mockSharedCollection(token, signal)
+/** GET /api/s/{token}: no account needed. 404 unknown, 410 revoked. */
+export async function getSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
+  if (!live('sharedCollection')) return mockSharedCollection(token, signal)
+  return toSharedCollection(await request<ApiSharedCollection>('GET', `/api/s/${encodeURIComponent(token)}`, { signal }))
 }
 
 /** A public endpoint the backend does not serve yet: real visitors must never see demo photos. */
@@ -462,7 +475,9 @@ export async function getPublicMap(query: PublicMapQuery, signal?: AbortSignal):
 /** GET /api/public/shares/{id}: the photos of one public share, placed by city. */
 export async function getPublicShare(id: string, signal?: AbortSignal): Promise<SharedCollection> {
   if (live('publicShare')) {
-    return request<SharedCollection>('GET', `/api/public/shares/${encodeURIComponent(id)}`, { signal })
+    return toSharedCollection(
+      await request<ApiSharedCollection>('GET', `/api/public/shares/${encodeURIComponent(id)}`, { signal }),
+    )
   }
   if (backendEnabled) throw publicUnavailable()
   return mockPublicShare(id, signal)

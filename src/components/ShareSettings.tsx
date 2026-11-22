@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import { Copy, ImageOff, Link2, Plus } from 'lucide-react'
+import { Copy, Globe, ImageOff, Link2, Plus } from 'lucide-react'
 import { createShare, listShares, revokeShare } from '../api/client'
-import type { Photo, Share, TripDetail } from '../api/types'
+import type { Photo, Share, ShareMode, TripDetail } from '../api/types'
 import { formatUploaded, plural } from '../format'
 import './ShareSettings.css'
 
@@ -68,6 +68,11 @@ function ShareRow({
       <div className="share-link-head">
         <p className="share-link-title">{share.title}</p>
         <p className="share-caption">
+          {share.mode === 'public' ? (
+            <span className="share-mode-public">
+              <Globe size={12} aria-hidden /> Public ·{' '}
+            </span>
+          ) : null}
           {plural(share.photo_ids.length, 'photo')} · created {formatUploaded(share.created_at)}
         </p>
       </div>
@@ -122,6 +127,7 @@ function NewShareForm({
 }) {
   const [title, setTitle] = useState(trip.title)
   const [description, setDescription] = useState('')
+  const [mode, setMode] = useState<ShareMode>('link')
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(photos.map((p) => p.id)))
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
@@ -143,7 +149,7 @@ function NewShareForm({
     setFailed(false)
     try {
       const share = await createShare(trip.id, {
-        mode: 'link',
+        mode,
         title: title.trim(),
         description: description.trim() || undefined,
         // Keep the trip's order, whatever order the boxes were ticked in.
@@ -225,11 +231,27 @@ function NewShareForm({
         </ul>
       </fieldset>
 
+      <fieldset className="share-modes">
+        <legend>Who can open it</legend>
+        <label className="share-mode">
+          <input type="radio" name={`${ids}-mode`} value="link" checked={mode === 'link'} onChange={() => setMode('link')} />
+          <Link2 size={16} aria-hidden />
+          <span>Anyone with the link</span>
+        </label>
+        <label className="share-mode">
+          <input type="radio" name={`${ids}-mode`} value="public" checked={mode === 'public'} onChange={() => setMode('public')} />
+          <Globe size={16} aria-hidden />
+          <span>Public, also on the public map</span>
+        </label>
+      </fieldset>
+
       <p className="share-audience">
-        <Link2 size={16} aria-hidden />
+        {mode === 'link' ? <Link2 size={16} aria-hidden /> : <Globe size={16} aria-hidden />}
         <span>
-          Anyone with the link can see the selected photos, their dates and the city each was taken in, without an
-          account. Exact locations and the rest of this trip stay private.
+          {mode === 'link'
+            ? 'Anyone with the link can see the selected photos, their dates and the city each was taken in, without an account.'
+            : 'Everyone can find the selected photos on the public map and open them, without an account. Only share photos of people who agreed to be shown publicly.'}{' '}
+          Exact locations and the rest of this trip stay private.
         </span>
       </p>
 
@@ -241,7 +263,7 @@ function NewShareForm({
       ) : null}
       <div className="share-form-actions">
         <button type="submit" className="btn btn-primary" disabled={saving || chosen.size === 0 || !title.trim()}>
-          {saving ? 'Creating…' : 'Create link'}
+          {saving ? 'Creating…' : mode === 'public' ? 'Publish' : 'Create link'}
         </button>
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
           Cancel

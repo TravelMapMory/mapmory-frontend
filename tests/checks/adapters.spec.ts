@@ -6,12 +6,14 @@ import {
   toPhotoPage,
   toPlace,
   toRejectedUploadItem,
+  toShare,
+  toSharedCollection,
   toSummary,
   toTripDetail,
   toUploadItem,
   uploadErrorMessage,
 } from '../../src/api/adapters'
-import type { ApiMapPhotoPage, ApiMeSummary, ApiPhoto, ApiPlace, ApiTrip } from '../../src/api/contract'
+import type { ApiMapPhotoPage, ApiMeSummary, ApiPhoto, ApiPlace, ApiShare, ApiSharedCollection, ApiTrip } from '../../src/api/contract'
 
 // A photo exactly as the contract (openapi.yaml 0.0.5) defines it: no place labels yet.
 const contractPhoto: ApiPhoto = {
@@ -243,4 +245,65 @@ test('a place search hit keeps every field the map and correction dialog use', (
   }
   expect(toPlace(kyoto)).toEqual(kyoto)
   expect(toPlace({ ...kyoto, kind: 'country', city: null, zoom: 5 }).city).toBeNull()
+})
+
+// Contract 0.0.9 (backend link and public shares).
+test('a share turns its token into the recipient address and drops the raw token', () => {
+  const share: ApiShare = {
+    id: 's1',
+    trip_id: 't1',
+    mode: 'public',
+    title: 'Kyoto',
+    description: null,
+    photo_ids: ['p1', 'p2'],
+    token: 'abcdefghijklmnopqrstuv',
+    created_at: '2026-11-22T20:00:00Z',
+    revoked_at: null,
+  }
+  const result = toShare(share, 'https://mapmory.app')
+  expect(result.url).toBe('https://mapmory.app/s/abcdefghijklmnopqrstuv')
+  expect(result.mode).toBe('public')
+  expect(result.photo_ids).toEqual(['p1', 'p2'])
+  expect('token' in result).toBe(false)
+})
+
+test('a shared collection keeps only coarse positions and uses the display image', () => {
+  const collection: ApiSharedCollection = {
+    title: 'Kyoto',
+    description: 'Autumn',
+    created_at: '2026-11-22T20:00:00Z',
+    photos: [
+      {
+        id: 'p1',
+        display_image: { url: 'https://storage.example/display/p1.jpg', expires_at: '2026-11-22T21:00:00Z' },
+        capture_time_local: '2025-05-12T09:00:00',
+        city: 'Kyoto',
+        country: 'Japan',
+        display_lat: 35.0116,
+        display_lng: 135.7681,
+      },
+      {
+        id: 'p2',
+        display_image: null,
+        capture_time_local: null,
+        city: null,
+        country: null,
+        display_lat: null,
+        display_lng: null,
+      },
+    ],
+  }
+  const result = toSharedCollection(collection)
+  expect(result.photos[0]).toEqual({
+    id: 'p1',
+    thumb_url: 'https://storage.example/display/p1.jpg',
+    display_url: 'https://storage.example/display/p1.jpg',
+    capture_time_local: '2025-05-12T09:00:00',
+    city: 'Kyoto',
+    country: 'Japan',
+    display_lat: 35.0116,
+    display_lng: 135.7681,
+  })
+  expect(result.photos[1].thumb_url).toBeNull()
+  expect(result.description).toBe('Autumn')
 })

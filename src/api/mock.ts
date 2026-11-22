@@ -966,7 +966,7 @@ export async function mockCreateShare(tripId: string, input: CreateShareInput): 
     id: `share-${Date.now()}`,
     token: newToken(),
     trip_id: tripId,
-    mode: 'link',
+    mode: input.mode,
     title,
     description: input.description?.trim() || null,
     photo_ids: ids,
