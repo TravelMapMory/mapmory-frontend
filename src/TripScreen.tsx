@@ -18,7 +18,7 @@ import {
   Upload,
   type LucideIcon,
 } from 'lucide-react'
-import { getTrip, listTripPhotos, patchPhotoLocation, sharingAvailable } from './api/client'
+import { getTrip, hasUnfinishedUploads, listTripPhotos, patchPhotoLocation, sharingAvailable } from './api/client'
 import type { LocationPatch, Photo, TripDetail } from './api/types'
 import LocationPicker, { type LatLng } from './components/LocationPicker'
 import PhotoViewer, { viewerImage } from './components/PhotoViewer'
@@ -351,7 +351,8 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
   const [correcting, setCorrecting] = useState<Photo | null>(null)
   const [viewing, setViewing] = useState<string | null>(null)
   const [message, setMessage] = useState('')
-  const [uploading, setUploading] = useState(Boolean(initialFiles?.length))
+  // Reopen the panel after a reload while this browser has unfinished uploads for the trip.
+  const [uploading, setUploading] = useState(() => Boolean(initialFiles?.length) || hasUnfinishedUploads(tripId))
   const [editing, setEditing] = useState(false)
   const editButton = useRef<HTMLButtonElement>(null)
   const returnFocus = useRef(false)

@@ -10,6 +10,8 @@ interface ImportMetaEnv {
   readonly VITE_FIREBASE_AUTH_DOMAIN?: string
   readonly VITE_FIREBASE_PROJECT_ID?: string
   readonly VITE_FIREBASE_APP_ID?: string
+  /** Firebase Auth emulator, e.g. http://127.0.0.1:9099; local development only. */
+  readonly VITE_FIREBASE_AUTH_EMULATOR_URL?: string
 }
 
 interface ImportMeta {
