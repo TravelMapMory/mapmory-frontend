@@ -62,10 +62,24 @@ jobs:
       - name: Push image
         env:
           TOKEN: ${{ steps.auth.outputs.access_token }}
-          GEOAPIFY_KEY: ${{ vars.VITE_GEOAPIFY_KEY }}
+          # Unset variables build the mock demo; mapmory-backend deploy/README.md says when to set them.
+          VITE_GEOAPIFY_KEY: ${{ vars.VITE_GEOAPIFY_KEY }}
+          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
         run: |
+          # Live endpoints without Firebase would call the protected API with no token, so that build never ships.
+          if [ -n "$VITE_API_URL" ] && [ -z "$VITE_FIREBASE_API_KEY" ]; then
+            echo "::error::VITE_API_URL is set but VITE_FIREBASE_API_KEY is not"
+            exit 1
+          fi
           echo "$TOKEN" | docker login -u oauth2accesstoken --password-stdin https://europe-north1-docker.pkg.dev
-          docker build --build-arg VITE_GEOAPIFY_KEY="$GEOAPIFY_KEY" -t "$IMAGE:$GITHUB_SHA" .
+          docker build -t "$IMAGE:$GITHUB_SHA" \
+            --build-arg VITE_GEOAPIFY_KEY --build-arg VITE_API_URL \
+            --build-arg VITE_FIREBASE_API_KEY --build-arg VITE_FIREBASE_AUTH_DOMAIN \
+            --build-arg VITE_FIREBASE_PROJECT_ID --build-arg VITE_FIREBASE_APP_ID .
           docker push "$IMAGE:$GITHUB_SHA"
           # A slow or re-run job for an older commit must not roll production back, so :main moves only while this commit is still main's tip.
           if [ "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA" ]; then
