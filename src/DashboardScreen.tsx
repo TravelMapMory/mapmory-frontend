@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useId, useState, type FormEvent } from 'react'
 import { Building2, Camera, Earth, FolderPlus, MapPinOff, Plus, Upload } from 'lucide-react'
 import { createTrip, getSummary, listTrips } from './api/client'
-import { TITLE_MAX } from './api/limits'
+import { tripTitleProblem } from './api/limits'
 import type { MeSummary, Photo, TripSummary } from './api/types'
 import StatTile from './components/StatTile'
 import TripCard from './components/TripCard'
@@ -35,12 +35,18 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: (trip: TripSummary
   const [title, setTitle] = useState('')
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [titleError, setTitleError] = useState<string | null>(null)
   const inputId = useId()
 
   async function submit(event: FormEvent) {
     event.preventDefault()
     const trimmed = title.trim()
     if (!trimmed) return
+    const problem = tripTitleProblem(title)
+    if (problem) {
+      setTitleError(problem)
+      return
+    }
     setSaving(true)
     setFailed(false)
     try {
@@ -67,9 +73,13 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: (trip: TripSummary
           id={inputId}
           className="dash-create-input"
           value={title}
-          onChange={(event) => setTitle(event.target.value)}
+          onChange={(event) => {
+            setTitle(event.target.value)
+            if (titleError) setTitleError(tripTitleProblem(event.target.value))
+          }}
           placeholder="e.g. Summer in Lisbon"
-          maxLength={TITLE_MAX}
+          aria-invalid={titleError !== null}
+          aria-describedby={titleError ? `${inputId}-error` : undefined}
           required
           autoFocus
         />
@@ -80,6 +90,11 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: (trip: TripSummary
           Cancel
         </button>
       </div>
+      {titleError ? (
+        <p id={`${inputId}-error`} className="dash-create-error">
+          {titleError}
+        </p>
+      ) : null}
       {failed ? (
         <p className="dash-create-error" role="alert">
           The trip could not be created. Try again.
