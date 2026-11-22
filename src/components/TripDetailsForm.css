@@ -39,6 +39,10 @@
   align-self: flex-end;
 }
 
+.trip-edit-count[data-over] {
+  color: #b42318;
+}
+
 .trip-edit-input {
   min-width: 0;
   height: 36px;

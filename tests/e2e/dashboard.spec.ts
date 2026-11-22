@@ -16,7 +16,7 @@ test('create validates blank titles, trims whitespace and opens a private empty 
   await page.getByRole('button', { name: 'Create trip', exact: true }).click()
   const name = page.getByRole('textbox', { name: 'Trip name' })
   await expect(name).toBeFocused()
-  await expect(name).toHaveAttribute('maxlength', '120')
+  await expect(name).not.toHaveAttribute('maxlength')
   await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeDisabled()
   await name.fill('   ')
   await expect(page.getByRole('button', { name: 'Create', exact: true })).toBeDisabled()
@@ -28,6 +28,23 @@ test('create validates blank titles, trims whitespace and opens a private empty 
   await dashboard(page)
   await expect(page.locator('.trip-card')).toHaveCount(4)
   await expect(page.locator('.trip-card-title').first()).toHaveText('Kyoto autumn')
+})
+
+test('create counts the title in code points: 120 emoji are accepted, 121 are refused', async ({ page }) => {
+  await boot(page)
+  await page.getByRole('button', { name: 'Create trip', exact: true }).click()
+  const name = page.getByRole('textbox', { name: 'Trip name' })
+  await name.fill('😀'.repeat(121))
+  await expect(name).toHaveValue('😀'.repeat(121))
+  await name.press('Enter')
+  await expect(page.getByText('A trip name can be at most 120 characters (now 121).')).toBeVisible()
+  await expect(name).toHaveAttribute('aria-invalid', 'true')
+  await expect(page.locator('.trip-card')).toHaveCount(3)
+
+  await name.fill(`  ${'😀'.repeat(120)}  `)
+  await expect(page.getByText(/at most 120 characters/)).toHaveCount(0)
+  await name.press('Enter')
+  await expect(page.getByRole('heading', { name: '😀'.repeat(120), exact: true })).toBeVisible()
 })
 
 test('Cancel and Escape discard creation without creating a trip', async ({ page }) => {

@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { updateTrip } from '../api/client'
 import { ApiError } from '../api/http'
-import { NOTES_MAX, TITLE_MAX } from '../api/limits'
+import { NOTES_MAX, codePoints, tripTitleProblem } from '../api/limits'
 import { NotFoundError } from '../api/mock'
 import type { TripDetail, UpdateTripInput } from '../api/types'
 import './TripDetailsForm.css'
@@ -28,11 +28,14 @@ function saveError(error: unknown): string {
 export default function TripDetailsForm({ trip, onSaved, onCancel }: TripDetailsFormProps) {
   const [title, setTitle] = useState(trip.title)
   const [notes, setNotes] = useState(trip.notes ?? '')
-  const [titleMissing, setTitleMissing] = useState(false)
+  const [titleError, setTitleError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const titleInput = useRef<HTMLInputElement>(null)
+  const notesInput = useRef<HTMLTextAreaElement>(null)
   const ids = useId()
+  const notesLength = codePoints(notes.trim())
+  const notesTooLong = notesLength > NOTES_MAX
 
   useEffect(() => {
     titleInput.current?.focus()
@@ -41,9 +44,14 @@ export default function TripDetailsForm({ trip, onSaved, onCancel }: TripDetails
   async function submit(event: FormEvent) {
     event.preventDefault()
     const trimmed = title.trim()
-    if (!trimmed) {
-      setTitleMissing(true)
+    const problem = tripTitleProblem(title)
+    if (problem) {
+      setTitleError(problem)
       titleInput.current?.focus()
+      return
+    }
+    if (notesTooLong) {
+      notesInput.current?.focus()
       return
     }
     // Send only what changed; nothing changed means nothing to save.
@@ -85,19 +93,18 @@ export default function TripDetailsForm({ trip, onSaved, onCancel }: TripDetails
           id={`${ids}-title`}
           className="trip-edit-input"
           value={title}
-          maxLength={TITLE_MAX}
           required
-          aria-invalid={titleMissing}
-          aria-describedby={titleMissing ? `${ids}-title-error` : undefined}
+          aria-invalid={titleError !== null}
+          aria-describedby={titleError ? `${ids}-title-error` : undefined}
           disabled={saving}
           onChange={(event) => {
             setTitle(event.target.value)
-            if (event.target.value.trim()) setTitleMissing(false)
+            if (titleError) setTitleError(tripTitleProblem(event.target.value))
           }}
         />
-        {titleMissing ? (
+        {titleError ? (
           <p id={`${ids}-title-error`} className="trip-edit-invalid">
-            Enter a trip name.
+            {titleError}
           </p>
         ) : null}
       </div>
@@ -107,17 +114,19 @@ export default function TripDetailsForm({ trip, onSaved, onCancel }: TripDetails
           Notes <span className="trip-edit-optional">(optional, only you see them)</span>
         </label>
         <textarea
+          ref={notesInput}
           id={`${ids}-notes`}
           className="trip-edit-input trip-edit-notes"
           value={notes}
-          maxLength={NOTES_MAX}
           rows={3}
+          aria-invalid={notesTooLong}
           aria-describedby={`${ids}-notes-count`}
           disabled={saving}
           onChange={(event) => setNotes(event.target.value)}
         />
-        <p id={`${ids}-notes-count`} className="trip-edit-count">
-          {notes.length} / {NOTES_MAX}
+        <p id={`${ids}-notes-count`} className="trip-edit-count" data-over={notesTooLong || undefined}>
+          {notesLength} / {NOTES_MAX}
+          {notesTooLong ? ' (too long, shorten the notes to save)' : null}
         </p>
       </div>
 

@@ -30,7 +30,7 @@ import type { AcceptanceOptions, MockOperation } from './acceptanceOptions'
 import { toPhoto, toTripDetail, uploadErrorMessage } from './adapters'
 import type { ApiCreateTrip, ApiDisplayImage, ApiPage, ApiPhoto, ApiTrip } from './contract'
 import { ApiError } from './http'
-import { NOTES_MAX, TITLE_MAX } from './limits'
+import { NOTES_MAX, TITLE_MAX, codePoints } from './limits'
 import type {
   CreateShareInput,
   LabelStatus,
@@ -347,12 +347,30 @@ export async function mockListTrips(signal?: AbortSignal): Promise<ApiPage<ApiTr
   const items = [...trips].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(summarise)
   return delay({ items, next_cursor: null }, undefined, signal)
 }
+
+/**
+ * The 400 the backend returns for a trimmed title outside 1 to TITLE_MAX code
+ * points or trimmed notes over NOTES_MAX code points; null when both are valid.
+ */
+function invalidTripText(title: string | undefined, notes: string | undefined): ApiError | null {
+  if (title !== undefined && (!title || codePoints(title) > TITLE_MAX)) {
+    return new ApiError(400, 'invalid_title', `A trip title needs 1 to ${TITLE_MAX} characters.`)
+  }
+  if (notes !== undefined && codePoints(notes.trim()) > NOTES_MAX) {
+    return new ApiError(400, 'invalid_notes', `Notes can be at most ${NOTES_MAX} characters.`)
+  }
+  return null
+}
+
 export async function mockCreateTrip(input: ApiCreateTrip): Promise<ApiTrip> {
   await beforeOperation('createTrip')
+  const title = input.title.trim()
+  const invalid = invalidTripText(title, input.notes)
+  if (invalid) return Promise.reject(invalid)
   const row: TripRow = {
     id: `trip-${Date.now()}`,
-    title: input.title,
-    notes: input.notes || null,
+    title,
+    notes: input.notes?.trim() || null,
     created_at: new Date().toISOString(),
     cover_photo_id: null,
   }
@@ -381,12 +399,8 @@ export async function mockUpdateTrip(id: string, input: UpdateTripInput): Promis
   const row = trips.find((t) => t.id === id)
   if (!row) return Promise.reject(new NotFoundError('Trip'))
   const title = input.title?.trim()
-  if (title !== undefined && (!title || title.length > TITLE_MAX)) {
-    return Promise.reject(new ApiError(400, 'invalid_title', `A trip title needs 1 to ${TITLE_MAX} characters.`))
-  }
-  if (input.notes !== undefined && input.notes.length > NOTES_MAX) {
-    return Promise.reject(new ApiError(400, 'invalid_notes', `Notes can be at most ${NOTES_MAX} characters.`))
-  }
+  const invalid = invalidTripText(title, input.notes)
+  if (invalid) return Promise.reject(invalid)
   if (title !== undefined) row.title = title
   if (input.notes !== undefined) row.notes = input.notes.trim() || null
   return delay(toTripDetail(summarise(row)))
