@@ -1,0 +1,39 @@
+.load-more {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.load-more-summary {
+  margin: 0;
+  font-size: 12px;
+  color: var(--c-text-2);
+}
+
+.load-more-error {
+  margin: 0;
+  font-size: 14px;
+  color: #b42318;
+}
+
+.load-more .btn[aria-disabled='true'] {
+  cursor: progress;
+}
+
+.load-more-spin {
+  animation: load-more-spin 1s linear infinite;
+}
+
+@keyframes load-more-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .load-more-spin {
+    animation: none;
+  }
+}
