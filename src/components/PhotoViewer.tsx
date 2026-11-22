@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
 import type { Photo } from '../api/types'
 import { formatCaptured, zoneNote } from '../format'
+import type { MoreState } from './LoadMore'
+import { viewerPosition } from './viewerPosition'
 import './PhotoViewer.css'
 
 export interface PhotoViewerProps {
@@ -10,6 +12,10 @@ export interface PhotoViewerProps {
   /** The photo opened first. */
   startId: string
   onClose: () => void
+  /** The trip has photos beyond the loaded pages; Next at the end loads them. */
+  hasMore?: boolean
+  moreState?: MoreState
+  onLoadMore?: () => void
 }
 
 /** The large image for a photo: the display rendition, else its thumbnail. */
@@ -48,9 +54,44 @@ function ViewerPhoto({ photo }: { photo: Photo }) {
  * Left/Right arrows and the buttons page through the trip, and focus returns to the
  * thumbnail that opened it.
  */
-export default function PhotoViewer({ photos, startId, onClose }: PhotoViewerProps) {
-  const [index, setIndex] = useState(() => Math.max(0, photos.findIndex((p) => p.id === startId)))
+export default function PhotoViewer({
+  photos,
+  startId,
+  onClose,
+  hasMore = false,
+  moreState = 'idle',
+  onLoadMore,
+}: PhotoViewerProps) {
+  // Follow the photo, not its position: pages and refreshes can shift the list.
+  const [currentId, setCurrentId] = useState(startId)
+  // Next was pressed at the end of the loaded photos; move on once the next page arrives.
+  const [advancePending, setAdvancePending] = useState(false)
   const ref = useRef<HTMLDialogElement>(null)
+  const { index, missing, hasPrev, hasNext } = viewerPosition(photos, currentId)
+  const canLoadMore = !missing && !hasNext && hasMore && Boolean(onLoadMore)
+
+  function step(delta: -1 | 1) {
+    if (missing) return
+    if (delta === -1 && hasPrev) setCurrentId(photos[index - 1].id)
+    else if (delta === 1 && hasNext) setCurrentId(photos[index + 1].id)
+    else if (delta === 1 && canLoadMore && moreState !== 'loading') {
+      setAdvancePending(true)
+      onLoadMore?.()
+    }
+  }
+  // The latest step for the window key listener, without re-subscribing on every render.
+  const stepRef = useRef(step)
+  useEffect(() => {
+    stepRef.current = step
+  })
+
+  // Render-time adjustment (no effect): once the next page has arrived, take the pending step.
+  if (advancePending && hasNext) {
+    setAdvancePending(false)
+    setCurrentId(photos[index + 1].id)
+  } else if (advancePending && (moreState === 'error' || !hasMore)) {
+    setAdvancePending(false)
+  }
 
   useEffect(() => {
     const dialog = ref.current
@@ -65,18 +106,15 @@ export default function PhotoViewer({ photos, startId, onClose }: PhotoViewerPro
   // Arrows page from anywhere while the viewer is open, even if focus has left its buttons.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if (event.key === 'ArrowLeft') setIndex((i) => Math.max(0, i - 1))
-      if (event.key === 'ArrowRight') setIndex((i) => Math.min(photos.length - 1, i + 1))
+      if (event.key === 'ArrowLeft') stepRef.current(-1)
+      if (event.key === 'ArrowRight') stepRef.current(1)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [photos.length])
+  }, [])
 
-  const photo = photos[Math.min(index, photos.length - 1)]
-  if (!photo) return null
-  const place = photo.place_name ?? 'No location'
-  const hasPrev = index > 0
-  const hasNext = index < photos.length - 1
+  const photo = missing ? null : photos[index]
+  const place = photo ? (photo.place_name ?? 'No location') : 'Photo unavailable'
 
   return (
     // The backdrop click is a mouse shortcut; Escape (onCancel) and the Close button are its keyboard equivalents.
@@ -100,33 +138,57 @@ export default function PhotoViewer({ photos, startId, onClose }: PhotoViewerPro
           <X size={20} aria-hidden />
         </button>
 
-        <figure className="viewer-figure">
-          <ViewerPhoto key={`${photo.id}:${photo.display_url}:${photo.thumb_url}`} photo={photo} />
-          <figcaption className="viewer-caption">
+        {photo ? (
+          <figure className="viewer-figure">
+            <ViewerPhoto key={`${photo.id}:${photo.display_url}:${photo.thumb_url}`} photo={photo} />
+            <figcaption className="viewer-caption">
+              <span id="viewer-place" className="viewer-place">
+                {place}
+              </span>
+              <span>
+                {formatCaptured(photo.capture_time_local) ?? 'No capture time'}
+                {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
+              </span>
+            </figcaption>
+          </figure>
+        ) : (
+          // The open photo left the trip (deleted elsewhere, or no longer viewable). Say so; never show another.
+          <div className="viewer-figure viewer-gone" role="status">
             <span id="viewer-place" className="viewer-place">
               {place}
             </span>
-            <span>
-              {formatCaptured(photo.capture_time_local) ?? 'No capture time'}
-              {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
-            </span>
-          </figcaption>
-        </figure>
+            <p>This photo is no longer in the trip.</p>
+          </div>
+        )}
 
-        <div className="viewer-nav">
-          {/* aria-disabled, not disabled, so the button keeps focus at the first or last photo. */}
-          <button type="button" className="viewer-step" onClick={() => hasPrev && setIndex(index - 1)} aria-disabled={!hasPrev}>
-            <ChevronLeft size={18} aria-hidden />
-            Previous
-          </button>
-          <span className="viewer-count" aria-live="polite">
-            {index + 1} of {photos.length}
-          </span>
-          <button type="button" className="viewer-step" onClick={() => hasNext && setIndex(index + 1)} aria-disabled={!hasNext}>
-            Next
-            <ChevronRight size={18} aria-hidden />
-          </button>
-        </div>
+        {photo ? (
+          <div className="viewer-nav">
+            {/* aria-disabled, not disabled, so the button keeps focus at the first or last photo. */}
+            <button type="button" className="viewer-step" onClick={() => step(-1)} aria-disabled={!hasPrev}>
+              <ChevronLeft size={18} aria-hidden />
+              Previous
+            </button>
+            <span className="viewer-count" aria-live="polite">
+              {moreState === 'loading' && advancePending
+                ? 'Loading more photos…'
+                : `${index + 1} of ${photos.length}${hasMore ? ' loaded' : ''}`}
+            </span>
+            <button
+              type="button"
+              className="viewer-step"
+              onClick={() => step(1)}
+              aria-disabled={!hasNext && (!canLoadMore || moreState === 'loading')}
+            >
+              Next
+              <ChevronRight size={18} aria-hidden />
+            </button>
+          </div>
+        ) : null}
+        {photo && canLoadMore && moreState === 'error' ? (
+          <p className="viewer-more-error" role="alert">
+            More photos could not be loaded. Press Next to try again.
+          </p>
+        ) : null}
         <p className="viewer-shortcuts" aria-label="Keyboard shortcuts">
           <kbd>←</kbd> / <kbd>→</kbd> navigate · <kbd>Esc</kbd> close
         </p>

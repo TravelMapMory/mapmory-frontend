@@ -13,6 +13,7 @@ import { addRegistration, hasOpenRegistrations, loadRegistrations, updateRegistr
 import { ApiError, request } from './http'
 import { PUBLIC_CLUSTER_LIMIT } from './limits'
 import { normalizeBBox } from './publicGrid'
+import { loadAllPages } from './paging'
 import {
   mockCreateShare,
   mockCreateTrip,
@@ -99,10 +100,16 @@ export async function getSummary(signal?: AbortSignal): Promise<MeSummary | null
   return mockSummary(signal)
 }
 
-/** GET /api/trips */
-export async function listTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {
-  const page = live('listTrips') ? await request<ApiPage<ApiTrip>>('GET', '/api/trips', { signal }) : await mockListTrips(signal)
+/** GET /api/trips — one page, newest first; pass the previous page's `next_cursor` for the next. */
+export async function listTrips(signal?: AbortSignal, cursor?: string | null): Promise<Page<TripSummary>> {
+  const page = live('listTrips')
+    ? await request<ApiPage<ApiTrip>>('GET', '/api/trips', { query: { cursor: cursor ?? null }, signal })
+    : await mockListTrips(signal, cursor)
   return toTripPage(page)
+}
+/** Every trip, following the cursor to the end; for pickers that must list them all. */
+export function listAllTrips(signal?: AbortSignal): Promise<Page<TripSummary>> {
+  return loadAllPages((cursor, s) => listTrips(s, cursor), signal)
 }
 
 /** POST /api/trips */
@@ -141,7 +148,7 @@ export async function listTripPhotos(id: string, signal?: AbortSignal, cursor?: 
   }
   // A real trip whose photos the backend does not serve yet: never mix in demo photos.
   if (live('getTrip')) return { items: [], next_cursor: null }
-  return toPhotoPage(await mockTripPhotos(id, signal))
+  return toPhotoPage(await mockTripPhotos(id, signal, cursor))
 }
 /** GET /api/map/photos — the owner's located photos in the bbox, at most 2,000. */
 export function getMapPhotos(query: MapPhotoQuery, signal?: AbortSignal): Promise<MapPhotoPage> {

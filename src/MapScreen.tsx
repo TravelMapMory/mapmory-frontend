@@ -2,7 +2,7 @@ import { latLngBounds, type Map as LeafletMap } from 'leaflet'
 import { MapContainer, TileLayer, useMapEvents, ZoomControl } from 'react-leaflet'
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { MapPinOff } from 'lucide-react'
-import { getMapPhotos, listTrips } from './api/client'
+import { getMapPhotos, listAllTrips } from './api/client'
 import type { BBox, MapPhoto, MapPhotoQuery, TripSummary } from './api/types'
 import MapModeSwitch from './components/MapModeSwitch'
 import PhotoClusters from './components/PhotoClusters'
@@ -71,7 +71,8 @@ export default function MapScreen({ tripId = null, onOpenTrip, onPublicMap }: Ma
 
   useEffect(() => {
     const controller = new AbortController()
-    listTrips(controller.signal)
+    // The trip filter must offer every trip, not only the first page.
+    listAllTrips(controller.signal)
       .then((page) => setTrips(page.items))
       .catch(() => undefined)
     return () => controller.abort()
