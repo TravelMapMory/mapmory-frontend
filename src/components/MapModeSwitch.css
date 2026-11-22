@@ -1,0 +1,42 @@
+.map-mode {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-pill);
+}
+
+.map-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 12px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--r-pill);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--c-text-2);
+  cursor: pointer;
+}
+
+.map-mode-btn:hover {
+  color: var(--c-text);
+}
+
+/* The current mode is navy with white text, and also bold: never colour alone. */
+.map-mode-btn[aria-current='page'] {
+  background: var(--c-primary);
+  color: #fff;
+  cursor: default;
+}
+
+.map-mode-btn:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}

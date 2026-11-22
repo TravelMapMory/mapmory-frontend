@@ -1,0 +1,75 @@
+/* Map · Public reuses the owner map's layout (MapScreen.css); only the share list is its own. */
+
+.pmap-selected {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+
+.pmap-shares {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pmap-share {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 8px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  font: inherit;
+  color: var(--c-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+.pmap-share:hover {
+  border-color: #b9c1ce;
+  box-shadow: var(--shadow-float);
+}
+
+.pmap-share:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.pmap-share-cover {
+  flex: none;
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: var(--r-xs);
+  background: var(--c-page);
+}
+
+.pmap-share-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.pmap-share-title {
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.pmap-share-meta {
+  font-size: 12px;
+  color: var(--c-text-2);
+}
+
+.pmap-share .vis-badge {
+  flex: none;
+  align-self: flex-start;
+}

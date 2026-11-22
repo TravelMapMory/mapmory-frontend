@@ -214,3 +214,52 @@ export interface SharedCollection {
   created_at: string
   photos: SharedPhoto[]
 }
+
+/**
+ * Query of `GET /api/public/map`: the visible area and the map zoom. The
+ * server groups public photos into grid cells sized to the zoom (doc 5.2),
+ * so moving or zooming the map asks for a new set.
+ */
+export interface PublicMapQuery {
+  bbox: BBox
+  /** Leaflet zoom level, 0 (whole world) to about 18 (street). */
+  zoom: number
+}
+
+/** A public share with photos inside one cluster; opening it shows the share. */
+export interface PublicShareRef {
+  id: string
+  title: string
+  cover_url: string | null
+  /** Photos of this share inside the cluster, not in the whole share. */
+  photo_count: number
+}
+
+/**
+ * One grid cell of public photos. Positions are coarse (doc 5.4): each photo
+ * is snapped to its city centre, or to a 0.01° grid without a city, so
+ * neither the cluster nor its bounds reveal where a photo was taken.
+ */
+export interface PublicCluster {
+  /** Stable for the same zoom and cell, e.g. "4/131/85". */
+  id: string
+  lat: number
+  lng: number
+  /** Distinct public photos in the cell. */
+  count: number
+  /** The most common city in the cell (country when none has a city), or null. */
+  label: string | null
+  cover_url: string | null
+  /** Extent of the photos' coarse positions; a single point when they share one. */
+  bounds: BBox
+  /** All public shares with photos in the cell. */
+  share_count: number
+  /** The largest of them, at most five. */
+  shares: PublicShareRef[]
+}
+
+/** `GET /api/public/map`. `truncated` is true when more than 200 cells had photos. */
+export interface PublicMapPage {
+  clusters: PublicCluster[]
+  truncated: boolean
+}

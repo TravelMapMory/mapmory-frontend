@@ -1,4 +1,4 @@
-import { Lock, MapIcon, MapPin, Share2, Upload } from 'lucide-react'
+import { Globe, Lock, MapIcon, MapPin, Share2, Upload } from 'lucide-react'
 import heroPhoto from './assets/pins/paris-wide.jpg'
 import './LandingScreen.css'
 
@@ -7,6 +7,8 @@ export interface LandingScreenProps {
   onSignIn: () => void
   /** Opens the sign-up form. */
   onSignUp: () => void
+  /** Opens Map · Public, which needs no account (doc 3.2). */
+  onExplore: () => void
 }
 
 /** The three must-have features agreed with the TA (meeting 20.9). */
@@ -32,7 +34,7 @@ const FEATURES = [
  * The page a signed-out visitor sees first (demo gala feedback): what MapMory
  * is, the three things it does, and one way in.
  */
-export default function LandingScreen({ onSignIn, onSignUp }: LandingScreenProps) {
+export default function LandingScreen({ onSignIn, onSignUp, onExplore }: LandingScreenProps) {
   return (
     <div className="land">
       <header className="land-hdr">
@@ -60,6 +62,10 @@ export default function LandingScreen({ onSignIn, onSignUp }: LandingScreenProps
             <div className="land-actions">
               <button type="button" className="btn btn-action land-cta" onClick={onSignUp}>
                 Get started
+              </button>
+              <button type="button" className="btn btn-secondary land-cta" onClick={onExplore}>
+                <Globe size={16} aria-hidden />
+                Explore the public map
               </button>
               <span className="land-note">
                 <Lock size={14} aria-hidden />

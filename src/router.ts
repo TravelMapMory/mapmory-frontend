@@ -9,6 +9,7 @@ import { useMemo, useSyncExternalStore } from 'react'
  *   /signup           sign up          /map               Map · My photos
  *   /login            log in           /map?trip={id}     Map, one trip selected
  *   /s/{token}        shared link      /trips/{id}        Trip detail
+ *   /map/public       Map · Public     /public/{id}       a public share
  */
 export type Route =
   | { name: 'landing' }
@@ -18,6 +19,8 @@ export type Route =
   | { name: 'map'; tripId: string | null }
   | { name: 'trip'; tripId: string }
   | { name: 'shared'; token: string }
+  | { name: 'public-map' }
+  | { name: 'public-share'; shareId: string }
   | { name: 'not-found' }
 
 /** Pages only the signed-in owner may see. */
@@ -32,11 +35,14 @@ export function parseRoute(pathname: string, search: string): Route {
   if (path === '/login') return { name: 'login' }
   if (path === '/dashboard') return { name: 'dashboard' }
   if (path === '/map') return { name: 'map', tripId: new URLSearchParams(search).get('trip') || null }
+  if (path === '/map/public') return { name: 'public-map' }
   const trip = /^\/trips\/([^/]+)$/.exec(path)
   const shared = /^\/s\/([^/]+)$/.exec(path)
+  const publicShare = /^\/public\/([^/]+)$/.exec(path)
   try {
     if (trip) return { name: 'trip', tripId: decodeURIComponent(trip[1]) }
     if (shared) return { name: 'shared', token: decodeURIComponent(shared[1]) }
+    if (publicShare) return { name: 'public-share', shareId: decodeURIComponent(publicShare[1]) }
   } catch {
     return { name: 'not-found' }
   }
@@ -60,6 +66,10 @@ export function routeHref(route: Route): string {
       return `/trips/${encodeURIComponent(route.tripId)}`
     case 'shared':
       return `/s/${encodeURIComponent(route.token)}`
+    case 'public-map':
+      return '/map/public'
+    case 'public-share':
+      return `/public/${encodeURIComponent(route.shareId)}`
   }
 }
 
@@ -78,6 +88,10 @@ export function routeTitle(route: Route): string {
       return 'Trip · MapMory'
     case 'shared':
       return 'Shared photos · MapMory'
+    case 'public-map':
+      return 'Public map · MapMory'
+    case 'public-share':
+      return 'Public share · MapMory'
     case 'not-found':
       return 'Page not found · MapMory'
     default:
