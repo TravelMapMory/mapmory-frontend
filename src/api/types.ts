@@ -1,8 +1,9 @@
 /*
- * Response shapes for the REST API in design doc 5.2, with field names taken
- * from the data model in 5.3. The backend does not serve these yet, so
- * `mock.ts` produces them; once an endpoint exists, only its function in
- * `client.ts` changes.
+ * View models: what the screens read, with field names taken from the data
+ * model in doc 5.3. The backend's own shapes are in `contract.ts`, and
+ * `adapters.ts` converts them, so a contract change stays out of the screens.
+ * Endpoints the contract does not define yet (summary, map, places, location
+ * correction) are still served in these shapes by `mock.ts`.
  */
 
 // photo lifecycle (doc 3.3). Only `ready` photos have display images
@@ -14,20 +15,24 @@ export type LocationSource = 'exif' | 'manual'
 
 /**
  * One photo as the owner sees it. `thumb_url` and `display_url` are the
- * short-lived signed GCS URLs the API derives from `thumb_key`/`display_key`;
+ * short-lived signed GCS URLs the API derives from `thumb_key`/`display_key`.
  */
 export interface Photo {
   id: string
   trip_id: string
   state: PhotoState
+  /** Why processing failed, e.g. "invalid_image"; null unless `state` is failed. */
+  error_code: string | null
   thumb_url: string | null
   display_url: string | null
+  /** When the image URLs stop working; refetch the photo after it. */
+  image_expires_at: string | null
   /** ISO local time without offset, like "2026-06-12T18:40:00". */
   capture_time_local: string | null
   /** e.g. "+02:00"; null when the camera recorded none. */
   capture_utc_offset: string | null
-  /** ISO UTC timestamp. */
-  uploaded_at: string
+  /** ISO UTC timestamp; null until the upload is complete. */
+  uploaded_at: string | null
   lat: number | null
   lng: number | null
   country: string | null
@@ -47,6 +52,8 @@ export interface TripSummary {
   created_at: string
   /** Owner's chosen cover, else the first suitable photo, else null. */
   cover_url: string | null
+  /** When `cover_url` stops working; refetch the trip after it. */
+  cover_expires_at: string | null
   /** All photos, including ones without GPS. */
   photo_count: number
   /** Photos that can be map pins. */
@@ -79,6 +86,11 @@ export interface Page<T> {
 /** `POST /api/trips` body. */
 export interface CreateTripInput {
   title: string
+  notes?: string
+}
+/** `PATCH /api/trips/{id}` body: only the fields that change. Empty notes clear them. */
+export interface UpdateTripInput {
+  title?: string
   notes?: string
 }
 /** `GET /api/trips/{id}`: the summary plus the cover the owner chose. */
@@ -151,4 +163,54 @@ export interface UploadItem {
   state: PhotoState
   error: string | null
   photo: Photo | null
+}
+
+/** How a share reaches people (doc 5.3 SHARE.mode). Increment 2 has link shares only. */
+export type ShareMode = 'link' | 'public'
+
+/** A share as its owner manages it. */
+export interface Share {
+  id: string
+  trip_id: string
+  mode: ShareMode
+  title: string
+  description: string | null
+  /** The photos the share shows; the rest of the trip stays private. */
+  photo_ids: string[]
+  /** Recipient address with the secret token. Only the owner ever receives it. */
+  url: string
+  created_at: string
+  revoked_at: string | null
+}
+
+/** `POST /api/trips/{id}/shares` body. */
+export interface CreateShareInput {
+  mode: 'link'
+  title: string
+  description?: string
+  photo_ids: string[]
+}
+
+/**
+ * One photo as a recipient sees it (doc 3.3): a city-level position instead
+ * of the exact one, and nothing about the rest of the trip.
+ */
+export interface SharedPhoto {
+  id: string
+  thumb_url: string | null
+  display_url: string | null
+  capture_time_local: string | null
+  city: string | null
+  country: string | null
+  /** The city's centre, or null when the photo has no city. Never the exact spot. */
+  display_lat: number | null
+  display_lng: number | null
+}
+
+/** `GET /api/s/{token}`: what anyone with the link sees, without signing in. */
+export interface SharedCollection {
+  title: string
+  description: string | null
+  created_at: string
+  photos: SharedPhoto[]
 }

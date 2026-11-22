@@ -7,6 +7,10 @@
  *
  * Every photo has its own picture, and its coordinates are those of the
  * landmark the picture shows (see CREDITS.md for each image).
+ *
+ * Endpoints the contract defines (trips, trip photos) answer in contract
+ * shapes, so client.ts runs the same adapters as for the real backend; the
+ * rest still answer in view-model shapes until the contract covers them.
  */
 import eiffelTower from '../assets/pins/paris.jpg'
 import parisSkyline from '../assets/pins/paris-wide.jpg'
@@ -20,21 +24,28 @@ import stPeters from '../assets/pins/rome-st-peters.jpg'
 import helsinkiCathedral from '../assets/pins/helsinki.jpg'
 import uspenskiCathedral from '../assets/pins/helsinki-uspenski.jpg'
 import suomenlinna from '../assets/pins/helsinki-suomenlinna.jpg'
-import { compareByCapture, sortByUpload } from '../photoOrder'
+import { captureDay, compareByCapture, sortByUpload } from '../photoOrder'
 import { readPhotoMetadata, sniffImageKind } from './exif'
 import type { AcceptanceOptions, MockOperation } from './acceptanceOptions'
+import { toPhoto, toTripDetail, uploadErrorMessage } from './adapters'
+import type { ApiCreateTrip, ApiDisplayImage, ApiPage, ApiPhoto, ApiTrip } from './contract'
+import { ApiError } from './http'
+import { NOTES_MAX, TITLE_MAX, codePoints } from './limits'
 import type {
-  CreateTripInput,
+  CreateShareInput,
+  LabelStatus,
   LocationPatch,
   MapPhoto,
   MapPhotoPage,
   MapPhotoQuery,
   MeSummary,
-  Page,
   Photo,
   Place,
+  Share,
+  SharedCollection,
+  SharedPhoto,
   TripDetail,
-  TripSummary,
+  UpdateTripInput,
   UploadItem,
 } from './types'
 
@@ -71,6 +82,19 @@ const LANDMARKS = {
 
 type LandmarkKey = keyof typeof LANDMARKS
 
+/** A stored photo: the contract's Photo with the place labels the mock always knows. */
+type PhotoRow = ApiPhoto & {
+  country: string | null
+  city: string | null
+  place_name: string | null
+  label_status: LabelStatus
+}
+
+/** Bundled images never expire, unlike the signed URLs the backend returns. */
+function image(url: string): ApiDisplayImage {
+  return { url, expires_at: '9999-12-31T23:59:59Z' }
+}
+
 // Builds a ready, located photo; `overrides` covers the unusual ones
 function photo(
   id: string,
@@ -78,25 +102,28 @@ function photo(
   place: LandmarkKey,
   captured: string,
   uploaded: string,
-  overrides: Partial<Photo> = {},
-): Photo {
+  overrides: Partial<PhotoRow> = {},
+): PhotoRow {
   const p = LANDMARKS[place]
   return {
     id,
     trip_id,
+    batch_id: `batch-${trip_id}`,
+    client_file_id: id,
     state: 'ready',
-    thumb_url: p.img,
-    display_url: p.img,
+    error_code: null,
+    display_image: image(p.img),
     capture_time_local: captured,
     capture_utc_offset: '+02:00',
     uploaded_at: uploaded,
+    exif_lat: p.lat,
+    exif_lng: p.lng,
     lat: p.lat,
     lng: p.lng,
     country: p.country,
     city: p.city,
     place_name: `${p.name}, ${p.city}`,
     label_status: 'confirmed',
-    location_source: 'exif',
     ...overrides,
   }
 }
@@ -125,7 +152,7 @@ const trips: TripRow[] = [
   },
 ]
 
-const photos: Photo[] = [
+const photos: PhotoRow[] = [
   photo('p-eu-1', 'trip-europe', 'eiffelTower', '2026-06-01T09:12:00', '2026-06-20T10:05:00Z'),
   photo('p-eu-2', 'trip-europe', 'montparnasse', '2026-06-02T19:40:00', '2026-06-20T10:05:10Z'),
   photo('p-eu-3', 'trip-europe', 'bigBen', '2026-06-04T04:50:00', '2026-06-20T10:05:20Z', {
@@ -154,19 +181,22 @@ const photos: Photo[] = [
   {
     id: 'p-rom-3',
     trip_id: 'trip-rome',
+    batch_id: 'batch-trip-rome',
+    client_file_id: 'p-rom-3',
     state: 'needs-location',
-    thumb_url: stPeters,
-    display_url: stPeters,
+    error_code: null,
+    display_image: image(stPeters),
     capture_time_local: null,
     capture_utc_offset: null,
     uploaded_at: '2026-09-28T17:36:00Z',
+    exif_lat: null,
+    exif_lng: null,
     lat: null,
     lng: null,
     country: null,
     city: null,
     place_name: null,
     label_status: 'pending',
-    location_source: null,
   },
 ]
 
@@ -186,7 +216,7 @@ switch (acceptance?.scenario) {
     trips.unshift({ id: 'trip-empty', title: 'Empty trip', notes: null, created_at: '2026-10-01T00:00:00Z', cover_photo_id: null })
     break
   case 'unlocated':
-    photos.forEach((p) => Object.assign(p, { lat: null, lng: null, city: null, country: null, place_name: null, state: 'needs-location', label_status: 'pending', location_source: null }))
+    photos.forEach((p) => Object.assign(p, { lat: null, lng: null, exif_lat: null, exif_lng: null, city: null, country: null, place_name: null, state: 'needs-location', label_status: 'pending' }))
     break
   case 'places':
     trips.splice(0, trips.length,
@@ -197,7 +227,7 @@ switch (acceptance?.scenario) {
       photo('a1', 'trip-a', 'eiffelTower', '2026-06-01T09:00:00', '2026-09-01T00:00:00Z'),
       photo('a2', 'trip-a', 'eiffelTower', '2026-06-02T09:00:00', '2026-09-01T00:00:01Z'),
       photo('b1', 'trip-b', 'eiffelTower', '2026-06-03T09:00:00', '2026-09-02T00:00:00Z'),
-      photo('us1', 'trip-b', 'eiffelTower', '2026-06-04T09:00:00', '2026-09-02T00:00:01Z', { country: 'United States', lat: 33.6609, lng: -95.5555, place_name: 'Paris, United States' }),
+      photo('us1', 'trip-b', 'eiffelTower', '2026-06-04T09:00:00', '2026-09-02T00:00:01Z', { country: 'United States', lat: 33.6609, lng: -95.5555, exif_lat: 33.6609, exif_lng: -95.5555, place_name: 'Paris, United States' }),
     )
     break
   case 'long-content':
@@ -210,10 +240,12 @@ switch (acceptance?.scenario) {
     const states: Photo['state'][] = ['pending', 'uploading', 'processing', 'ready', 'needs-location', 'failed']
     photos.splice(0, photos.length, ...states.map((state, i) => photo(`state-${state}`, 'trip-rome', 'colosseum', `2026-09-${20 + i}T09:00:00`, `2026-09-28T17:35:0${i}Z`, {
       state,
-      thumb_url: state === 'ready' || state === 'needs-location' ? colosseum : null,
-      display_url: state === 'ready' || state === 'needs-location' ? colosseum : null,
+      error_code: state === 'failed' ? 'invalid_image' : null,
+      display_image: state === 'ready' || state === 'needs-location' ? image(colosseum) : null,
       lat: state === 'ready' ? 41.8902 : null,
       lng: state === 'ready' ? 12.4922 : null,
+      exif_lat: state === 'ready' ? 41.8902 : null,
+      exif_lng: state === 'ready' ? 12.4922 : null,
       label_status: state === 'needs-location' ? 'pending' : 'confirmed',
     })))
     break
@@ -246,35 +278,36 @@ async function beforeOperation(operation: MockOperation, signal?: AbortSignal): 
 }
 
 // Doc 3.3: only photos with usable coordinates are map pins.
-function isLocated(p: Photo): boolean {
+function isLocated(p: PhotoRow): boolean {
   return p.lat !== null && p.lng !== null
 }
 function distinct(values: (string | null)[]): string[] {
   return [...new Set(values.filter((v): v is string => v !== null))]
 }
-// The API returns photos in the order photoOrder.ts defines (frontend #25).
+// Use the shared photo-ordering rules for mock API responses.
 const byCapture = compareByCapture
-function summarise(trip: TripRow): TripSummary {
+
+function summarise(trip: TripRow): ApiTrip {
   const own = photos.filter((p) => p.trip_id === trip.id)
   const located = own.filter(isLocated).sort(byCapture)
-  const dated = own.map((p) => p.capture_time_local).filter((t): t is string => t !== null).sort()
+  const dated = own.map(captureDay).filter((day): day is string => day !== null).sort()
   // Owner's cover, else the first ready photo, else the placeholder.
   const cover =
-    own.find((p) => p.id === trip.cover_photo_id && p.thumb_url) ??
-    own.find((p) => p.state === 'ready' && p.thumb_url)
+    own.find((p) => p.id === trip.cover_photo_id && p.display_image) ??
+    own.find((p) => p.state === 'ready' && p.display_image)
 
   return {
     id: trip.id,
     title: trip.title,
-    notes: trip.notes,
+    notes: trip.notes ?? '',
     created_at: trip.created_at,
-    cover_url: cover?.display_url ?? null,
+    cover: cover?.display_image ? { photo_id: cover.id, image: cover.display_image } : null,
     photo_count: own.length,
     located_count: located.length,
     cities: distinct(located.map((p) => p.city)),
     countries: distinct(located.map((p) => p.country)),
-    start_date: dated[0]?.slice(0, 10) ?? null,
-    end_date: dated[dated.length - 1]?.slice(0, 10) ?? null,
+    start_date: dated[0] ?? null,
+    end_date: dated[dated.length - 1] ?? null,
     visibility: 'private',
   }
 }
@@ -304,7 +337,9 @@ export async function mockSummary(signal?: AbortSignal): Promise<MeSummary> {
     country_count: distinct(located.map((p) => p.country)).length,
     city_count: distinct(located.map((p) => p.city)).length,
     to_review_count: photos.filter((p) => p.state === 'needs-location' || p.label_status === 'suggested').length,
-    recently_uploaded: sortByUpload(photos).slice(0, 8),
+    recently_uploaded: sortByUpload(photos)
+      .slice(0, 8)
+      .map(toPhoto),
   }, undefined, signal)
 }
 /** Page sizes the real API is expected to use; tests shrink them through `pageSize`. */
@@ -316,7 +351,7 @@ const PHOTO_PAGE_SIZE = 50
  * here it is the offset of the next item. A cursor the server did not issue
  * is rejected, as the real API must do.
  */
-function pageOf<T>(items: T[], cursor: string | null | undefined, defaultSize: number): Page<T> {
+function pageOf<T>(items: T[], cursor: string | null | undefined, defaultSize: number): ApiPage<T> {
   const size = acceptance?.pageSize ?? defaultSize
   const start = cursor ? Number(cursor) : 0
   if (!Number.isInteger(start) || start < 0) throw new Error('Invalid cursor')
@@ -324,17 +359,35 @@ function pageOf<T>(items: T[], cursor: string | null | undefined, defaultSize: n
   return { items: items.slice(start, end), next_cursor: end < items.length ? String(end) : null }
 }
 
-export async function mockListTrips(signal?: AbortSignal, cursor?: string | null): Promise<Page<TripSummary>> {
+export async function mockListTrips(signal?: AbortSignal, cursor?: string | null): Promise<ApiPage<ApiTrip>> {
   await beforeOperation('listTrips', signal)
   const items = [...trips].sort((a, b) => b.created_at.localeCompare(a.created_at)).map(summarise)
   return delay(pageOf(items, cursor, TRIP_PAGE_SIZE), undefined, signal)
 }
-export async function mockCreateTrip(input: CreateTripInput): Promise<TripSummary> {
+
+/**
+ * The 400 the backend returns for a trimmed title outside 1 to TITLE_MAX code
+ * points or trimmed notes over NOTES_MAX code points; null when both are valid.
+ */
+function invalidTripText(title: string | undefined, notes: string | undefined): ApiError | null {
+  if (title !== undefined && (!title || codePoints(title) > TITLE_MAX)) {
+    return new ApiError(400, 'invalid_title', `A trip title needs 1 to ${TITLE_MAX} characters.`)
+  }
+  if (notes !== undefined && codePoints(notes.trim()) > NOTES_MAX) {
+    return new ApiError(400, 'invalid_notes', `Notes can be at most ${NOTES_MAX} characters.`)
+  }
+  return null
+}
+
+export async function mockCreateTrip(input: ApiCreateTrip): Promise<ApiTrip> {
   await beforeOperation('createTrip')
+  const title = input.title.trim()
+  const invalid = invalidTripText(title, input.notes)
+  if (invalid) return Promise.reject(invalid)
   const row: TripRow = {
     id: `trip-${Date.now()}`,
-    title: input.title,
-    notes: input.notes ?? null,
+    title,
+    notes: input.notes?.trim() || null,
     created_at: new Date().toISOString(),
     cover_photo_id: null,
   }
@@ -350,15 +403,28 @@ export class NotFoundError extends Error {
   }
 }
 
-export async function mockGetTrip(id: string, signal?: AbortSignal): Promise<TripDetail> {
+export async function mockGetTrip(id: string, signal?: AbortSignal): Promise<ApiTrip> {
   await beforeOperation('getTrip', signal)
   const row = trips.find((t) => t.id === id)
   if (!row) return Promise.reject(new NotFoundError('Trip'))
-  return delay({ ...summarise(row), cover_photo_id: row.cover_photo_id }, undefined, signal)
+  return delay(summarise(row), undefined, signal)
+}
+
+/** Title and notes, validated the way the backend must: a title is required, notes may be cleared. */
+export async function mockUpdateTrip(id: string, input: UpdateTripInput): Promise<TripDetail> {
+  await beforeOperation('updateTrip')
+  const row = trips.find((t) => t.id === id)
+  if (!row) return Promise.reject(new NotFoundError('Trip'))
+  const title = input.title?.trim()
+  const invalid = invalidTripText(title, input.notes)
+  if (invalid) return Promise.reject(invalid)
+  if (title !== undefined) row.title = title
+  if (input.notes !== undefined) row.notes = input.notes.trim() || null
+  return delay(toTripDetail(summarise(row)))
 }
 
 /** One page of the trip's photos, located or not, in capture order (journey log). */
-export async function mockTripPhotos(id: string, signal?: AbortSignal, cursor?: string | null): Promise<Page<Photo>> {
+export async function mockTripPhotos(id: string, signal?: AbortSignal, cursor?: string | null): Promise<ApiPage<ApiPhoto>> {
   await beforeOperation('tripPhotos', signal)
   const items = photos.filter((p) => p.trip_id === id).sort(byCapture)
   return delay(pageOf(items, cursor, PHOTO_PAGE_SIZE), undefined, signal)
@@ -398,8 +464,8 @@ export async function mockMapPhotos(query: MapPhotoQuery, signal?: AbortSignal):
     trip_title: titles.get(p.trip_id) ?? '',
     lat: p.lat as number,
     lng: p.lng as number,
-    thumb_url: p.thumb_url,
-    display_url: p.display_url,
+    thumb_url: p.display_image?.url ?? null,
+    display_url: p.display_image?.url ?? null,
     capture_time_local: p.capture_time_local,
     city: p.city,
     country: p.country,
@@ -585,7 +651,7 @@ export async function mockPatchLocation(id: string, patch: LocationPatch, signal
   const index = photos.findIndex((p) => p.id === id)
   if (index < 0) return Promise.reject(new NotFoundError('Photo'))
   const current = photos[index]
-  let next: Photo
+  let next: PhotoRow
   if ('confirm_label' in patch) {
     if (current.lat === null) return Promise.reject(new Error('Photo has no location to confirm'))
     next = { ...current, label_status: 'confirmed' }
@@ -597,13 +663,13 @@ export async function mockPatchLocation(id: string, patch: LocationPatch, signal
       // The owner chose this spot, so a label found for it is not a mere suggestion.
       label_status: labels.place_name ? 'confirmed' : 'pending',
       state: current.state === 'needs-location' ? 'ready' : current.state,
+      // The EXIF pair stays as imported, so the adapter reports this position as manual.
       lat: patch.lat,
       lng: patch.lng,
-      location_source: 'manual',
     }
   }
   photos[index] = next
-  return delay(next, undefined, signal)
+  return delay(toPhoto(next), undefined, signal)
 }
 
 /** Doc 6.1: JPEG and PNG only from Increment 1, at most 25 MB per file. */
@@ -623,7 +689,7 @@ async function processFile(
   let item: UploadItem = { client_file_id, file_name: file.name, state: 'pending', error: null, photo: null }
   const existing = photos.find((p) => p.id === registered.get(client_file_id))
   if (existing) {
-    report({ ...item, state: existing.state, photo: existing })
+    report({ ...item, state: existing.state, photo: toPhoto(existing) })
     return
   }
   const fail = (error: string) => report({ ...item, state: 'failed', error })
@@ -638,7 +704,7 @@ async function processFile(
     return
   }
   if (file.size > MAX_UPLOAD_BYTES) {
-    fail('The file is larger than 25 MB.')
+    fail(uploadErrorMessage('file_too_large'))
     return
   }
 
@@ -646,7 +712,7 @@ async function processFile(
   report(item)
   const kind = sniffImageKind(new Uint8Array(await file.slice(0, 8).arrayBuffer()))
   if (!kind) {
-    fail('This is not a JPEG or PNG image.')
+    fail(uploadErrorMessage('unsupported_type'))
     return
   }
   // The worker decodes every image (doc 7.1); a file that cannot be decoded fails with a reason.
@@ -654,7 +720,7 @@ async function processFile(
     const bitmap = await createImageBitmap(file)
     bitmap.close()
   } catch {
-    fail('The image could not be read. The file may be damaged.')
+    fail(uploadErrorMessage('invalid_image'))
     return
   }
   const meta = await readPhotoMetadata(file, kind)
@@ -664,24 +730,26 @@ async function processFile(
   const labels: Labels = located
     ? resolveLabels(meta.lat as number, meta.lng as number)
     : { city: null, country: null, place_name: null, label_status: 'pending' }
-  const url = URL.createObjectURL(file)
-  const row: Photo = {
+  const row: PhotoRow = {
     id: `p-${client_file_id}`,
     trip_id: tripId,
+    batch_id: `batch-${tripId}`,
+    client_file_id,
     state: located ? 'ready' : 'needs-location',
-    thumb_url: url,
-    display_url: url,
+    error_code: null,
+    display_image: image(URL.createObjectURL(file)),
     capture_time_local: meta.captureLocal,
     capture_utc_offset: meta.captureOffset,
     uploaded_at: new Date().toISOString(),
+    exif_lat: meta.lat,
+    exif_lng: meta.lng,
     lat: meta.lat,
     lng: meta.lng,
     ...labels,
-    location_source: located ? 'exif' : null,
   }
   photos.push(row)
   registered.set(client_file_id, row.id)
-  report({ ...item, state: row.state, photo: row })
+  report({ ...item, state: row.state, photo: toPhoto(row) })
 }
 
 /**
@@ -702,4 +770,167 @@ export async function mockUploadPhotos(
     }
   }
   await Promise.all(Array.from({ length: UPLOAD_CONCURRENCY }, worker))
+}
+
+/** A share row: the owner's view plus the secret token its link carries. */
+interface ShareRow extends Omit<Share, 'url'> {
+  token: string
+}
+
+/** Two demo links, so the recipient view can be shown without creating one first. */
+const shares: ShareRow[] = [
+  {
+    id: 'share-europe',
+    token: 'demo-europe',
+    trip_id: 'trip-europe',
+    mode: 'link',
+    title: 'Highlights from Europe by rail',
+    description: 'Paris, London and Berlin, for the family.',
+    photo_ids: ['p-eu-1', 'p-eu-3', 'p-eu-4'],
+    created_at: '2026-06-21T09:00:00Z',
+    revoked_at: null,
+  },
+  {
+    id: 'share-old',
+    token: 'demo-revoked',
+    trip_id: 'trip-europe',
+    mode: 'link',
+    title: 'Old link',
+    description: null,
+    photo_ids: ['p-eu-1'],
+    created_at: '2026-06-20T12:00:00Z',
+    revoked_at: '2026-06-22T08:00:00Z',
+  },
+]
+
+/*
+ * Links outlive a reload in the real app, so the mock keeps them in this
+ * browser's storage: a link created here can be pasted into the address bar
+ * or another tab. Acceptance tests start each run from the demo links only.
+ */
+const SHARES_KEY = 'mapmory.mock.shares'
+
+function loadShares() {
+  if (acceptance || import.meta.env.VITE_API_URL) return
+  try {
+    const saved = JSON.parse(localStorage.getItem(SHARES_KEY) ?? '[]') as ShareRow[]
+    for (const row of saved) {
+      const index = shares.findIndex((s) => s.id === row.id)
+      if (index >= 0) shares[index] = row
+      else shares.push(row)
+    }
+  } catch {
+    // Blocked or corrupt storage: start from the demo links.
+  }
+}
+
+function saveShares() {
+  if (acceptance || import.meta.env.VITE_API_URL) return
+  try {
+    localStorage.setItem(SHARES_KEY, JSON.stringify(shares))
+  } catch {
+    // Storage can be blocked; links then last until reload.
+  }
+}
+
+loadShares()
+
+function shareUrl(token: string): string {
+  return `${window.location.origin}/s/${token}`
+}
+
+function toShare({ token, ...row }: ShareRow): Share {
+  return { ...row, url: shareUrl(token) }
+}
+
+/** Only photos with an image can be shared; processing and failed ones have nothing to show. */
+function isShareable(p: Photo): boolean {
+  return (p.state === 'ready' || p.state === 'needs-location') && p.display_url !== null
+}
+
+/** A long random token: the link is the only key to the share, so it must not be guessable. */
+function newToken(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(18))
+  return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_')
+}
+
+/** The owner's active links for a trip, newest first. Revoked links are history, not shown. */
+export async function mockListShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
+  await beforeOperation('listShares', signal)
+  const items = shares
+    .filter((s) => s.trip_id === tripId && s.revoked_at === null)
+    .sort((a, b) => b.created_at.localeCompare(a.created_at))
+    .map(toShare)
+  return delay(items, undefined, signal)
+}
+
+export async function mockCreateShare(tripId: string, input: CreateShareInput): Promise<Share> {
+  await beforeOperation('createShare')
+  if (!trips.some((t) => t.id === tripId)) throw new ApiError(404, 'not_found', 'Trip not found')
+  const title = input.title.trim()
+  const ids = [...new Set(input.photo_ids)]
+  // Every photo must belong to this trip: a share can never reach into another trip.
+  const valid = ids.every((id) => photos.some((p) => p.id === id && p.trip_id === tripId && isShareable(toPhoto(p))))
+  if (!title || ids.length === 0 || !valid) throw new ApiError(400, 'invalid_request', 'Choose at least one photo of this trip')
+  const row: ShareRow = {
+    id: `share-${Date.now()}`,
+    token: newToken(),
+    trip_id: tripId,
+    mode: 'link',
+    title,
+    description: input.description?.trim() || null,
+    photo_ids: ids,
+    created_at: new Date().toISOString(),
+    revoked_at: null,
+  }
+  shares.push(row)
+  saveShares()
+  return delay(toShare(row))
+}
+
+/** DELETE /api/shares/{id}: the link stops working at once; the photos stay in the trip. */
+export async function mockRevokeShare(id: string): Promise<void> {
+  await beforeOperation('revokeShare')
+  const row = shares.find((s) => s.id === id)
+  if (!row) throw new ApiError(404, 'not_found', 'Share not found')
+  row.revoked_at ??= new Date().toISOString()
+  saveShares()
+  return delay(undefined)
+}
+
+/** The centre of the photo's city: shared views never reveal where exactly a photo was taken. */
+function cityCentre(p: Photo): { lat: number; lng: number } | null {
+  const centre = CITIES.find((c) => c.city === p.city && c.country === p.country)
+  return centre ? { lat: centre.lat, lng: centre.lng } : null
+}
+
+function toSharedPhoto(p: Photo): SharedPhoto {
+  const centre = p.lat !== null ? cityCentre(p) : null
+  return {
+    id: p.id,
+    thumb_url: p.thumb_url,
+    display_url: p.display_url,
+    capture_time_local: p.capture_time_local,
+    city: p.city,
+    country: p.country,
+    display_lat: centre?.lat ?? null,
+    display_lng: centre?.lng ?? null,
+  }
+}
+
+/**
+ * GET /api/s/{token}, callable without signing in. An unknown token is 404;
+ * a revoked one is 410, so the recipient can be told the owner turned it off.
+ */
+export async function mockSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
+  await beforeOperation('sharedCollection', signal)
+  const row = shares.find((s) => s.token === token)
+  if (!row) throw new ApiError(404, 'not_found', 'Share not found')
+  if (row.revoked_at) throw new ApiError(410, 'share_revoked', 'This link was turned off')
+  const shown = photos.filter((p) => row.photo_ids.includes(p.id)).map(toPhoto).filter(isShareable).sort(byCapture)
+  return delay(
+    { title: row.title, description: row.description, created_at: row.created_at, photos: shown.map(toSharedPhoto) },
+    undefined,
+    signal,
+  )
 }

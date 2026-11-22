@@ -13,16 +13,20 @@ import {
   Map as MapIcon,
   MapPin,
   MapPinOff,
+  Pencil,
+  Share2,
   Upload,
   type LucideIcon,
 } from 'lucide-react'
-import { getTrip, listTripPhotos, patchPhotoLocation } from './api/client'
+import { getTrip, hasUnfinishedUploads, listTripPhotos, patchPhotoLocation, sharingAvailable } from './api/client'
 import { loadPages, mergePage, type FetchPage } from './api/paging'
 import LoadMore from './components/LoadMore'
 import { useLoadMore } from './useLoadMore'
 import type { LocationPatch, Photo, TripDetail } from './api/types'
 import LocationPicker, { type LatLng } from './components/LocationPicker'
 import PhotoViewer, { viewerImage } from './components/PhotoViewer'
+import TripDetailsForm from './components/TripDetailsForm'
+import ShareSettings from './components/ShareSettings'
 import UploadPanel from './components/UploadPanel'
 import VisibilityBadge from './components/VisibilityBadge'
 import { formatCaptured, formatDateRange, plural, zoneNote } from './format'
@@ -350,7 +354,24 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
   const [correcting, setCorrecting] = useState<Photo | null>(null)
   const [viewing, setViewing] = useState<string | null>(null)
   const [message, setMessage] = useState('')
-  const [uploading, setUploading] = useState(Boolean(initialFiles?.length))
+  // Reopen the panel after a reload while this browser has unfinished uploads for the trip.
+  const [uploading, setUploading] = useState(() => Boolean(initialFiles?.length) || hasUnfinishedUploads(tripId))
+  const [editing, setEditing] = useState(false)
+  const editButton = useRef<HTMLButtonElement>(null)
+  const returnFocus = useRef(false)
+
+  // Closing the details form (save or cancel) puts focus back on Edit details.
+  useEffect(() => {
+    if (editing || !returnFocus.current) return
+    returnFocus.current = false
+    editButton.current?.focus()
+  }, [editing])
+
+  function closeEditor() {
+    returnFocus.current = true
+    setEditing(false)
+  }
+  const [sharing, setSharing] = useState(false)
 
   const fetchPhotos = useCallback<FetchPage<Photo>>(
     (cursor, signal) => listTripPhotos(tripId, signal, cursor),
@@ -467,7 +488,34 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
               .filter(Boolean)
               .join('  ·  ')}
           </p>
-          {trip.notes ? <p className="trip-notes">{trip.notes}</p> : null}
+          {editing ? (
+            <TripDetailsForm
+              trip={trip}
+              onCancel={closeEditor}
+              onSaved={(saved) => {
+                // Keep the photos; the trip response carries the new title, notes and aggregates.
+                setLoad((current) => (current.status === 'ready' ? { ...current, trip: saved } : current))
+                setMessage('Trip details saved.')
+                closeEditor()
+              }}
+            />
+          ) : (
+            <>
+              {trip.notes ? <p className="trip-notes">{trip.notes}</p> : null}
+              <button
+                ref={editButton}
+                type="button"
+                className="trip-edit-open"
+                onClick={() => {
+                  setMessage('')
+                  setEditing(true)
+                }}
+              >
+                <Pencil size={14} aria-hidden />
+                Edit details
+              </button>
+            </>
+          )}
         </div>
         <div className="trip-head-actions">
           <button type="button" className="btn btn-primary" onClick={() => onShowOnMap(trip.id)}>
@@ -483,8 +531,21 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
             <Upload size={16} aria-hidden />
             Upload photos
           </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={!sharingAvailable}
+            aria-expanded={sharingAvailable ? sharing : undefined}
+            title={!sharingAvailable ? 'Sharing will be available when persistent photo sharing is supported.' : undefined}
+            onClick={() => setSharing((open) => !open)}
+          >
+            <Share2 size={16} aria-hidden />
+            {sharingAvailable ? 'Share' : 'Share (coming soon)'}
+          </button>
         </div>
       </header>
+
+      {sharingAvailable && sharing ? <ShareSettings trip={trip} photos={photos} /> : null}
 
       <p className="visually-hidden" role="status">
         {message}

@@ -8,6 +8,8 @@ const UNDATED = ['Helsinki Cathedral, Helsinki', 'Suomenlinna, Helsinki']
 test('gallery lists photos in capture order with stable tie-breaks and undated photos in their own group', async ({ page }) => {
   await boot(page, { scenario: 'ordering' })
   await openTrip(page, 'Rome with family')
+  // Invalid 30 February must not expand the trip's summary date range.
+  await expect(page.locator('.trip-meta')).toContainText('20–21 Sept 2026')
   await expect(page.locator('.trip-tile-place')).toHaveText([...DATED, ...UNDATED])
   await expect(page.getByRole('heading', { name: 'No capture date', exact: true })).toBeVisible()
   // The heading sits between the dated and the undated tiles.

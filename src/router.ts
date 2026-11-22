@@ -3,12 +3,12 @@ import { useMemo, useSyncExternalStore } from 'react'
 /*
  * A small History API router. Every screen has an address, so Back/Forward,
  * reload and copied links work. It is in-house rather than react-router to
- * avoid a dependency (and a lockfile rewrite) for seven paths.
+ * avoid a dependency (and a lockfile rewrite) for eight paths.
  *
  *   /                 landing          /dashboard         Dashboard
  *   /signup           sign up          /map               Map · My photos
  *   /login            log in           /map?trip={id}     Map, one trip selected
- *                                      /trips/{id}        Trip detail
+ *   /s/{token}        shared link      /trips/{id}        Trip detail
  */
 export type Route =
   | { name: 'landing' }
@@ -17,6 +17,7 @@ export type Route =
   | { name: 'dashboard' }
   | { name: 'map'; tripId: string | null }
   | { name: 'trip'; tripId: string }
+  | { name: 'shared'; token: string }
   | { name: 'not-found' }
 
 /** Pages only the signed-in owner may see. */
@@ -32,12 +33,12 @@ export function parseRoute(pathname: string, search: string): Route {
   if (path === '/dashboard') return { name: 'dashboard' }
   if (path === '/map') return { name: 'map', tripId: new URLSearchParams(search).get('trip') || null }
   const trip = /^\/trips\/([^/]+)$/.exec(path)
-  if (trip) {
-    try {
-      return { name: 'trip', tripId: decodeURIComponent(trip[1]) }
-    } catch {
-      return { name: 'not-found' }
-    }
+  const shared = /^\/s\/([^/]+)$/.exec(path)
+  try {
+    if (trip) return { name: 'trip', tripId: decodeURIComponent(trip[1]) }
+    if (shared) return { name: 'shared', token: decodeURIComponent(shared[1]) }
+  } catch {
+    return { name: 'not-found' }
   }
   return { name: 'not-found' }
 }
@@ -57,6 +58,8 @@ export function routeHref(route: Route): string {
       return route.tripId ? `/map?trip=${encodeURIComponent(route.tripId)}` : '/map'
     case 'trip':
       return `/trips/${encodeURIComponent(route.tripId)}`
+    case 'shared':
+      return `/s/${encodeURIComponent(route.token)}`
   }
 }
 
@@ -73,6 +76,8 @@ export function routeTitle(route: Route): string {
       return 'Map · MapMory'
     case 'trip':
       return 'Trip · MapMory'
+    case 'shared':
+      return 'Shared photos · MapMory'
     case 'not-found':
       return 'Page not found · MapMory'
     default:
