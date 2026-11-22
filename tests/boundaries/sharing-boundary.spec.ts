@@ -77,6 +77,11 @@ test('live owner trip shows Share as disabled even when the trip loads successfu
     })
   })
 
+  // Trip photos are live as well; an empty trip keeps the test about sharing.
+  await page.route('**/api/trips/trip-live/photos?*', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ items: [], next_cursor: null }) }),
+  )
+
   await page.goto(`${LIVE}/trips/trip-live`)
 
   // Verify that we reached the real Trip screen rather than a login,
