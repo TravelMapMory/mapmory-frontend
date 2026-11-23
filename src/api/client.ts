@@ -7,8 +7,29 @@
  * otherwise it keeps using the mock. Add an endpoint to LIVE once the backend
  * serves it; when all are live, the mock can go.
  */
-import { toPhotoPage, toTripDetail, toTripPage, toTripSummary, toUploadItem, uploadErrorMessage } from './adapters'
-import type { ApiBatch, ApiPage, ApiPhoto, ApiRegisteredBatch, ApiRegisterUpload, ApiTrip } from './contract'
+import {
+  toMapPhotoPage,
+  toPhoto,
+  toPhotoPage,
+  toPlace,
+  toSummary,
+  toTripDetail,
+  toTripPage,
+  toTripSummary,
+  toUploadItem,
+  uploadErrorMessage,
+} from './adapters'
+import type {
+  ApiBatch,
+  ApiMapPhotoPage,
+  ApiMeSummary,
+  ApiPage,
+  ApiPhoto,
+  ApiPlaceSearch,
+  ApiRegisteredBatch,
+  ApiRegisterUpload,
+  ApiTrip,
+} from './contract'
 import { addRegistration, hasOpenRegistrations, loadRegistrations, updateRegistration } from './uploadRegistry'
 import { ApiError, request } from './http'
 import { loadAllPages } from './paging'
@@ -63,16 +84,23 @@ type Endpoint =
   | 'sharedCollection'
 
 /** Endpoints mapmory-backend serves today. */
-const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>(['listTrips', 'createTrip', 'getTrip', 'updateTrip', 'upload', 'tripPhotos'])
+const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
+  'summary',
+  'listTrips',
+  'createTrip',
+  'getTrip',
+  'updateTrip',
+  'upload',
+  'tripPhotos',
+  'mapPhotos',
+  'searchPlaces',
+  'patchLocation',
+])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
 
 /** Sharing is a mock-only capability until the backend supports public links. */
 export const sharingAvailable = !backendEnabled
-
-function locationCorrectionUnavailable(): ApiError {
-  return new ApiError(503, 'not_implemented', 'Correcting a photo location is not available yet.')
-}
 
 function mockSharingUnavailable(): ApiError {
   return new ApiError(503, 'not_implemented', 'Persistent sharing is not available yet.')
@@ -85,7 +113,7 @@ function live(endpoint: Endpoint): boolean {
 /** GET /api/me/summary */
 export async function getSummary(signal?: AbortSignal): Promise<MeSummary | null> {
   if (live('summary')) {
-    return request<MeSummary>('GET', '/api/me/summary', { signal })
+    return toSummary(await request<ApiMeSummary>('GET', '/api/me/summary', { signal }))
   }
   // Real trips without a summary API must not display demo statistics or photos.
   if (live('listTrips')) return null
@@ -143,18 +171,24 @@ export async function listTripPhotos(id: string, signal?: AbortSignal, cursor?: 
   return toPhotoPage(await mockTripPhotos(id, signal, cursor))
 }
 /** GET /api/map/photos — the owner's located photos in the bbox, at most 2,000. */
-export function getMapPhotos(query: MapPhotoQuery, signal?: AbortSignal): Promise<MapPhotoPage> {
-  return mockMapPhotos(query, signal)
+export async function getMapPhotos(query: MapPhotoQuery, signal?: AbortSignal): Promise<MapPhotoPage> {
+  if (!live('mapPhotos')) return mockMapPhotos(query, signal)
+  const page = await request<ApiMapPhotoPage>('GET', '/api/map/photos', {
+    query: { bbox: query.bbox?.join(','), trip_id: query.trip_id, from: query.from, to: query.to, q: query.q },
+    signal,
+  })
+  return toMapPhotoPage(page)
 }
 /** GET /api/places/search — world places, callable without signing in. */
-export function searchPlaces(q: string, signal?: AbortSignal): Promise<Place[]> {
-  return mockSearchPlaces(q, signal)
+export async function searchPlaces(q: string, signal?: AbortSignal): Promise<Place[]> {
+  if (!live('searchPlaces')) return mockSearchPlaces(q, signal)
+  const result = await request<ApiPlaceSearch>('GET', '/api/places/search', { query: { q: q.trim() }, signal })
+  return result.items.map(toPlace)
 }
 /** PATCH /api/photos/{id}/location */
-export function patchPhotoLocation(id: string, patch: LocationPatch): Promise<Photo> {
-  // Real photos are not in the mock; correction waits for backend #43.
-  if (live('tripPhotos')) return Promise.reject(locationCorrectionUnavailable())
-  return mockPatchLocation(id, patch)
+export async function patchPhotoLocation(id: string, patch: LocationPatch): Promise<Photo> {
+  if (!live('patchLocation')) return mockPatchLocation(id, patch)
+  return toPhoto(await request<ApiPhoto>('PATCH', `/api/photos/${encodeURIComponent(id)}/location`, { body: patch }))
 }
 /**
  * Upload flow (doc 7.1): POST /api/trips/{id}/batches registers the files,

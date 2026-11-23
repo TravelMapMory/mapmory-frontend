@@ -5,8 +5,19 @@
  * backend grows one endpoint at a time, so fields it does not send yet get
  * neutral defaults here instead of breaking the screens.
  */
-import type { ApiBatch, ApiPage, ApiPhoto, ApiRejectedFile, ApiTrip } from './contract'
-import type { LocationSource, Page, Photo, TripDetail, TripSummary, UploadItem } from './types'
+import type { ApiBatch, ApiMapPhoto, ApiMapPhotoPage, ApiMeSummary, ApiPage, ApiPhoto, ApiPlace, ApiRejectedFile, ApiTrip } from './contract'
+import type {
+  LocationSource,
+  MapPhoto,
+  MapPhotoPage,
+  MeSummary,
+  Page,
+  Photo,
+  Place,
+  TripDetail,
+  TripSummary,
+  UploadItem,
+} from './types'
 
 export type { ApiTrip } from './contract'
 
@@ -69,6 +80,7 @@ export function toPhoto(photo: ApiPhoto): Photo {
     country: photo.country ?? null,
     city: photo.city ?? null,
     place_name: placeName,
+    label_attribution: photo.label_attribution ?? null,
     // Without labels from the server there is nothing to confirm yet.
     label_status: photo.label_status ?? (placeName ? 'confirmed' : 'pending'),
     location_source: locationSource(photo),
@@ -122,4 +134,39 @@ export function toRejectedUploadItem(file: ApiRejectedFile, fileName: string): U
  */
 export function toBatchItems(batch: ApiBatch, fileNames: ReadonlyMap<string, string> = new Map()): UploadItem[] {
   return batch.photos.map((photo) => toUploadItem(photo, fileNames.get(photo.client_file_id) ?? photo.client_file_id))
+}
+
+/** One owner-map marker. The single display rendition serves as the thumbnail too. */
+export function toMapPhoto(photo: ApiMapPhoto): MapPhoto {
+  return {
+    id: photo.id,
+    trip_id: photo.trip_id,
+    trip_title: photo.trip_title,
+    lat: photo.lat,
+    lng: photo.lng,
+    thumb_url: photo.display_image?.url ?? null,
+    display_url: photo.display_image?.url ?? null,
+    capture_time_local: photo.capture_time_local,
+    city: photo.city,
+    country: photo.country,
+    place_name: photo.place_name,
+  }
+}
+
+export function toMapPhotoPage(page: ApiMapPhotoPage): MapPhotoPage {
+  return { items: page.items.map(toMapPhoto), truncated: page.truncated }
+}
+
+export function toSummary(summary: ApiMeSummary): MeSummary {
+  return {
+    photo_count: summary.photo_count,
+    country_count: summary.country_count,
+    city_count: summary.city_count,
+    to_review_count: summary.to_review_count,
+    recently_uploaded: summary.recently_uploaded.map(toPhoto),
+  }
+}
+
+export function toPlace(place: ApiPlace): Place {
+  return { ...place }
 }

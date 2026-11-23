@@ -190,6 +190,11 @@ function CorrectionPanel({
           <dd>
             {photo.place_name ?? (located ? 'No known place nearby' : 'Unknown')}
             {suggested ? ' (suggested, not yet confirmed)' : ''}
+            {photo.place_name && photo.label_attribution ? (
+              <small className="trip-place-attribution">
+                {photo.label_attribution}
+              </small>
+            ) : null}
           </dd>
         </dl>
         {suggested ? (

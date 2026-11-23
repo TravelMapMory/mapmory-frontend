@@ -1,16 +1,20 @@
 import { expect, test } from '@playwright/test'
 import {
   toBatchItems,
+  toMapPhotoPage,
   toPhoto,
   toPhotoPage,
+  toPlace,
   toRejectedUploadItem,
+  toSummary,
   toTripDetail,
   toUploadItem,
   uploadErrorMessage,
 } from '../../src/api/adapters'
-import type { ApiPhoto, ApiTrip } from '../../src/api/contract'
+import type { ApiMapPhotoPage, ApiMeSummary, ApiPhoto, ApiPlace, ApiTrip } from '../../src/api/contract'
 
-// A photo exactly as the contract (openapi.yaml 0.0.5) defines it: no place labels yet.
+// Baseline photo from the earlier API contract, without optional
+// place-label fields added in OpenAPI 0.0.8.
 const contractPhoto: ApiPhoto = {
   id: '0b8f6a0e-1c62-4f0b-9d55-3f1f7e0c2a10',
   trip_id: '6f1c0f62-4c1e-4a59-9a43-6b2f0a3e8c11',
@@ -45,6 +49,7 @@ test('a contract photo becomes a view photo with image expiry and neutral labels
     country: null,
     city: null,
     place_name: null,
+    label_attribution: null,
     label_status: 'pending',
     location_source: 'exif',
   })
@@ -74,6 +79,7 @@ test('nullable contract fields stay null rather than becoming empty values', () 
     lng: null,
     location_source: null,
   })
+  expect(toPhoto(pending).label_attribution).toBeNull()
 })
 
 test('a position that differs from the EXIF one, or has none, is a manual correction', () => {
@@ -141,4 +147,106 @@ test('a batch restored after reload names files it still knows and falls back to
     ['kyoto.jpg', 'ready'],
     ['file-2', 'processing'],
   ])
+})
+
+// Contract 0.0.8 (backend place labels, owner map and summary).
+test('a labelled photo keeps the server label status and its place labels', () => {
+  const photo = toPhoto({
+    ...contractPhoto,
+    country: 'Japan',
+    city: 'Kyoto',
+    place_name: 'Fushimi Inari Taisha',
+    label_status: 'suggested',
+    label_attribution: 'Powered by Geoapify · © OpenStreetMap contributors',
+  })
+  expect(photo.label_attribution).toBe(
+    'Powered by Geoapify · © OpenStreetMap contributors',
+  )
+  expect(photo.label_status).toBe('suggested')
+  expect([photo.city, photo.country, photo.place_name]).toEqual(['Kyoto', 'Japan', 'Fushimi Inari Taisha'])
+  expect(photo.location_source).toBe('exif')
+})
+
+test('a corrected photo is a manual location while EXIF stays the import value', () => {
+  const photo = toPhoto({ ...contractPhoto, lat: 34.967, lng: 135.773, label_status: 'confirmed', city: 'Kyoto' })
+  expect(photo.location_source).toBe('manual')
+  expect(photo.label_status).toBe('confirmed')
+})
+
+test('owner map markers use the display image as thumbnail and keep truncation', () => {
+  const page: ApiMapPhotoPage = {
+    truncated: true,
+    items: [
+      {
+        id: 'p1',
+        trip_id: 't1',
+        trip_title: 'Japan 2025',
+        lat: 35.0116,
+        lng: 135.7681,
+        display_image: { url: 'https://storage.example/display/p1.jpg', expires_at: '2026-11-22T20:00:00Z' },
+        capture_time_local: '2025-05-12T09:00:00',
+        city: 'Kyoto',
+        country: 'Japan',
+        place_name: null,
+      },
+      {
+        id: 'p2',
+        trip_id: 't1',
+        trip_title: 'Japan 2025',
+        lat: 34.69,
+        lng: 135.5,
+        display_image: null,
+        capture_time_local: null,
+        city: null,
+        country: null,
+        place_name: null,
+      },
+    ],
+  }
+  const result = toMapPhotoPage(page)
+  expect(result.truncated).toBe(true)
+  expect(result.items[0]).toEqual({
+    id: 'p1',
+    trip_id: 't1',
+    trip_title: 'Japan 2025',
+    lat: 35.0116,
+    lng: 135.7681,
+    thumb_url: 'https://storage.example/display/p1.jpg',
+    display_url: 'https://storage.example/display/p1.jpg',
+    capture_time_local: '2025-05-12T09:00:00',
+    city: 'Kyoto',
+    country: 'Japan',
+    place_name: null,
+  })
+  expect(result.items[1].thumb_url).toBeNull()
+})
+
+test('the summary converts recent uploads into view-model photos', () => {
+  const summary: ApiMeSummary = {
+    photo_count: 12,
+    country_count: 2,
+    city_count: 5,
+    to_review_count: 3,
+    recently_uploaded: [{ ...contractPhoto, label_status: 'pending' }],
+  }
+  const result = toSummary(summary)
+  expect([result.photo_count, result.country_count, result.city_count, result.to_review_count]).toEqual([12, 2, 5, 3])
+  expect(result.recently_uploaded).toHaveLength(1)
+  expect(result.recently_uploaded[0].thumb_url).toBe(contractPhoto.display_image?.url ?? null)
+})
+
+test('a place search hit keeps every field the map and correction dialog use', () => {
+  const kyoto: ApiPlace = {
+    id: 'g1',
+    name: 'Kyoto',
+    label: 'Kyoto, Japan',
+    kind: 'city',
+    lat: 35.0116,
+    lng: 135.7681,
+    zoom: 11,
+    city: 'Kyoto',
+    country: 'Japan',
+  }
+  expect(toPlace(kyoto)).toEqual(kyoto)
+  expect(toPlace({ ...kyoto, kind: 'country', city: null, zoom: 5 }).city).toBeNull()
 })

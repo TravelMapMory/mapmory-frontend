@@ -72,11 +72,13 @@ export interface ApiPhoto {
   lat: number | null
   lng: number | null
   display_image: ApiDisplayImage | null
-  // Place labels (doc 5.3); not in the contract yet.
+  // Place labels (doc 5.3, contract 0.0.8). Optional so older backends still type-check.
   country?: string | null
   city?: string | null
   place_name?: string | null
   label_status?: LabelStatus
+  /** Credit the label provider requires next to the labels. */
+  label_attribution?: string | null
 }
 
 /** `TripPage`, `PhotoPage`: every list endpoint pages with an opaque cursor. */
@@ -138,4 +140,51 @@ export interface ApiRegisteredBatch {
 /** `Error`: the body of every non-2xx answer. */
 export interface ApiErrorBody {
   error: { code: string; message: string }
+}
+
+/** `MapPhoto`: one marker of GET /api/map/photos. */
+export interface ApiMapPhoto {
+  id: string
+  trip_id: string
+  trip_title: string
+  lat: number
+  lng: number
+  display_image: ApiDisplayImage | null
+  capture_time_local: string | null
+  city: string | null
+  country: string | null
+  place_name: string | null
+}
+
+/** `MapPhotoPage`: `truncated` is true when more than 2,000 photos matched. */
+export interface ApiMapPhotoPage {
+  items: ApiMapPhoto[]
+  truncated: boolean
+}
+
+/** `MeSummary`, GET /api/me/summary. */
+export interface ApiMeSummary {
+  photo_count: number
+  country_count: number
+  city_count: number
+  to_review_count: number
+  recently_uploaded: ApiPhoto[]
+}
+
+/** `Place`: one GET /api/places/search hit, a city or a country. */
+export interface ApiPlace {
+  id: string
+  name: string
+  label: string
+  kind: 'city' | 'country'
+  lat: number
+  lng: number
+  zoom: number
+  city: string | null
+  country: string
+}
+
+/** `PlaceSearchResult` */
+export interface ApiPlaceSearch {
+  items: ApiPlace[]
 }

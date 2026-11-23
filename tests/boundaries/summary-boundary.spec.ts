@@ -29,17 +29,26 @@ test.describe('Dashboard summary: mock/live boundary', () => {
     expect(summary?.recently_uploaded.length).toBeGreaterThan(0)
   })
 
-  test('live trips never use demonstration summary data', async ({
+  test('live mode uses the backend summary without demonstration data', async ({
     page,
   }) => {
     let summaryRequests = 0
 
+    const backendSummary = {
+      photo_count: 7,
+      country_count: 2,
+      city_count: 3,
+      to_review_count: 1,
+      recently_uploaded: [],
+    }
+
     await page.route('**/api/me/summary', async (route) => {
       summaryRequests++
+
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: '{}',
+        body: JSON.stringify(backendSummary),
       })
     })
 
@@ -47,12 +56,7 @@ test.describe('Dashboard summary: mock/live boundary', () => {
 
     const summary = await getDashboardSummary(page)
 
-    // Trip APIs are live, but the summary API is not implemented yet.
-    // Returning null prevents unrelated demo statistics and photos
-    // from appearing alongside the authenticated user's real trips.
-    expect(summary).toBeNull()
-
-    // The frontend must not call an endpoint absent from LIVE.
-    expect(summaryRequests).toBe(0)
+    expect(summary).toEqual(backendSummary)
+    expect(summaryRequests).toBe(1)
   })
 })
