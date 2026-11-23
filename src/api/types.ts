@@ -2,8 +2,8 @@
  * View models: what the screens read, with field names taken from the data
  * model in doc 5.3. The backend's own shapes are in `contract.ts`, and
  * `adapters.ts` converts them, so a contract change stays out of the screens.
- * Endpoints the contract does not define yet (summary, map, places, location
- * correction) are still served in these shapes by `mock.ts`.
+ * Live summary, map, place search and location correction are supported by
+ * the backend; `mock.ts` provides their demo-mode implementations.
  */
 
 // photo lifecycle (doc 3.3). Only `ready` photos have display images
@@ -38,6 +38,8 @@ export interface Photo {
   country: string | null
   city: string | null
   place_name: string | null
+  /** Attribution supplied by the place-label provider. */
+  label_attribution: string | null
   label_status: LabelStatus
   location_source: LocationSource | null
 }

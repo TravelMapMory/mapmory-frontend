@@ -452,6 +452,14 @@
   margin: 0;
 }
 
+.trip-place-attribution {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--text-muted, #666);
+}
+
 @media (max-width: 600px) {
   .trip {
     padding: 16px 16px 32px;
