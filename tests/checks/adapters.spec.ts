@@ -15,7 +15,8 @@ import {
 } from '../../src/api/adapters'
 import type { ApiMapPhotoPage, ApiMeSummary, ApiPhoto, ApiPlace, ApiShare, ApiSharedCollection, ApiTrip } from '../../src/api/contract'
 
-// A photo exactly as the contract (openapi.yaml 0.0.5) defines it: no place labels yet.
+// Baseline photo from the earlier API contract, without optional
+// place-label fields added in OpenAPI 0.0.8.
 const contractPhoto: ApiPhoto = {
   id: '0b8f6a0e-1c62-4f0b-9d55-3f1f7e0c2a10',
   trip_id: '6f1c0f62-4c1e-4a59-9a43-6b2f0a3e8c11',
@@ -50,6 +51,7 @@ test('a contract photo becomes a view photo with image expiry and neutral labels
     country: null,
     city: null,
     place_name: null,
+    label_attribution: null,
     label_status: 'pending',
     location_source: 'exif',
   })
@@ -79,6 +81,7 @@ test('nullable contract fields stay null rather than becoming empty values', () 
     lng: null,
     location_source: null,
   })
+  expect(toPhoto(pending).label_attribution).toBeNull()
 })
 
 test('a position that differs from the EXIF one, or has none, is a manual correction', () => {
@@ -158,6 +161,9 @@ test('a labelled photo keeps the server label status and its place labels', () =
     label_status: 'suggested',
     label_attribution: 'Powered by Geoapify · © OpenStreetMap contributors',
   })
+  expect(photo.label_attribution).toBe(
+    'Powered by Geoapify · © OpenStreetMap contributors',
+  )
   expect(photo.label_status).toBe('suggested')
   expect([photo.city, photo.country, photo.place_name]).toEqual(['Kyoto', 'Japan', 'Fushimi Inari Taisha'])
   expect(photo.location_source).toBe('exif')

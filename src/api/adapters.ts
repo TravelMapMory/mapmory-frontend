@@ -94,6 +94,7 @@ export function toPhoto(photo: ApiPhoto): Photo {
     country: photo.country ?? null,
     city: photo.city ?? null,
     place_name: placeName,
+    label_attribution: photo.label_attribution ?? null,
     // Without labels from the server there is nothing to confirm yet.
     label_status: photo.label_status ?? (placeName ? 'confirmed' : 'pending'),
     location_source: locationSource(photo),

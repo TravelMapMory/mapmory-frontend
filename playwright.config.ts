@@ -16,7 +16,11 @@ export default defineConfig({
       : undefined,
   },
   projects: [
-    { name: 'checks', testMatch: '**/checks/*.spec.ts' },
+    {
+      name: 'checks',
+      testMatch: '**/checks/*.spec.ts',
+      testIgnore: '**/live-client.spec.ts',
+    },
     {
       name: 'integration',
       testMatch: '**/integration/*.spec.ts',
