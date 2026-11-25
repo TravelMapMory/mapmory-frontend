@@ -4,6 +4,7 @@ import { createShare, listShares, listTripPhotos, revokeShare } from '../api/cli
 import { loadAllPages } from '../api/paging'
 import type { Photo, Share, ShareMode, TripDetail } from '../api/types'
 import { formatUploaded, plural } from '../format'
+import SharePreview from './SharePreview'
 import './ShareSettings.css'
 
 export interface ShareSettingsProps {
@@ -132,7 +133,10 @@ function NewShareForm({
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(photos.slice(0, 500).map((p) => p.id)))
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [step, setStep] = useState<'configure' | 'preview'>('configure')
+  const formHeading = useRef<HTMLHeadingElement>(null)
   const ids = useId()
+  const selectedPhotos = photos.filter((photo) => chosen.has(photo.id))
 
   function toggle(id: string) {
     setChosen((current) => {
@@ -143,9 +147,15 @@ function NewShareForm({
     })
   }
 
-  async function submit(event: FormEvent) {
+  function submit(event: FormEvent) {
     event.preventDefault()
     if (!title.trim() || chosen.size === 0 || chosen.size > 500) return
+    setFailed(false)
+    setStep('preview')
+  }
+
+  async function publish() {
+    if (saving || !title.trim() || selectedPhotos.length === 0 || selectedPhotos.length > 500) return
     setSaving(true)
     setFailed(false)
     try {
@@ -154,24 +164,41 @@ function NewShareForm({
         title: title.trim(),
         description: description.trim() || undefined,
         // Keep the trip's order, whatever order the boxes were ticked in.
-        photo_ids: photos.filter((p) => chosen.has(p.id)).map((p) => p.id),
+        photo_ids: selectedPhotos.map((photo) => photo.id),
       })
       onCreated(share)
     } catch {
       setFailed(true)
+    } finally {
       setSaving(false)
     }
+  }
+
+  if (step === 'preview') {
+    return (
+      <SharePreview
+        title={title.trim()}
+        description={description.trim()}
+        mode={mode}
+        photos={selectedPhotos}
+        saving={saving}
+        failed={failed}
+        onBack={() => { setFailed(false); setStep('configure'); requestAnimationFrame(() => formHeading.current?.focus()) }}
+        onConfirm={() => void publish()}
+        onCancel={onCancel}
+      />
+    )
   }
 
   return (
     <form
       className="share-form"
-      onSubmit={(e) => void submit(e)}
+      onSubmit={submit}
       onKeyDown={(event) => {
         if (event.key === 'Escape') onCancel()
       }}
     >
-      <h3 className="share-h3">New link</h3>
+      <h3 className="share-h3" ref={formHeading} tabIndex={-1}>New link</h3>
       <div className="share-field">
         <label htmlFor={`${ids}-title`}>Title</label>
         <input
@@ -265,7 +292,7 @@ function NewShareForm({
       ) : null}
       <div className="share-form-actions">
         <button type="submit" className="btn btn-primary" disabled={saving || chosen.size === 0 || !title.trim()}>
-          {saving ? 'Creating…' : mode === 'public' ? 'Publish' : 'Create link'}
+          Preview share
         </button>
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
           Cancel
