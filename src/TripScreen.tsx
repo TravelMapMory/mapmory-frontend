@@ -15,10 +15,11 @@ import {
   MapPinOff,
   Pencil,
   Share2,
+  Trash2,
   Upload,
   type LucideIcon,
 } from 'lucide-react'
-import { getTrip, hasUnfinishedUploads, listTripPhotos, patchPhotoLocation, sharingAvailable } from './api/client'
+import { deleteTrip, getTrip, hasUnfinishedUploads, listTripPhotos, patchPhotoLocation, sharingAvailable } from './api/client'
 import { loadPages, mergePage, type FetchPage } from './api/paging'
 import LoadMore from './components/LoadMore'
 import { useLoadMore } from './useLoadMore'
@@ -39,6 +40,72 @@ export interface TripScreenProps {
   initialFiles?: File[]
   onBack: () => void
   onShowOnMap: (tripId: string) => void
+  /** Called after the trip was deleted; the trip page no longer exists then. */
+  onDeleted: () => void
+}
+
+/**
+ * Deleting a trip (doc 2.2 use case 6): a confirmation that says what goes,
+ * and an error that keeps everything when the request fails.
+ */
+function DeleteTripConfirm({
+  trip,
+  onDeleted,
+  onCancel,
+}: {
+  trip: TripDetail
+  onDeleted: () => void
+  onCancel: () => void
+}) {
+  const [deleting, setDeleting] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const keep = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    // The safe choice gets focus first.
+    keep.current?.focus()
+  }, [])
+
+  async function confirm() {
+    setDeleting(true)
+    setFailed(false)
+    try {
+      await deleteTrip(trip.id)
+      onDeleted()
+    } catch {
+      setFailed(true)
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <div
+      className="trip-delete"
+      role="group"
+      aria-label="Delete this trip?"
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && !deleting) onCancel()
+      }}
+    >
+      <p>
+        Delete <strong>{trip.title}</strong> and its {plural(trip.photo_count, 'photo')}? Its share links and public
+        shares stop working at once. This cannot be undone.
+      </p>
+      {failed ? (
+        <p className="trip-delete-error" role="alert">
+          The trip could not be deleted. Nothing was removed; try again.
+        </p>
+      ) : null}
+      <div className="trip-delete-actions">
+        <button type="button" className="btn btn-danger" onClick={() => void confirm()} disabled={deleting}>
+          {deleting ? 'Deleting…' : 'Yes, delete trip'}
+        </button>
+        <button ref={keep} type="button" className="btn btn-secondary" onClick={onCancel} disabled={deleting}>
+          Keep trip
+        </button>
+      </div>
+    </div>
+  )
 }
 
 type Load =
@@ -353,7 +420,7 @@ function Journey({ photos, onCorrect, onView }: PhotoListProps) {
  * without GPS, and the place to correct locations. A gallery shows the
  * photos as a grid; the journey view lists them day by day.
  */
-export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }: TripScreenProps) {
+export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, onDeleted }: TripScreenProps) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [view, setView] = useState<View>('gallery')
   const [correcting, setCorrecting] = useState<Photo | null>(null)
@@ -377,6 +444,7 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
     setEditing(false)
   }
   const [sharing, setSharing] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const fetchPhotos = useCallback<FetchPage<Photo>>(
     (cursor, signal) => listTripPhotos(tripId, signal, cursor),
@@ -547,8 +615,21 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap }
             <Share2 size={16} aria-hidden />
             {sharingAvailable ? 'Share' : 'Share (coming soon)'}
           </button>
+          <button
+            type="button"
+            className="btn btn-secondary trip-delete-open"
+            aria-expanded={confirmingDelete}
+            onClick={() => setConfirmingDelete((open) => !open)}
+          >
+            <Trash2 size={16} aria-hidden />
+            Delete trip
+          </button>
         </div>
       </header>
+
+      {confirmingDelete ? (
+        <DeleteTripConfirm trip={trip} onDeleted={onDeleted} onCancel={() => setConfirmingDelete(false)} />
+      ) : null}
 
       {sharingAvailable && sharing ? <ShareSettings trip={trip} photos={photos} /> : null}
 

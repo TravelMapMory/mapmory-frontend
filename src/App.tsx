@@ -2,14 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Header, { type Screen } from './components/Header'
 import DashboardScreen from './DashboardScreen'
 import AuthScreen from './AuthScreen'
-import { firebaseEnabled, logOut, watchSignedIn } from './auth'
+import { deleteSignIn, firebaseEnabled, logOut, watchSignedIn } from './auth'
 import LandingScreen from './LandingScreen'
 import PublicHeader from './components/PublicHeader'
 import MapScreen from './MapScreen'
 import NotFoundScreen from './NotFoundScreen'
 import PublicMapScreen from './PublicMapScreen'
 import SharedScreen from './SharedScreen'
-import { sharingAvailable } from './api/client'
+import { deleteAccount, sharingAvailable } from './api/client'
+import DeleteAccountPanel from './components/DeleteAccountPanel'
 import TripScreen from './TripScreen'
 import { isOwnerRoute, navigate, routeTitle, useRoute, type Route } from './router'
 import './App.css'
@@ -66,6 +67,7 @@ export default function App() {
   /** The owner page a signed-out visitor asked for, opened after they log in. */
   const returnTo = useRef<Route | null>(null)
   /** Files chosen on the Dashboard, handed to the trip page once. */
+  const [deletingAccount, setDeletingAccount] = useState(false)
   const [pendingUpload, setPendingUpload] = useState<{ tripId: string; files: File[] } | null>(null)
 
   const redirect = useMemo(() => redirectFor(route, signedIn), [route, signedIn])
@@ -98,6 +100,16 @@ export default function App() {
   function signIn() {
     if (!firebaseEnabled) writeSignedIn(true)
     setSignedIn(true)
+  }
+  // Doc 3.6: the data goes first, then the Firebase sign-in; a failure keeps
+  // the owner signed in with everything intact, and the panel shows an error.
+  async function confirmDeleteAccount() {
+    await deleteAccount()
+    if (firebaseEnabled) await deleteSignIn()
+    else writeSignedIn(false)
+    setDeletingAccount(false)
+    setSignedIn(false)
+    navigate({ name: 'landing' })
   }
   async function signOut() {
     if (firebaseEnabled) await logOut()
@@ -188,7 +200,10 @@ export default function App() {
 
   return (
     <div className="app">
-      <Header current={tab} onNavigate={openTab} onSignOut={signOut} />
+      <Header current={tab} onNavigate={openTab} onSignOut={signOut} onDeleteAccount={() => setDeletingAccount(true)} />
+      {deletingAccount ? (
+        <DeleteAccountPanel onConfirm={confirmDeleteAccount} onCancel={() => setDeletingAccount(false)} />
+      ) : null}
       <main className="app-body">
         {route.name === 'dashboard' ? (
           <DashboardScreen onShowOnMap={showOnMap} onOpenTrip={openTrip} onUploadPhotos={uploadTo} />
@@ -211,6 +226,7 @@ export default function App() {
             initialFiles={pendingUpload?.tripId === route.tripId ? pendingUpload.files : undefined}
             onBack={() => openTab('dashboard')}
             onShowOnMap={showOnMap}
+            onDeleted={() => navigate({ name: 'dashboard' })}
           />
         ) : null}
       </main>

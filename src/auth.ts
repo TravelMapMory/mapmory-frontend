@@ -8,6 +8,7 @@ import { initializeApp } from 'firebase/app'
 import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
+  deleteUser,
   getAuth,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -64,4 +65,23 @@ export async function logIn(email: string, password: string): Promise<void> {
 
 export function logOut(): Promise<void> {
   return signOut(firebaseAuth())
+}
+
+/**
+ * Deletes the Firebase sign-in after the owner's data is gone. Firebase can
+ * refuse when the last sign-in was long ago; then the owner is signed out
+ * instead, and signing in again starts a new, empty account.
+ */
+export async function deleteSignIn(): Promise<'deleted' | 'signed-out'> {
+  const current = firebaseAuth().currentUser
+  if (current) {
+    try {
+      await deleteUser(current)
+      return 'deleted'
+    } catch {
+      // auth/requires-recent-login and similar: fall back to signing out.
+    }
+  }
+  await signOut(firebaseAuth())
+  return 'signed-out'
 }
