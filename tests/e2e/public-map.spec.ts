@@ -77,7 +77,7 @@ test('a place cluster lists its shares, which open as their own page and lead ba
   await expect(page.getByText('Shared publicly', { exact: true })).toBeVisible()
   // The whole share (3 photos), but nothing else from the trip.
   await expect(page.locator('.shared-tile')).toHaveCount(3)
-  await expect(page.getByText('Photos are placed by city only.')).toBeVisible()
+  await expect(page.getByText('Photos are shown at approximate shared locations, not exact positions.')).toBeVisible()
   await checkLayout(page)
 
   await page.getByRole('button', { name: 'Public map', exact: true }).click()

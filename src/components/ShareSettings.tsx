@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Copy, Globe, ImageOff, Link2, Plus } from 'lucide-react'
-import { createShare, listShares, revokeShare } from '../api/client'
+import { createShare, listShares, listTripPhotos, revokeShare } from '../api/client'
+import { loadAllPages } from '../api/paging'
 import type { Photo, Share, ShareMode, TripDetail } from '../api/types'
 import { formatUploaded, plural } from '../format'
 import './ShareSettings.css'
@@ -128,7 +129,7 @@ function NewShareForm({
   const [title, setTitle] = useState(trip.title)
   const [description, setDescription] = useState('')
   const [mode, setMode] = useState<ShareMode>('link')
-  const [chosen, setChosen] = useState<Set<string>>(() => new Set(photos.map((p) => p.id)))
+  const [chosen, setChosen] = useState<Set<string>>(() => new Set(photos.slice(0, 500).map((p) => p.id)))
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
   const ids = useId()
@@ -137,14 +138,14 @@ function NewShareForm({
     setChosen((current) => {
       const next = new Set(current)
       if (next.has(id)) next.delete(id)
-      else next.add(id)
+      else if (next.size < 500) next.add(id)
       return next
     })
   }
 
   async function submit(event: FormEvent) {
     event.preventDefault()
-    if (!title.trim() || chosen.size === 0) return
+    if (!title.trim() || chosen.size === 0 || chosen.size > 500) return
     setSaving(true)
     setFailed(false)
     try {
@@ -202,7 +203,7 @@ function NewShareForm({
           <span className="share-caption" aria-live="polite">
             {chosen.size} of {plural(photos.length, 'photo')} selected
           </span>
-          <button type="button" className="share-text-btn" onClick={() => setChosen(new Set(photos.map((p) => p.id)))}>
+          <button type="button" className="share-text-btn" onClick={() => setChosen(new Set(photos.slice(0, 500).map((p) => p.id)))}>
             Select all
           </button>
           <button type="button" className="share-text-btn" onClick={() => setChosen(new Set())}>
@@ -215,7 +216,7 @@ function NewShareForm({
             return (
               <li key={photo.id}>
                 <label className="share-pick">
-                  <input type="checkbox" checked={chosen.has(photo.id)} onChange={() => toggle(photo.id)} />
+                  <input type="checkbox" checked={chosen.has(photo.id)} disabled={!chosen.has(photo.id) && chosen.size >= 500} onChange={() => toggle(photo.id)} />
                   {photo.thumb_url ? (
                     <img src={photo.thumb_url} alt="" loading="lazy" />
                   ) : (
@@ -256,6 +257,7 @@ function NewShareForm({
       </p>
 
       {chosen.size === 0 ? <p className="share-caption">Select at least one photo to create a link.</p> : null}
+      {photos.length > 500 ? <p className="share-caption">A share can contain up to 500 photos.</p> : null}
       {failed ? (
         <p className="share-error" role="alert">
           The link could not be created. Try again.
@@ -278,13 +280,38 @@ function NewShareForm({
  * Copy and Revoke, and a form for a new link to selected photos. A link share
  * is not public: only people who are given the link can open it.
  */
-export default function ShareSettings({ trip, photos }: ShareSettingsProps) {
+export default function ShareSettings({ trip }: ShareSettingsProps) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [creating, setCreating] = useState(false)
+  const [picker, setPicker] = useState<{ status: 'idle' | 'loading' | 'error' } | { status: 'ready'; photos: Photo[] }>({ status: 'idle' })
+  const pickerRequest = useRef<AbortController | null>(null)
   const [created, setCreated] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const heading = useRef<HTMLHeadingElement>(null)
-  const candidates = shareable(photos)
+  // The trip gallery is paginated. Fetch the complete selection independently,
+  // so opening a share never silently excludes unloaded photos.
+  useEffect(() => () => pickerRequest.current?.abort(), [])
+
+  async function openPicker() {
+    pickerRequest.current?.abort()
+    const controller = new AbortController()
+    pickerRequest.current = controller
+    setPicker({ status: 'loading' })
+    try {
+      const page = await loadAllPages(
+        (cursor, signal) => listTripPhotos(trip.id, signal, cursor),
+        controller.signal,
+      )
+      if (controller.signal.aborted) return
+      const eligible = shareable(page.items)
+      setPicker({ status: 'ready', photos: eligible })
+      setCreating(eligible.length > 0)
+    } catch {
+      if (!controller.signal.aborted) setPicker({ status: 'error' })
+    } finally {
+      if (pickerRequest.current === controller) pickerRequest.current = null
+    }
+  }
 
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
@@ -361,8 +388,11 @@ export default function ShareSettings({ trip, photos }: ShareSettingsProps) {
       {creating ? (
         <NewShareForm
           trip={trip}
-          photos={candidates}
-          onCancel={() => setCreating(false)}
+          photos={picker.status === 'ready' ? picker.photos : []}
+          onCancel={() => {
+            setCreating(false)
+            setPicker({ status: 'idle' })
+          }}
           onCreated={(share) => {
             setCreating(false)
             setCreated(share.id)
@@ -373,15 +403,22 @@ export default function ShareSettings({ trip, photos }: ShareSettingsProps) {
             }))
           }}
         />
-      ) : candidates.length > 0 ? (
+      ) : (
         <div>
-          <button type="button" className="btn btn-action" onClick={() => setCreating(true)}>
+          {picker.status === 'error' ? (
+            <p role="alert" className="share-error">Photos could not be loaded. Try again.</p>
+          ) : null}
+          {picker.status === 'loading' ? (
+            <p role="status" className="share-caption">Loading all trip photos…</p>
+          ) : null}
+          <button type="button" className="btn btn-action" disabled={picker.status === 'loading'} onClick={() => void openPicker()}>
             <Plus size={16} aria-hidden />
             New link
           </button>
+          {picker.status === 'ready' && picker.photos.length === 0 ? (
+            <p className="share-caption">No processed photos are ready to share.</p>
+          ) : null}
         </div>
-      ) : (
-        <p className="share-caption">Upload photos to this trip before sharing it.</p>
       )}
     </section>
   )
