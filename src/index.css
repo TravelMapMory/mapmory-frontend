@@ -83,3 +83,13 @@ button {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Destructive actions: deleting a trip or the account, revoking a link. */
+.btn-danger {
+  background: #b42318;
+  color: #fff;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: #912018;
+}

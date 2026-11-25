@@ -9,6 +9,7 @@ export interface LandingScreenProps {
   onSignUp: () => void
   /** Opens Map · Public, which needs no account (doc 3.2). */
   onExplore: () => void
+  deletionNotice?: string
 }
 
 /** The three must-have features agreed with the TA (meeting 20.9). */
@@ -34,7 +35,7 @@ const FEATURES = [
  * The page a signed-out visitor sees first (demo gala feedback): what MapMory
  * is, the three things it does, and one way in.
  */
-export default function LandingScreen({ onSignIn, onSignUp, onExplore }: LandingScreenProps) {
+export default function LandingScreen({ onSignIn, onSignUp, onExplore, deletionNotice }: LandingScreenProps) {
   return (
     <div className="land">
       <header className="land-hdr">
@@ -50,6 +51,7 @@ export default function LandingScreen({ onSignIn, onSignUp, onExplore }: Landing
       </header>
 
       <main className="land-body">
+        {deletionNotice ? <p role="status" className="land-delete-notice">{deletionNotice}</p> : null}
         <section className="land-hero" aria-labelledby="land-title">
           <div className="land-hero-text">
             <h1 id="land-title" className="land-title">

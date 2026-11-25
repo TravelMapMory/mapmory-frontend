@@ -477,3 +477,33 @@
     flex-wrap: wrap;
   }
 }
+
+.trip-delete-open {
+  color: #b42318;
+}
+
+.trip-delete {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  background: var(--c-surface);
+  border: 1px solid #f3c1bd;
+  border-left: 4px solid #b42318;
+  border-radius: var(--r-md, 12px);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.trip-delete p {
+  margin: 0;
+}
+
+.trip-delete-error {
+  color: #b42318;
+}
+
+.trip-delete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
