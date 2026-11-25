@@ -143,14 +143,14 @@ test('the server answer is capped at 200 clusters and says so', async ({ page },
   test.skip(testInfo.project.name !== 'desktop', 'Needs a screen large enough for more than 200 grid cells.')
   await page.setViewportSize({ width: 1920, height: 1200 })
   await openPublicMap(page, { scenario: 'public-many' }, { lat: 48, lng: 10, zoom: 4 })
-  await expect(page.getByText('Showing the 200 largest groups of photos in this area.', { exact: false })).toBeVisible()
+  await expect(page.getByText('Some public photos are not shown in this area.', { exact: false })).toBeVisible()
   await expect(markers(page)).toHaveCount(200)
 
   // Zoomed in on one city the area holds far fewer groups, and the note goes away.
   await page.getByRole('combobox', { name: 'Find a place' }).fill('Paris')
   await page.getByRole('option', { name: 'Paris, France', exact: true }).click()
   await expect(count(page)).toHaveText('2 public photos in this area')
-  await expect(page.getByText('Showing the 200 largest groups', { exact: false })).toHaveCount(0)
+  await expect(page.getByText('Some public photos are not shown in this area.', { exact: false })).toHaveCount(0)
 })
 
 test('a share that is not listed publicly cannot be opened by its id', async ({ page }) => {

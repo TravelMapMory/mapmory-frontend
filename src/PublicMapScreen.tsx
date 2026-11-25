@@ -4,7 +4,6 @@ import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
 import { MapPinOff, X } from 'lucide-react'
 import { getPublicMap } from './api/client'
 import { ApiError } from './api/http'
-import { PUBLIC_CLUSTER_LIMIT } from './api/limits'
 import type { PublicCluster, PublicMapPage, PublicMapQuery } from './api/types'
 import MapModeSwitch from './components/MapModeSwitch'
 import PlaceSearch from './components/PlaceSearch'
@@ -20,7 +19,7 @@ import './PublicMapScreen.css'
 const START_VIEW = { lat: 50.5, lng: 10, zoom: 4 }
 /** Pans and zooms in quick succession ask the server once, for where the map stopped. */
 const MOVE_DEBOUNCE_MS = 200
-/** Public positions are city-level (doc 5.4), so zooming deeper never splits a cluster further. */
+/** Avoid zooming indefinitely into stored coarse positions. */
 const MAX_FIT_ZOOM = 13
 
 /*
@@ -76,7 +75,7 @@ export interface PublicMapScreenProps {
  * Map · Public (doc 3.2, use case 5): photos from public shares, for anyone,
  * signed in or not. The map only ever holds the visible area: each pan or
  * zoom asks `GET /api/public/map` for that area, and the server answers with
- * at most 200 grid clusters at city-level positions. "Find a place" moves the
+ * at most 200 grid clusters at coarse positions. "Find a place" moves the
  * map; there is no filter over anyone's collection (doc 4).
  */
 export default function PublicMapScreen({ onOpenShare, onMyPhotos }: PublicMapScreenProps) {
@@ -207,7 +206,7 @@ export default function PublicMapScreen({ onOpenShare, onMyPhotos }: PublicMapSc
         <div className="mp-head">
           <h1 className="mp-title">Public map</h1>
           <p className="mp-caption">
-            Photos people have chosen to share publicly. Each one is placed by its city, never at the exact spot.
+            Photos people have chosen to share publicly, shown at approximate locations rather than exact positions.
           </p>
         </div>
 
@@ -220,10 +219,7 @@ export default function PublicMapScreen({ onOpenShare, onMyPhotos }: PublicMapSc
         {load.status === 'ready' && page.truncated ? (
           <div className="mp-notice" role="note">
             <MapPinOff size={18} aria-hidden />
-            <p>
-              Showing the {PUBLIC_CLUSTER_LIMIT} largest groups of photos in this area. Zoom in or find a place to see the
-              rest.
-            </p>
+            <p>Some public photos are not shown in this area. Zoom in or explore a smaller area to see more.</p>
           </div>
         ) : null}
 

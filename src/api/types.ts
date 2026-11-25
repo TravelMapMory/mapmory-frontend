@@ -167,7 +167,7 @@ export interface UploadItem {
   photo: Photo | null
 }
 
-/** How a share reaches people (doc 5.3 SHARE.mode). Increment 2 has link shares only. */
+/** Link shares require the token; public shares are also discoverable on the public map. */
 export type ShareMode = 'link' | 'public'
 
 /** A share as its owner manages it. */
@@ -261,7 +261,7 @@ export interface PublicCluster {
   shares: PublicShareRef[]
 }
 
-/** `GET /api/public/map`. `truncated` is true when more than 200 cells had photos. */
+/** `GET /api/public/map`. `truncated` means the 20,000-record input cap or 200-cluster output cap was exceeded. */
 export interface PublicMapPage {
   clusters: PublicCluster[]
   truncated: boolean

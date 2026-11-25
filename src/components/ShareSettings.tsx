@@ -250,8 +250,8 @@ function NewShareForm({
         {mode === 'link' ? <Link2 size={16} aria-hidden /> : <Globe size={16} aria-hidden />}
         <span>
           {mode === 'link'
-            ? 'Anyone with the link can see the selected photos, their dates and the city each was taken in, without an account.'
-            : 'Everyone can find the selected photos on the public map and open them, without an account. Only share photos of people who agreed to be shown publicly.'}{' '}
+            ? 'Anyone with the link can view the selected photos, their dates and approximate locations, without an account.'
+            : 'Anyone can discover the selected photos on the public map and view their dates and approximate locations, without an account. Only share photos of people who agreed to be shown publicly.'}{' '}
           Exact locations and the rest of this trip stay private.
         </span>
       </p>
@@ -278,7 +278,7 @@ function NewShareForm({
 /**
  * Share settings for one trip (doc 3.2): the trip's active links, each with
  * Copy and Revoke, and a form for a new link to selected photos. A link share
- * is not public: only people who are given the link can open it.
+ * is not listed on the public map, but anyone holding its URL can open it.
  */
 export default function ShareSettings({ trip }: ShareSettingsProps) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -336,7 +336,7 @@ export default function ShareSettings({ trip }: ShareSettingsProps) {
         <h2 id="share-title" className="share-h2" ref={heading} tabIndex={-1}>
           Share by link
         </h2>
-        <p className="share-caption">Only people you send a link to can open it. You can revoke a link at any time.</p>
+        <p className="share-caption">Link shares are accessible to anyone with the URL. Public shares can also be found on the public map. You can revoke either type.</p>
       </div>
 
       <p className="visually-hidden" role="status">
