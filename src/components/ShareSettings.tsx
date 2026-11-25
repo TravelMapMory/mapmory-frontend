@@ -19,7 +19,7 @@ function shareable(photos: Photo[]): Photo[] {
   return photos.filter((p) => (p.state === 'ready' || p.state === 'needs-location') && p.display_url)
 }
 
-/** One active link: its address to copy, and Revoke behind a confirmation. */
+/** One active share: its address to copy, and Revoke behind confirmation. */
 function ShareRow({
   share,
   focusOnMount,
@@ -94,19 +94,19 @@ function ShareRow({
         ) : null}
       </div>
       {confirming ? (
-        <div className="share-confirm" role="group" aria-label="Revoke this link?">
-          <p>Revoke this link? Anyone who opens it will see that it no longer works. Your photos stay in the trip.</p>
+        <div className="share-confirm" role="group" aria-label="Revoke this share?">
+          <p>Revoke this share? New visits to the collection will stop working. Your photos stay in the trip. Previously issued image URLs may remain accessible until they expire.</p>
           <div className="share-confirm-actions">
             <button type="button" className="btn btn-danger" onClick={() => void revoke()} disabled={revoking}>
-              {revoking ? 'Revoking…' : 'Revoke link'}
+              {revoking ? 'Revoking…' : 'Revoke share'}
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => setConfirming(false)} disabled={revoking}>
-              Keep link
+              Keep share
             </button>
           </div>
           {failed ? (
             <p className="share-error" role="alert">
-              The link could not be revoked. Try again.
+              The share could not be revoked. Try again.
             </p>
           ) : null}
         </div>
@@ -115,7 +115,7 @@ function ShareRow({
   )
 }
 
-/** Title, optional description and the photos to include in a new link. */
+/** Title, optional description and photos to include in a new share. */
 function NewShareForm({
   trip,
   photos,
@@ -198,7 +198,7 @@ function NewShareForm({
         if (event.key === 'Escape') onCancel()
       }}
     >
-      <h3 className="share-h3" ref={formHeading} tabIndex={-1}>New link</h3>
+      <h3 className="share-h3" ref={formHeading} tabIndex={-1}>Create a share</h3>
       <div className="share-field">
         <label htmlFor={`${ids}-title`}>Title</label>
         <input
@@ -283,11 +283,11 @@ function NewShareForm({
         </span>
       </p>
 
-      {chosen.size === 0 ? <p className="share-caption">Select at least one photo to create a link.</p> : null}
+      {chosen.size === 0 ? <p className="share-caption">Select at least one photo to create a share.</p> : null}
       {photos.length > 500 ? <p className="share-caption">A share can contain up to 500 photos.</p> : null}
       {failed ? (
         <p className="share-error" role="alert">
-          The link could not be created. Try again.
+          The share could not be created. Try again.
         </p>
       ) : null}
       <div className="share-form-actions">
@@ -303,9 +303,8 @@ function NewShareForm({
 }
 
 /**
- * Share settings for one trip (doc 3.2): the trip's active links, each with
- * Copy and Revoke, and a form for a new link to selected photos. A link share
- * is not listed on the public map, but anyone holding its URL can open it.
+ * Share settings for one trip: manage link/public shares and create a fixed
+ * selection of photos. Link-only shares are not discoverable on the public map.
  */
 export default function ShareSettings({ trip }: ShareSettingsProps) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
@@ -361,7 +360,7 @@ export default function ShareSettings({ trip }: ShareSettingsProps) {
     <section className="share" aria-labelledby="share-title">
       <div className="share-head">
         <h2 id="share-title" className="share-h2" ref={heading} tabIndex={-1}>
-          Share by link
+          Sharing
         </h2>
         <p className="share-caption">Link shares are accessible to anyone with the URL. Public shares can also be found on the public map. You can revoke either type.</p>
       </div>
@@ -371,10 +370,10 @@ export default function ShareSettings({ trip }: ShareSettingsProps) {
       </p>
       {message ? <p className="share-message">{message}</p> : null}
 
-      {load.status === 'loading' ? <p className="share-caption">Loading links…</p> : null}
+      {load.status === 'loading' ? <p className="share-caption">Loading shares…</p> : null}
       {load.status === 'error' ? (
         <div role="alert" className="share-status">
-          <p>Your links could not be loaded.</p>
+          <p>Your shares could not be loaded.</p>
           <button
             type="button"
             className="btn btn-secondary"
@@ -389,7 +388,7 @@ export default function ShareSettings({ trip }: ShareSettingsProps) {
       ) : null}
 
       {load.status === 'ready' && load.shares.length > 0 ? (
-        <ul className="share-links" aria-label="Active links">
+        <ul className="share-links" aria-label="Active shares">
           {load.shares.map((share) => (
             <ShareRow
               key={share.id}
@@ -400,7 +399,7 @@ export default function ShareSettings({ trip }: ShareSettingsProps) {
                 setLoad((current) =>
                   current.status === 'ready' ? { status: 'ready', shares: current.shares.filter((s) => s.id !== revoked.id) } : current,
                 )
-                setMessage(`Link "${revoked.title}" revoked. It no longer opens.`)
+                setMessage(`Share "${revoked.title}" revoked. New visits are blocked.`)
                 // The row and its buttons are gone, so keep keyboard focus in the panel.
                 heading.current?.focus()
               }}
@@ -409,7 +408,7 @@ export default function ShareSettings({ trip }: ShareSettingsProps) {
         </ul>
       ) : null}
       {load.status === 'ready' && load.shares.length === 0 && !creating ? (
-        <p className="share-caption">This trip has no active links.</p>
+        <p className="share-caption">This trip has no active shares.</p>
       ) : null}
 
       {creating ? (
@@ -423,7 +422,11 @@ export default function ShareSettings({ trip }: ShareSettingsProps) {
           onCreated={(share) => {
             setCreating(false)
             setCreated(share.id)
-            setMessage(`Link created for ${plural(share.photo_ids.length, 'photo')}. Copy it and send it to the people you choose.`)
+            setMessage(
+              share.mode === 'public'
+                ? `Public share created for ${plural(share.photo_ids.length, 'photo')}. It can now appear on the public map.`
+                : `Link created for ${plural(share.photo_ids.length, 'photo')}. Copy it to share the collection.`,
+            )
             setLoad((current) => ({
               status: 'ready',
               shares: [share, ...(current.status === 'ready' ? current.shares : [])],
@@ -440,7 +443,7 @@ export default function ShareSettings({ trip }: ShareSettingsProps) {
           ) : null}
           <button type="button" className="btn btn-action" disabled={picker.status === 'loading'} onClick={() => void openPicker()}>
             <Plus size={16} aria-hidden />
-            New link
+            New share
           </button>
           {picker.status === 'ready' && picker.photos.length === 0 ? (
             <p className="share-caption">No processed photos are ready to share.</p>

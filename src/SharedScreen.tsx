@@ -144,7 +144,7 @@ export default function SharedScreen({ source, onHome, onBackToMap }: SharedScre
     body = (
       <Unavailable
         title="This share isn't public"
-        text="The owner may have stopped sharing these photos publicly, or the share is hidden while a report is reviewed."
+        text="This collection is not publicly available. The owner may have revoked it, or the link may be incorrect."
         onHome={onHome}
       />
     )

@@ -15,14 +15,14 @@ async function openShare(page: Page, trip: string) {
   const share = page.getByRole('button', { name: 'Share', exact: true })
   await share.click()
   await expect(share).toHaveAttribute('aria-expanded', 'true')
-  await expect(page.getByRole('heading', { name: 'Share by link' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sharing' })).toBeVisible()
 }
 
 test('owner shares chosen photos by link and a signed-out recipient sees only those, by city', async ({ page }) => {
   await boot(page)
   await openShare(page, 'Rome with family')
-  await expect(page.getByText('This trip has no active links.')).toBeVisible()
-  await page.getByRole('button', { name: 'New link' }).click()
+  await expect(page.getByText('This trip has no active shares.')).toBeVisible()
+  await page.getByRole('button', { name: 'New share' }).click()
   await expect(page.getByText('3 of 3 photos selected')).toBeVisible()
   await page.getByRole('checkbox', { name: 'Pantheon, Rome' }).uncheck()
   await expect(page.getByText('2 of 3 photos selected')).toBeVisible()
@@ -90,14 +90,15 @@ test('owner revokes a link after confirming, and the link stops working at once'
   await openShare(page, 'Europe by rail')
   const link = page.getByRole('listitem', { name: 'Highlights from Europe by rail' })
   await link.getByRole('button', { name: 'Revoke', exact: true }).click()
-  await link.getByRole('button', { name: 'Keep link' }).click()
+  await expect(link.getByText('Previously issued image URLs may remain accessible until they expire.', { exact: false })).toBeVisible()
+  await link.getByRole('button', { name: 'Keep share' }).click()
   await expect(link).toBeVisible()
   await link.getByRole('button', { name: 'Revoke', exact: true }).click()
-  await link.getByRole('button', { name: 'Revoke link' }).click()
+  await link.getByRole('button', { name: 'Revoke share' }).click()
   await expect(link).toHaveCount(0)
-  await expect(page.locator('.share-message')).toContainText('revoked')
-  await expect(page.getByText('This trip has no active links.')).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Share by link' })).toBeFocused()
+  await expect(page.locator('.share-message')).toContainText('New visits are blocked')
+  await expect(page.getByText('This trip has no active shares.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Sharing' })).toBeFocused()
 
   await visit(page, 'http://127.0.0.1/s/demo-europe')
   await expect(page.getByRole('heading', { name: 'This link has been turned off' })).toBeVisible()
@@ -106,7 +107,7 @@ test('owner revokes a link after confirming, and the link stops working at once'
 test('a link needs at least one photo, and a failed create can be retried', async ({ page }) => {
   await boot(page)
   await openShare(page, 'Weekend in Helsinki')
-  await page.getByRole('button', { name: 'New link' }).click()
+  await page.getByRole('button', { name: 'New share' }).click()
   await page.getByRole('button', { name: 'Select none' }).click()
   await expect(page.getByRole('button', { name: 'Preview share' })).toBeDisabled()
   await page.getByRole('button', { name: 'Select all' }).click()
@@ -131,7 +132,7 @@ test('a failed link list offers retry', async ({ page }) => {
 test('a public share asks for consent, is marked Public and opens without an account', async ({ page }) => {
   await boot(page)
   await openShare(page, 'Rome with family')
-  await page.getByRole('button', { name: 'New link' }).click()
+  await page.getByRole('button', { name: 'New share' }).click()
   // Link is the default audience; public is an explicit choice.
   await expect(page.getByRole('radio', { name: 'Anyone with the link' })).toBeChecked()
   await page.getByRole('radio', { name: /Public, also on the public map/ }).check()
@@ -144,6 +145,7 @@ test('a public share asks for consent, is marked Public and opens without an acc
   const share = page.getByRole('listitem', { name: 'Rome in public' })
   await expect(share).toContainText('Public')
   await expect(share).toContainText('3 photos')
+  await expect(page.locator('.share-message')).toContainText('Public share created')
   const url = await share.getByRole('textbox').inputValue()
   await checkLayout(page)
 
@@ -157,7 +159,7 @@ test('a public share asks for consent, is marked Public and opens without an acc
 test('preview has no side effects, and back to edit retains the selection and audience', async ({ page }) => {
   await boot(page)
   await openShare(page, 'Rome with family')
-  await page.getByRole('button', { name: 'New link' }).click()
+  await page.getByRole('button', { name: 'New share' }).click()
   await page.getByRole('checkbox', { name: 'Pantheon, Rome' }).uncheck()
   await page.getByLabel('Title').fill('A smaller Rome share')
   await page.getByRole('radio', { name: /Public, also on the public map/ }).check()
@@ -169,7 +171,7 @@ test('preview has no side effects, and back to edit retains the selection and au
   await expect(page.getByLabel('Title')).toHaveValue('A smaller Rome share')
   await expect(page.getByRole('radio', { name: /Public, also on the public map/ })).toBeChecked()
   await expect(page.getByRole('checkbox', { name: 'Pantheon, Rome' })).not.toBeChecked()
-  await expect(page.getByRole('heading', { name: 'New link' })).toBeFocused()
+  await expect(page.getByRole('heading', { name: 'Create a share' })).toBeFocused()
   await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(page.getByRole('listitem', { name: 'A smaller Rome share' })).toHaveCount(0)
 })
