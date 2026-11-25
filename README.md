@@ -39,6 +39,14 @@ Other frontend functionality remains partially mock-backed. Photo uploads, proce
 - npm
 - [MapMory backend](https://github.com/TravelMapMory) (optional, for live API integration)
 
+### Development data modes
+
+The frontend supports mock and live API modes. Leave `VITE_API_URL` unset to use predefined demo trips and photos, including simulated sharing. Set `VITE_API_URL` to connect to the Go backend.
+
+The backend's database settings do not switch the frontend between these modes. Live photo sharing additionally requires the backend sharing APIs, PostgreSQL, and configured photo storage.
+
+See [Mock and Live API Modes](docs/development.md#mock-and-live-api-modes) for configuration details, limitations, and testing instructions.
+
 ### Local development
 
 Install the dependencies:
