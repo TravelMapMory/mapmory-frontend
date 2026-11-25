@@ -128,7 +128,14 @@ function live(endpoint: Endpoint): boolean {
 /** GET /api/me/summary */
 export async function getSummary(signal?: AbortSignal): Promise<MeSummary | null> {
   if (live('summary')) {
-    return toSummary(await request<ApiMeSummary>('GET', '/api/me/summary', { signal }))
+    try {
+      return toSummary(await request<ApiMeSummary>('GET', '/api/me/summary', { signal }))
+    } catch (error) {
+      // A backend without photo storage does not serve the summary (404). The
+      // trips still load; the Dashboard shows its no-summary state instead of failing.
+      if (error instanceof ApiError && error.status === 404) return null
+      throw error
+    }
   }
   // Real trips without a summary API must not display demo statistics or photos.
   if (live('listTrips')) return null
