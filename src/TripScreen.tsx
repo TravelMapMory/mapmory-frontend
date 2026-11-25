@@ -93,7 +93,7 @@ function DeleteTripConfirm({
       </p>
       {failed ? (
         <p className="trip-delete-error" role="alert">
-          The trip could not be deleted. Nothing was removed; try again.
+          We could not confirm whether the trip was deleted. Refresh your trips before trying again.
         </p>
       ) : null}
       <div className="trip-delete-actions">

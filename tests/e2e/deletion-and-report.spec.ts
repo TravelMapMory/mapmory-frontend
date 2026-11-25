@@ -34,7 +34,7 @@ test('a failed trip deletion keeps the trip and can be retried', async ({ page }
   await failNext(page, 'deleteTrip')
   const confirm = page.getByRole('group', { name: 'Delete this trip?' })
   await confirm.getByRole('button', { name: 'Yes, delete trip' }).click()
-  await expect(page.getByRole('alert')).toContainText('could not be deleted')
+  await expect(page.getByRole('alert')).toContainText('could not confirm')
   await expect(page.getByRole('heading', { name: 'Weekend in Helsinki', exact: true })).toBeVisible()
 
   await confirm.getByRole('button', { name: 'Yes, delete trip' }).click()
@@ -69,11 +69,12 @@ test('deleting the account needs an explicit confirmation and leaves an empty Ma
   await failNext(page, 'deleteAccount')
   await panel.getByRole('checkbox').check()
   await remove.click()
-  await expect(panel.getByRole('alert')).toContainText('could not be deleted')
+  await expect(panel.getByRole('alert')).toContainText('could not complete or confirm account deletion')
   await expect(page.locator('.trip-card')).toHaveCount(3)
 
   await remove.click()
   await expect(page.getByRole('button', { name: 'Get started', exact: true })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: 'MapMory demo account' })).toBeVisible()
 
   // Signing in again starts with nothing.
   await page.getByRole('button', { name: 'Get started', exact: true }).click()

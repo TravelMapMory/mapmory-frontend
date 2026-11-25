@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Header, { type Screen } from './components/Header'
 import DashboardScreen from './DashboardScreen'
 import AuthScreen from './AuthScreen'
-import { deleteSignIn, firebaseEnabled, logOut, watchSignedIn } from './auth'
+import { deleteSignIn, firebaseEnabled, logOut, reauthenticateForDeletion, watchSignedIn } from './auth'
+import { completeAccountDeletion } from './accountDeletion'
 import LandingScreen from './LandingScreen'
 import PublicHeader from './components/PublicHeader'
 import MapScreen from './MapScreen'
@@ -68,6 +69,7 @@ export default function App() {
   const returnTo = useRef<Route | null>(null)
   /** Files chosen on the Dashboard, handed to the trip page once. */
   const [deletingAccount, setDeletingAccount] = useState(false)
+  const [deletionNotice, setDeletionNotice] = useState('')
   const [pendingUpload, setPendingUpload] = useState<{ tripId: string; files: File[] } | null>(null)
 
   const redirect = useMemo(() => redirectFor(route, signedIn), [route, signedIn])
@@ -101,12 +103,23 @@ export default function App() {
     if (!firebaseEnabled) writeSignedIn(true)
     setSignedIn(true)
   }
-  // Doc 3.6: the data goes first, then the Firebase sign-in; a failure keeps
-  // the owner signed in with everything intact, and the panel shows an error.
-  async function confirmDeleteAccount() {
-    await deleteAccount()
-    if (firebaseEnabled) await deleteSignIn()
-    else writeSignedIn(false)
+  // Reauthenticate before touching persisted data. After the backend commit,
+  // Firebase deletion can still fail independently, so report that outcome.
+  async function confirmDeleteAccount(password: string) {
+    if (firebaseEnabled) {
+      const result = await completeAccountDeletion(password, {
+        reauthenticate: reauthenticateForDeletion,
+        deleteData: deleteAccount,
+        deleteIdentity: deleteSignIn,
+      })
+      setDeletionNotice(result.status === 'identity-retained'
+        ? 'Your MapMory data was deleted, but your Firebase sign-in account could not be removed. You have been signed out. Please contact the MapMory team to finish deleting your sign-in account.'
+        : 'Your MapMory data and sign-in account were deleted.')
+    } else {
+      await deleteAccount()
+      writeSignedIn(false)
+      setDeletionNotice('Your MapMory demo account and its content were deleted.')
+    }
     setDeletingAccount(false)
     setSignedIn(false)
     navigate({ name: 'landing' })
@@ -144,6 +157,7 @@ export default function App() {
         onSignIn={() => navigate({ name: 'login' })}
         onSignUp={() => navigate({ name: 'signup' })}
         onExplore={() => navigate({ name: 'public-map' })}
+        deletionNotice={deletionNotice}
       />
     )
   }
@@ -202,7 +216,7 @@ export default function App() {
     <div className="app">
       <Header current={tab} onNavigate={openTab} onSignOut={signOut} onDeleteAccount={() => setDeletingAccount(true)} />
       {deletingAccount ? (
-        <DeleteAccountPanel onConfirm={confirmDeleteAccount} onCancel={() => setDeletingAccount(false)} />
+        <DeleteAccountPanel onConfirm={confirmDeleteAccount} requirePassword={firebaseEnabled} onCancel={() => setDeletingAccount(false)} />
       ) : null}
       <main className="app-body">
         {route.name === 'dashboard' ? (

@@ -4,8 +4,10 @@ import './DeleteAccountPanel.css'
 
 export interface DeleteAccountPanelProps {
   /** Deletes the data and the sign-in; rejects to keep the panel open with an error. */
-  onConfirm: () => Promise<void>
+  onConfirm: (password: string) => Promise<void>
   onCancel: () => void
+  /** Require fresh Firebase email/password credentials in live mode. */
+  requirePassword?: boolean
 }
 
 /**
@@ -13,10 +15,11 @@ export interface DeleteAccountPanelProps {
  * understand it cannot be undone before the button works; Escape and Cancel
  * leave everything as it was.
  */
-export default function DeleteAccountPanel({ onConfirm, onCancel }: DeleteAccountPanelProps) {
+export default function DeleteAccountPanel({ onConfirm, onCancel, requirePassword = false }: DeleteAccountPanelProps) {
   const [understood, setUnderstood] = useState(false)
+  const [password, setPassword] = useState('')
   const [deleting, setDeleting] = useState(false)
-  const [failed, setFailed] = useState(false)
+  const [error, setError] = useState('')
   const heading = useRef<HTMLHeadingElement>(null)
   const ids = useId()
 
@@ -26,11 +29,18 @@ export default function DeleteAccountPanel({ onConfirm, onCancel }: DeleteAccoun
 
   async function confirm() {
     setDeleting(true)
-    setFailed(false)
+    setError('')
     try {
-      await onConfirm()
-    } catch {
-      setFailed(true)
+      await onConfirm(password)
+    } catch (failure) {
+      // The request may have committed before a network error was observed.
+      // A Firebase reauthentication error, however, precedes data deletion.
+      const code = typeof failure === 'object' && failure && 'code' in failure ? String(failure.code) : ''
+      setError(code === 'auth/wrong-password' || code === 'auth/invalid-credential'
+        ? 'Incorrect password. Your MapMory data has not been deleted.'
+        : code === 'auth/too-many-requests'
+          ? 'Too many sign-in attempts. Try again later. Your MapMory data has not been deleted.'
+          : 'We could not complete or confirm account deletion. Check your account status before trying again.')
       setDeleting(false)
     }
   }
@@ -55,13 +65,22 @@ export default function DeleteAccountPanel({ onConfirm, onCancel }: DeleteAccoun
         <input type="checkbox" checked={understood} onChange={(e) => setUnderstood(e.target.checked)} disabled={deleting} />
         <span>I understand that my trips and photos will be deleted permanently.</span>
       </label>
-      {failed ? (
-        <p className="delacct-error" role="alert">
-          Your account could not be deleted. Nothing was removed; try again.
-        </p>
+      {requirePassword ? (
+        <label className="delacct-password">
+          Confirm your password
+          <input
+            type="password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            disabled={deleting}
+            required
+          />
+        </label>
       ) : null}
+      {error ? <p className="delacct-error" role="alert">{error}</p> : null}
       <div className="delacct-actions">
-        <button type="button" className="btn btn-danger" onClick={() => void confirm()} disabled={!understood || deleting}>
+        <button type="button" className="btn btn-danger" onClick={() => void confirm()} disabled={!understood || deleting || (requirePassword && !password)}>
           {deleting ? 'Deleting…' : 'Yes, delete my account'}
         </button>
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={deleting}>
