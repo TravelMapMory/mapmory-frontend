@@ -2,7 +2,7 @@
 
 MapMory is a photo-first travel memory application that helps users organize and revisit their travels through an interactive map.
 
-Instead of manually organizing photos by location, MapMory extracts GPS coordinates and timestamps from image metadata (EXIF) to associate photos with places and trips. Users can browse their memories geographically, correct missing locations, and eventually share selected photos with others.
+Instead of manually organizing photos by location, MapMory extracts GPS coordinates and timestamps from image metadata (EXIF) to associate photos with places and trips. Users can browse their memories geographically, correct missing locations, and share selected photos by link or through the public map.
 
 This repository contains the **React frontend** of MapMory. The backend is implemented separately in Go.
 
@@ -10,26 +10,24 @@ The project's design document and OpenAPI specification define the intended func
 
 ## Project status
 
-MapMory is currently a working frontend prototype with partial backend integration. Features are progressively migrated from mock implementations to the real backend.
+MapMory includes an interactive mock-data prototype and a separate live API mode. The frontend has adapters for authenticated trip and photo management, photo uploads, location correction, and selective sharing. Those live features require a compatible, running Go backend; an empty or unavailable live service does not supply demonstration photos as a fallback.
 
-| Feature | Current status |
+| Feature | Current frontend behavior |
 |---|---|
-| Landing page and navigation | Implemented |
-| Sign-up and login | Firebase email/password authentication when configured; demo mode otherwise |
-| Dashboard | Live trip cards, creation, and navigation; photo statistics and recent uploads remain unavailable in live mode until their backend APIs are integrated |
-| Trip creation and listing | Integrated with Go backend |
-| Trip detail retrieval | Integrated with Go backend |
-| Photo uploads | Mock implementation |
-| EXIF extraction | Browser-side prototype |
-| Location correction | Mock implementation |
-| Interactive map | Implemented with mock photo data |
-| Photo sharing | Planned |
+| Landing, navigation, public map entry | Implemented |
+| Authentication | Firebase email/password when configured; demo sign-in otherwise |
+| Dashboard | Live trip listing, summary and recent photos using backend API; demonstration data in mock mode |
+| Trip creation, detail, editing | Connected to Go API in live mode |
+| Photo uploads and processing status | Signed-URL registration/upload/completion and recovery in live mode; simulated in mock mode |
+| Trip gallery, journey, map | Paginated live photos, owner map markers and filtering; mock alternatives |
+| Location search and correction | Live place search and location updates; simulated in mock mode |
+| Share creation and management | Owner-scoped list/create/revoke; fixed photo selections; two-step preview before publishing |
+| Anonymous recipient view | Link token `/s/{token}` or public-share ID `/public/{id}`; selected display images and approximate locations only |
+| Public map | `/map/public`, viewport-bounded clustering and public-share discovery |
 
-The frontend supports incremental integration with the Go backend. With `VITE_API_URL` configured, trip creation, listing, and retrieval use the backend.
+Sharing supports **anyone with the link** and **public discovery**. Named recipients, groups, owner-selected share covers, reporting/moderation, and self-service account deletion are not part of this frontend implementation.
 
-Backend PR #41 established PostgreSQL-backed application-user resolution. The subsequent `feat/trip-persistence` branch provides persistent, owner-scoped trip operations, verified locally against PostgreSQL and Firebase authentication.
-
-Other frontend functionality remains partially mock-backed. Photo uploads, processing, location correction, map data, and sharing are not yet integrated with the persistent backend. The current integration status describes the feature branches and should be updated as they are merged.
+The Go backend must support the corresponding endpoints, PostgreSQL persistence, Firebase verification and image storage. Backend PR #58 provides sharing support; ensure it is available in the backend version you run. See [Mock and Live API Modes](docs/api-modes.md) for precise requirements and limitations.
 
 ## Getting started
 
@@ -43,9 +41,9 @@ Other frontend functionality remains partially mock-backed. Photo uploads, proce
 
 The frontend supports mock and live API modes. Leave `VITE_API_URL` unset to use predefined demo trips and photos, including simulated sharing. Set `VITE_API_URL` to connect to the Go backend.
 
-The backend's database settings do not switch the frontend between these modes. Live photo sharing additionally requires the backend sharing APIs, PostgreSQL, and configured photo storage.
+The backend's database settings do not switch the frontend between these modes. Live photo sharing additionally requires a compatible sharing backend, PostgreSQL, Firebase and configured photo storage.
 
-See [Mock and Live API Modes](docs/development.md#mock-and-live-api-modes) for configuration details, limitations, and testing instructions.
+See [Mock and Live API Modes](docs/api-modes.md) for configuration details, limitations, and testing instructions.
 
 ### Local development
 
@@ -69,7 +67,7 @@ To use the real trip API, start the Go backend in the backend repository:
 go run ./cmd/server
 ```
 
-With the backend in database mode and `MAPMORY_PHOTO_BUCKET` set, photo upload and the trip photo list also use the real API: the browser registers the files, PUTs each one straight to its signed Cloud Storage URL and asks the backend to process it. Photo location correction and sharing are not available against the backend yet.
+With database mode and photo storage configured, uploads and trip photo lists use the real API: the browser registers files, PUTs each one directly to a storage-signed URL, then asks the backend to process it. Location correction and sharing also use live API endpoints. GCS is the existing backend storage option; the separately proposed local-filesystem backend branch can be used instead once that branch is applied and verified. A frontend setting alone cannot enable local photo storage.
 
 Without access to the shared Firebase project, sign in against the [Firebase Auth emulator](https://firebase.google.com/docs/emulator-suite/connect_auth) instead: run `npx firebase-tools emulators:start --only auth --project demo-mapmory`, set `VITE_FIREBASE_AUTH_EMULATOR_URL=http://127.0.0.1:9099`, any non-empty `VITE_FIREBASE_API_KEY` and `VITE_FIREBASE_PROJECT_ID=demo-mapmory`, and start the backend with `FIREBASE_PROJECT_ID=demo-mapmory FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`. Emulator accounts exist only while the emulator runs.
 
@@ -95,8 +93,8 @@ The `.env.local` file is intended for local configuration and should not be comm
 | `npm run test:typecheck` | Run TypeScript checks |
 | `npm run test:acceptance` | Run Playwright acceptance tests |
 | `npm run test:acceptance:ui` | Open Playwright's interactive test runner |
-| `npm run test:integration` | Test live trip APIs against the Go backend   |
-| `npm run test:boundaries`  | Verify mock/live Dashboard summary selection |
+| `npm run test:integration` | Test authenticated live trip APIs against the Go backend |
+| `npm run test:boundaries` | Verify mock/live separation for summary, uploads and sharing |
 
 Use `npm ci` to install the versions recorded in `package-lock.json` without modifying the lockfile.
 
@@ -117,6 +115,9 @@ Each page has its own URL, supporting browser navigation, refreshing, and direct
 | `/map` | Map · My photos | Signed in |
 | `/map?trip={id}` | Map filtered by trip | Signed in |
 | `/trips/{id}` | Trip details | Signed in |
+| `/s/{token}` | Link recipient view | Anyone possessing the link |
+| `/map/public` | Public map | Everyone |
+| `/public/{id}` | Public collection view | Everyone for public, unrevoked shares |
 | Other paths | Page not found | Everyone |
 
 Opening a protected page while signed out redirects to `/login`. After signing in, users return to their originally requested page.
@@ -131,7 +132,10 @@ Invalid routes and nonexistent trips display a "Page not found" screen. Authenti
 - **Authentication** (`src/AuthScreen.tsx`): Firebase email/password sign-up and login, with demo fallback when unconfigured.
 - **Dashboard** (`src/DashboardScreen.tsx`): Trip cards, summaries, recent photos, trip creation, and empty states.
 - **Trip details** (`src/TripScreen.tsx`): Trip information, photo gallery, journey view, uploads, and location correction.
-- **Map** (`src/MapScreen.tsx`): Clustered photo markers, trip and date filters, place search, and photo previews.
+- **Map** (`src/MapScreen.tsx`): Clustered owner photo markers, trip and date filters, place search, and photo previews.
+- **Sharing** (`src/components/ShareSettings.tsx`, `src/components/SharePreview.tsx`): Choose processed photos, preview title/selection/audience, publish link or public shares and revoke them.
+- **Recipient** (`src/SharedScreen.tsx`): Anonymous, share-scoped gallery and approximate-location map.
+- **Public map** (`src/PublicMapScreen.tsx`): Explore public shares within the map viewport, with bounded clusters.
 
 **Photo viewer controls:** Select a thumbnail in the Gallery or Journey view to open the viewer. Use **← / →** or Previous/Next to move between photos, **Esc** or Close to dismiss it, and **Tab** / **Shift+Tab** to move between controls. Press **Enter** or **Space** to activate a focused button. Clicking the backdrop also closes the viewer. Closing returns keyboard focus to the thumbnail that opened it.
 
@@ -181,38 +185,28 @@ Screens should access data through `client.ts` rather than directly calling the 
 
 ### Backend integration
 
-When `VITE_API_URL` is configured, the following endpoints use the Go backend:
+When `VITE_API_URL` is set, `src/api/client.ts` uses the Go API for the following families of operations:
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/api/trips` | List the current user's trips |
-| POST | `/api/trips` | Create a trip |
-| GET | `/api/trips/{trip_id}` | Retrieve an individual trip |
+| Endpoint(s) | Purpose |
+|---|---|
+| `GET /api/me/summary` | Owner dashboard counts and recent uploads |
+| `GET, POST /api/trips`; `GET, PATCH /api/trips/{id}` | Trip listing, creation, detail and editing |
+| `GET /api/trips/{id}/photos`; `GET /api/map/photos` | Paginated gallery and owner map |
+| `POST /api/trips/{id}/batches`; batch file completion/status endpoints | Photo registration, signed URL upload, processing and recovery |
+| `GET /api/places/search`; `PATCH /api/photos/{id}/location` | Place lookup and owner correction |
+| `GET, POST /api/trips/{id}/shares`; `DELETE /api/shares/{id}` | Owner sharing management |
+| `GET /api/s/{token}` | Anonymous link recipient collection |
+| `GET /api/public/shares/{id}`; `GET /api/public/map` | Public collection and viewport-limited map |
 
-Trip creation returns the new trip's ID, which the frontend uses to navigate to its detail page and retrieve the created trip.
+These are *frontend integrations*, not a guarantee that an arbitrary backend checkout implements the entire API. Live sharing depends on backend PR #58. The HTTP client attaches Firebase ID tokens for owner requests and retries a 401 once with a refreshed token; anonymous recipient and public endpoints do not require an account.
 
-Missing trips return HTTP 404 according to the OpenAPI contract, and the frontend displays its not-found screen.
-
-The HTTP client attaches Firebase ID tokens when Firebase is configured, and retries a 401 once with a refreshed token. A second 401 is returned as an API error rather than automatically signing out a valid Firebase session.
-
-In development, Vite proxies `/api` requests to the backend configured by `VITE_API_URL`, avoiding the need for separate CORS configuration.
-
-Other operations continue to use mock implementations until their backend endpoints are available.
+In development, Vite proxies `/api` requests to `VITE_API_URL`. File bytes use separate signed PUT/GET URLs supplied by storage, which can have their own origin and CORS requirements. The frontend never uploads originals through the `/api` proxy.
 
 ### Mock and live data boundaries
 
-The frontend enables backend operations incrementally. Configuring `VITE_API_URL` does not mean that every feature uses the real backend.
+Leaving `VITE_API_URL` unset selects the demonstration dataset, including simulated uploads, share links, revocation, and public shares. Setting it selects live requests for all endpoint families listed above, **without falling back to mock records** when the server responds with an error or empty dataset. The mock link/share state is browser-local rather than cross-device persistence.
 
-Currently, `listTrips`, `createTrip`, and `getTrip` use the Go API. Other features remain mock-backed or unavailable in live mode.
-
-In particular:
-
-- Trip listing, creation, and retrieval use persistent, owner-scoped records when the backend runs in database mode.
-- Real trips return an empty photo collection until the photo-listing endpoint is implemented.
-- Dashboard photo statistics and recently uploaded photos are unavailable in live mode until `GET /api/me/summary` is implemented.
-- Map data, photo uploads, place search, and location correction still have mock implementations and must not be interpreted as persistent user data.
-
-Mock mode remains useful for isolated UI development and acceptance testing. Live integration tests should explicitly verify that demonstration data is not presented as authenticated user data.
+The two modes are independent of the backend's `MAPMORY_ENABLE_DB_USER_RESOLUTION` flag. To exercise persistence and authorization, use a database-backed backend with the required migrations. See [API Modes](docs/api-modes.md) for a setup matrix and integration checks.
 
 ### Firebase identity versus application-user identity
 
@@ -220,7 +214,7 @@ Firebase signs the user in and provides an ID token. The frontend attaches that 
 
 Backend PR #41 offers `GET /api/auth/me` (Firebase token verification) and, with `MAPMORY_ENABLE_DB_USER_RESOLUTION=true` and PostgreSQL configured, `GET /api/users/me` (returns `{ id, auth_subject }`). These endpoints are useful for integration testing but **neither is called automatically by the frontend**. A successful Firebase login therefore does not by itself prove backend database availability.
 
-The backend's `feat/trip-persistence` branch provides PostgreSQL-backed trip operations with owner-scoped access when `MAPMORY_ENABLE_DB_USER_RESOLUTION=true`. The frontend passes Firebase ID tokens and does not supply or control the internal owner UUID.
+The database-backed Go API provides persistent, owner-scoped trip operations when `MAPMORY_ENABLE_DB_USER_RESOLUTION=true`. The frontend passes Firebase ID tokens and does not supply or control the internal owner UUID.
 
 Integration testing has confirmed that trips survive backend restarts and that two distinct Firebase users cannot list or retrieve one another's private trips.
 
@@ -235,14 +229,7 @@ curl -i -H "Authorization: Bearer $FIREBASE_ID_TOKEN" http://localhost:8080/api/
 
 Export `FIREBASE_ID_TOKEN` in the shell first. The latter endpoint should return the same `id` on repeated requests for the same account. Avoid logging tokens, passwords or refresh tokens.
 
-Remaining integration work includes:
-
-- Persistent photo storage and photo ownership APIs
-- Cursor-based pagination
-- Signed URL upload registration and completion
-- Asynchronous photo processing and status recovery
-- Location resolution and correction
-- Photo sharing and access control
+The remaining release verification is a real upload → process → correct → preview → share → anonymous view → revoke flow against the compatible PostgreSQL-backed backend, preferably also on a mobile browser. Automated mock and intercepted-request tests do not replace this check.
 
 ## Maps and photo metadata
 
@@ -250,9 +237,7 @@ Remaining integration work includes:
 
 MapMory uses Leaflet to display photos geographically.
 
-The current prototype supports marker clustering, trip and date filtering, place search, and photo previews.
-
-Clustering is implemented using a custom screen-space algorithm. Large-dataset viewport loading and some world-wrap edge cases are not yet fully supported.
+The owner map supports markers, filtering, place search and viewport requests; the public map uses bounded server-side clusters. The public response is capped, and a truncation notice explains that not all matches may be shown at once.
 
 ### Basemap configuration
 
@@ -280,11 +265,11 @@ docker build \
 
 The upload prototype accepts JPEG and PNG images up to 25,000,000 bytes (25 MB).
 
-The browser-side EXIF reader (`src/api/exif.ts`) extracts capture timestamps and GPS coordinates for the mock implementation.
+The browser-side EXIF reader (`src/api/exif.ts`) supports the mock implementation. The real backend extracts EXIF and generates sanitized display images during processing.
 
 Photos without usable GPS coordinates remain available in the gallery with the `needs-location` state but do not appear on the map.
 
-Location correction currently supports place search and manual pin placement using mock data.
+In live mode, location correction uses backend place search and a photo location patch; mock mode keeps its local simulation.
 
 The production architecture delegates EXIF extraction, image processing, and place resolution to backend services rather than relying on the browser implementation.
 
@@ -375,7 +360,7 @@ The integration suite exercises the actual Go backend using Firebase ID tokens. 
 - Authentication, input validation, and error responses.
 - Bidirectional trip ownership isolation between two distinct Firebase users.
 
-Start backend `feat/trip-persistence` with PostgreSQL and `MAPMORY_ENABLE_DB_USER_RESOLUTION=true`. Set the following environment variables:
+Start a compatible backend checkout with PostgreSQL and `MAPMORY_ENABLE_DB_USER_RESOLUTION=true`. Set the following environment variables:
 
 | Variable | Purpose |
 |---|---|
@@ -391,28 +376,17 @@ npm run test:integration
 
 Tests requiring missing credentials are reported as skipped. The ownership test verifies that both tokens resolve to different application users before checking trip access in both directions.
 
-**Use a disposable development database.** The tests create persistent trips, and the backend does not yet provide a trip deletion endpoint. Never commit or publish Firebase tokens.
+**Use a disposable development database.** The tests create persistent trips and may leave test records behind. Never commit or publish Firebase tokens.
 
 #### Mock/live boundary regression
 
-The boundary suite verifies that the frontend does not mix demonstration Dashboard data with real trip records.
-
-It checks that:
-
-- Mock mode retains demonstration statistics and recent photos.
-- When trip endpoints are live but the summary API is unavailable, `getSummary()` returns `null` without requesting the unimplemented endpoint.
-
-Run:
+The boundary suite uses isolated Vite servers to verify data-source separation. It covers mock demonstration data, live dashboard summaries, real sharing owner/recipient/public-map contracts, and signed upload flows with intercepted HTTP responses. It does not require a running Go server:
 
 ```bash
 npm run test:boundaries
 ```
 
-The dedicated Playwright configuration starts two isolated Vite servers with different API settings. No running Go backend or Firebase credentials are required.
-
-These suites complement the existing mock-based acceptance tests. Live API tests verify HTTP contracts and authorization, while boundary tests verify frontend data-source selection. Neither replaces full browser-based end-to-end testing.
-
-Manual integration testing has also confirmed that trips persist after restarting the backend and remain isolated between Firebase accounts.
+The mock-mode acceptance suite runs at desktop, tablet and phone viewports. The live client suite and actual backend integration checks complement these tests; passing intercepted-request tests does not establish end-to-end object storage, persistence, or cross-account privacy.
 
 ## Docker and deployment
 
@@ -444,14 +418,13 @@ This supports platforms such as Google Cloud Run.
 
 ## Known limitations
 
-MapMory is still under active development. Important limitations include:
-
-- Firebase authentication is supported when configured; demo authentication is available for isolated UI development.
-- PostgreSQL-backed trip persistence and ownership enforcement are available on backend `feat/trip-persistence`, but the older in-memory backend mode remains available.
-- Live backend integration currently covers trip creation, listing, and retrieval.
-- Dashboard photo statistics and recent uploads are unavailable in live mode until the summary API is implemented.
-- The map and several photo-related workflows still use mock data.
-- Photo uploads, processing, location correction, and sharing are not yet integrated with persistent backend services.
+- A compatible, configured Go backend is required for live mode; live UI adapter support does not by itself guarantee server readiness.
+- Only link and public sharing audiences are implemented. Named recipients/groups, public reporting/moderation, owner-selected share covers and self-service account deletion are not implemented by this frontend.
+- The owner-side pre-publication preview confirms selected photos, labels and audience, **not** a pixel-accurate reproduction of the recipient map; the backend computes the share's approximate display positions.
+- Revocation blocks new recipient collection lookups. Already issued signed display-image URLs may remain usable until they expire; no original image URLs are exposed to share recipients.
+- Public-map requests are bounded and may be truncated; moving or zooming the viewport retrieves another result set.
+- The local filesystem backend storage option is a separate development-only backend change, not something configured by the frontend alone. GCS remains an option where provisioned.
+- Full live upload/correction/share/revocation and real mobile-device testing must be performed against the configured backend before release.
 
 ## References and credits
 
@@ -462,15 +435,3 @@ The planned production stack includes PostgreSQL, Google Cloud Storage with sign
 Icons are provided by `lucide-react`, with status information represented through both text and iconography.
 
 Sample photographs in `src/assets/pins/` are sourced from Wikimedia Commons. Their authors and licenses are documented in [CREDITS.md](CREDITS.md).
-
-### Link sharing availability
-
-Link sharing is currently **mock-only**. In persistent mode, the Share button remains visible but disabled as **Share (coming soon)**. With `VITE_API_URL` unset, the owner can create
-and revoke demonstration links, and `/s/{token}` displays mock recipient content.
-These links live in the browser's local storage; they are not persistent backend shares.
-
-With `VITE_API_URL` set, the Share action is hidden on trip pages, `/s/{token}`
-shows the not-found page, and the four sharing client functions reject with
-`not_implemented` rather than reading demo records. The backend photo and public
-sharing APIs must be implemented before enabling sharing in persistent mode.
-The `tests/boundaries/sharing-boundary.spec.ts` tests cover this separation.

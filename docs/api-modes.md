@@ -1,67 +1,78 @@
 ## Mock and Live API Modes
 
-MapMory's frontend supports two data modes: **mock mode** for developing and demonstrating the interface without a backend, and **live mode** for integrating with the Go API.
+MapMory's frontend supports **mock mode** for standalone UI development and **live mode** for real requests to the Go backend. These modes are selected solely by `VITE_API_URL`; backend database and storage flags are separate decisions.
 
-The mode is controlled by the frontend environment variable `VITE_API_URL`, independently of the backend's database configuration.
+### Selecting a mode
 
-### Mock mode
-
-To run the frontend with predefined demonstration data, leave `VITE_API_URL` unset:
+For mock mode, remove or comment out the variable in `.env.local` (an empty value also disables it):
 
 ```dotenv
-# VITE_API_URL=http://localhost:8080
+# VITE_API_URL=http://127.0.0.1:8080
 ```
 
-Restart the Vite development server after changing the environment configuration.
-
-In mock mode:
-
-- The Dashboard displays predefined trips, photos, and statistics.
-- Users can explore the trip viewer, maps, and sharing interface without a running backend.
-- Share creation, recipient viewing, and revocation are simulated in the browser, using local mock data and state.
-- Mock shares do not exist in PostgreSQL and are not accessible across independent browsers or devices through a shared backend.
-- Mock revocation does not constitute server-side access revocation.
-
-**The sharing UI is not new to the live-sharing integration.** The earlier frontend sharing work implemented the share-management and recipient experiences using mock data. This allows interface development and demonstrations without waiting for the backend.
-
-### Live mode
-
-To connect the frontend to the Go API, configure:
+For live mode:
 
 ```dotenv
-VITE_API_URL=http://localhost:8080
+VITE_API_URL=http://127.0.0.1:8080
 ```
 
-In live mode, implemented operations use real API requests rather than predefined demonstration data.
+Restart Vite after changing the environment. The `.env.example` template currently provides an API URL, so **copying it unchanged selects live mode**; comment that value out to get standalone demonstration data.
 
-For the complete photo-sharing workflow, the backend must have:
+### Behavior by mode
 
-- Database-backed user resolution enabled.
-- A valid PostgreSQL connection with the required migrations applied, including the sharing schema.
-- Firebase authentication configured.
-- A configured photo storage bucket and the permissions necessary to serve signed display-image URLs.
-- The sharing endpoints introduced by backend PR #58.
-
-Frontend PR #48 connects the existing sharing interface to these backend endpoints. It includes live share creation, listing and revocation, anonymous recipient retrieval, public-share retrieval, public-map queries, API adapters, and error handling.
-
-A frontend configured for live mode does not automatically fall back to mock photos when the backend has no data or does not support an endpoint.
-
-### Backend database mode is independent
-
-The backend's `MAPMORY_ENABLE_DB_USER_RESOLUTION` and `DATABASE_URL` settings control backend persistence and user resolution. They do **not** control whether the frontend uses mock data.
-
-| Frontend configuration | Backend configuration | Expected behavior |
+| Area | Mock mode | Live mode |
 |---|---|---|
-| `VITE_API_URL` unset | Any / not running | Predefined demonstration data and simulated sharing |
-| `VITE_API_URL` set | Legacy backend without database mode | Live API requests where supported; no predefined frontend demo photos |
-| `VITE_API_URL` set | Database-backed backend with sharing support | Real persisted trips, photos, and sharing |
+| Identity | Demo sign-in if Firebase is not configured | Firebase ID token required for owner operations; same frontend authentication configuration applies |
+| Trips and Dashboard | Predefined, editable in-browser examples | Persisted, owner-scoped trips and backend dashboard summary |
+| Photo uploads | Simulated per-file status and EXIF | Batch registration, signed PUT, processing completion and status recovery |
+| Photos and locations | Mock gallery, maps, search and corrections | Paginated gallery, owner map, place search and persisted corrections |
+| Share management | Browser-local create/list/revoke | Authenticated `GET`/`POST /api/trips/{id}/shares`, `DELETE /api/shares/{id}` |
+| Recipient view | Simulated `/s/{token}` collection | Anonymous `GET /api/s/{token}` returning only selected sanitized display images and coarse positions |
+| Public discovery | Demo `/map/public` and `/public/{id}` | Anonymous `GET /api/public/map` and `GET /api/public/shares/{id}` |
+| Revocation | Simulated UI behavior | Server-side invalidation of future collection requests |
 
-### Testing sharing
+The interface includes a **two-step creation flow**: select photos/title/audience, then review the selected thumbnails and audience before publishing. The owner-side preview is not the backend's final location rendering; the recipient sees server-coarsened positions.
 
-**Mock UI testing:** Run the frontend without `VITE_API_URL`. Verify photo selection, share creation, recipient presentation, and revocation using demonstration data.
+Link shares can be opened by anyone possessing the unguessable link, without signing in. Public shares can also be discovered via the public map. All other trip photos remain private. The current frontend does **not** support named users/groups, owner-selected covers, public reporting/moderation or account deletion.
 
-**Live integration testing:** Run the frontend against a compatible backend with PostgreSQL and photo storage configured. Upload and process a real photo, create a share, open its link in another browser or private window, and revoke it.
+### Prerequisites for live integration
 
-Live integration tests must verify that operations reach the backend, that recipients do not need authentication, that private trip data is not exposed, and that revoked or missing shares produce the expected error states.
+A compatible backend must provide:
 
-Mock-mode success does not establish that live sharing works end to end.
+- Firebase Auth ID-token verification and matching frontend Firebase project (or a matching local Auth emulator).
+- PostgreSQL, `MAPMORY_ENABLE_DB_USER_RESOLUTION=true`, and all required Goose migrations, including the sharing schema.
+- Owner trip/photo/map and upload endpoints, place search/correction, plus backend PR #58's sharing and public endpoints.
+- Working photo object storage and signed URL generation. This can be GCS with the necessary permissions, **or** the development-only local filesystem adapter from the separate backend branch if installed and tested. Do not set `MAPMORY_PHOTO_STORAGE=local` against a backend that lacks that adapter.
+
+The browser uses Vite's `/api` development proxy for JSON requests. Image and upload bytes use backend-issued signed URLs; if these resolve to a different origin, that storage endpoint must allow the frontend's origin. Local files are not served by the frontend directly.
+
+### Backend persistence does not select frontend mode
+
+| Frontend | Backend | Result |
+|---|---|---|
+| `VITE_API_URL` unset | Not running or any mode | Mock demo records and simulated sharing |
+| `VITE_API_URL` set | Missing/unavailable endpoints | Real requests fail or show errors; **no mock fallback** |
+| `VITE_API_URL` set | Compatible database-backed backend with storage | Real trips, photo uploads, corrections and persisted shares |
+
+### Testing
+
+Mock and intercepted HTTP tests:
+
+```bash
+npm run test:acceptance
+npm run test:boundaries
+```
+
+The boundary suite includes owner-scoped share CRUD, anonymous recipient and public-share access, public-map data boundaries and upload request flows. These tests do **not** require PostgreSQL or GCS and do not establish that an actual backend is operational.
+
+With a disposable local PostgreSQL database, Firebase accounts and working storage, manually check the full live workflow:
+
+1. Sign in, create a trip and upload both a GPS-tagged photo and a photo with missing GPS.
+2. Wait for processing, correct a location, reload and verify persistence.
+3. Select processed photos, review the preview, then publish a link share.
+4. Open the token URL in a signed-out/private browser; confirm only chosen images and approximate positions are shown.
+5. Revoke the share and verify a fresh lookup fails. Remember previously issued signed display URLs may remain usable until their expiry.
+6. Create a public share, confirm it appears in the public map viewport, then revoke it and verify it disappears.
+7. If possible, repeat recipient viewing from a phone and test using two separate owner accounts.
+
+Never commit `.env.local`, Firebase tokens, local photo files or passwords. The mock and HTTP-intercepted suites are complementary to—not replacements for—this live smoke test.
