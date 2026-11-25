@@ -5,7 +5,19 @@
  * backend grows one endpoint at a time, so fields it does not send yet get
  * neutral defaults here instead of breaking the screens.
  */
-import type { ApiBatch, ApiMapPhoto, ApiMapPhotoPage, ApiMeSummary, ApiPage, ApiPhoto, ApiPlace, ApiRejectedFile, ApiTrip } from './contract'
+import type {
+  ApiBatch,
+  ApiMapPhoto,
+  ApiMapPhotoPage,
+  ApiMeSummary,
+  ApiPage,
+  ApiPhoto,
+  ApiPlace,
+  ApiRejectedFile,
+  ApiShare,
+  ApiSharedCollection,
+  ApiTrip,
+} from './contract'
 import type {
   LocationSource,
   MapPhoto,
@@ -14,6 +26,8 @@ import type {
   Page,
   Photo,
   Place,
+  Share,
+  SharedCollection,
   TripDetail,
   TripSummary,
   UploadItem,
@@ -169,4 +183,33 @@ export function toSummary(summary: ApiMeSummary): MeSummary {
 
 export function toPlace(place: ApiPlace): Place {
   return { ...place }
+}
+
+/** The recipient address of a link token on this frontend (router: /s/{token}). */
+export function shareUrl(origin: string, token: string): string {
+  return `${origin}/s/${encodeURIComponent(token)}`
+}
+
+/** A share as its owner sees it; the token becomes the address to copy. */
+export function toShare({ token, ...share }: ApiShare, origin: string): Share {
+  return { ...share, url: shareUrl(origin, token) }
+}
+
+/** What a recipient sees. The display image serves as the thumbnail too. */
+export function toSharedCollection(collection: ApiSharedCollection): SharedCollection {
+  return {
+    title: collection.title,
+    description: collection.description,
+    created_at: collection.created_at,
+    photos: collection.photos.map((p) => ({
+      id: p.id,
+      thumb_url: p.display_image?.url ?? null,
+      display_url: p.display_image?.url ?? null,
+      capture_time_local: p.capture_time_local,
+      city: p.city,
+      country: p.country,
+      display_lat: p.display_lat,
+      display_lng: p.display_lng,
+    })),
+  }
 }

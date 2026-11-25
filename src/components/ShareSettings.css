@@ -307,3 +307,77 @@
   margin-top: 2px;
   color: var(--c-action);
 }
+
+.share-modes {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+}
+
+.share-modes legend {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.share-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+/* Public is shown with an icon and a word, never by colour alone (doc 4.3). */
+.share-mode-public {
+  color: #b45309;
+  font-weight: 600;
+}
+
+
+/* The pre-publication preview shows only selected photos and safe place labels. */
+.share-preview-details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.share-preview-title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.share-preview-description { margin: 0; font-size: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.share-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 420px;
+  overflow: auto;
+}
+.share-preview-photo { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.share-preview-photo img, .share-preview-photo .share-pick-empty {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: var(--r-xs);
+}
+.share-preview-photo .share-pick-empty { display: grid; }
+
+.share-preview-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid #ead9b7;
+  border-radius: var(--r-xs);
+  background: #fff8eb;
+  color: #614719;
+  font-size: 13px;
+  line-height: 1.5;
+}

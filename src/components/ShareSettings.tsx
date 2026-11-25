@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import { Copy, ImageOff, Link2, Plus } from 'lucide-react'
-import { createShare, listShares, revokeShare } from '../api/client'
-import type { Photo, Share, TripDetail } from '../api/types'
+import { Copy, Globe, ImageOff, Link2, Plus } from 'lucide-react'
+import { createShare, listShares, listTripPhotos, revokeShare } from '../api/client'
+import { loadAllPages } from '../api/paging'
+import type { Photo, Share, ShareMode, TripDetail } from '../api/types'
 import { formatUploaded, plural } from '../format'
+import SharePreview from './SharePreview'
 import './ShareSettings.css'
 
 export interface ShareSettingsProps {
@@ -17,7 +19,7 @@ function shareable(photos: Photo[]): Photo[] {
   return photos.filter((p) => (p.state === 'ready' || p.state === 'needs-location') && p.display_url)
 }
 
-/** One active link: its address to copy, and Revoke behind a confirmation. */
+/** One active share: its address to copy, and Revoke behind confirmation. */
 function ShareRow({
   share,
   focusOnMount,
@@ -68,6 +70,11 @@ function ShareRow({
       <div className="share-link-head">
         <p className="share-link-title">{share.title}</p>
         <p className="share-caption">
+          {share.mode === 'public' ? (
+            <span className="share-mode-public">
+              <Globe size={12} aria-hidden /> Public ·{' '}
+            </span>
+          ) : null}
           {plural(share.photo_ids.length, 'photo')} · created {formatUploaded(share.created_at)}
         </p>
       </div>
@@ -87,19 +94,19 @@ function ShareRow({
         ) : null}
       </div>
       {confirming ? (
-        <div className="share-confirm" role="group" aria-label="Revoke this link?">
-          <p>Revoke this link? Anyone who opens it will see that it no longer works. Your photos stay in the trip.</p>
+        <div className="share-confirm" role="group" aria-label="Revoke this share?">
+          <p>Revoke this share? New visits to the collection will stop working. Your photos stay in the trip. Previously issued image URLs may remain accessible until they expire.</p>
           <div className="share-confirm-actions">
             <button type="button" className="btn btn-danger" onClick={() => void revoke()} disabled={revoking}>
-              {revoking ? 'Revoking…' : 'Revoke link'}
+              {revoking ? 'Revoking…' : 'Revoke share'}
             </button>
             <button type="button" className="btn btn-secondary" onClick={() => setConfirming(false)} disabled={revoking}>
-              Keep link
+              Keep share
             </button>
           </div>
           {failed ? (
             <p className="share-error" role="alert">
-              The link could not be revoked. Try again.
+              The share could not be revoked. Try again.
             </p>
           ) : null}
         </div>
@@ -108,7 +115,7 @@ function ShareRow({
   )
 }
 
-/** Title, optional description and the photos to include in a new link. */
+/** Title, optional description and photos to include in a new share. */
 function NewShareForm({
   trip,
   photos,
@@ -122,49 +129,76 @@ function NewShareForm({
 }) {
   const [title, setTitle] = useState(trip.title)
   const [description, setDescription] = useState('')
-  const [chosen, setChosen] = useState<Set<string>>(() => new Set(photos.map((p) => p.id)))
+  const [mode, setMode] = useState<ShareMode>('link')
+  const [chosen, setChosen] = useState<Set<string>>(() => new Set(photos.slice(0, 500).map((p) => p.id)))
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [step, setStep] = useState<'configure' | 'preview'>('configure')
+  const formHeading = useRef<HTMLHeadingElement>(null)
   const ids = useId()
+  const selectedPhotos = photos.filter((photo) => chosen.has(photo.id))
 
   function toggle(id: string) {
     setChosen((current) => {
       const next = new Set(current)
       if (next.has(id)) next.delete(id)
-      else next.add(id)
+      else if (next.size < 500) next.add(id)
       return next
     })
   }
 
-  async function submit(event: FormEvent) {
+  function submit(event: FormEvent) {
     event.preventDefault()
-    if (!title.trim() || chosen.size === 0) return
+    if (!title.trim() || chosen.size === 0 || chosen.size > 500) return
+    setFailed(false)
+    setStep('preview')
+  }
+
+  async function publish() {
+    if (saving || !title.trim() || selectedPhotos.length === 0 || selectedPhotos.length > 500) return
     setSaving(true)
     setFailed(false)
     try {
       const share = await createShare(trip.id, {
-        mode: 'link',
+        mode,
         title: title.trim(),
         description: description.trim() || undefined,
         // Keep the trip's order, whatever order the boxes were ticked in.
-        photo_ids: photos.filter((p) => chosen.has(p.id)).map((p) => p.id),
+        photo_ids: selectedPhotos.map((photo) => photo.id),
       })
       onCreated(share)
     } catch {
       setFailed(true)
+    } finally {
       setSaving(false)
     }
+  }
+
+  if (step === 'preview') {
+    return (
+      <SharePreview
+        title={title.trim()}
+        description={description.trim()}
+        mode={mode}
+        photos={selectedPhotos}
+        saving={saving}
+        failed={failed}
+        onBack={() => { setFailed(false); setStep('configure'); requestAnimationFrame(() => formHeading.current?.focus()) }}
+        onConfirm={() => void publish()}
+        onCancel={onCancel}
+      />
+    )
   }
 
   return (
     <form
       className="share-form"
-      onSubmit={(e) => void submit(e)}
+      onSubmit={submit}
       onKeyDown={(event) => {
         if (event.key === 'Escape') onCancel()
       }}
     >
-      <h3 className="share-h3">New link</h3>
+      <h3 className="share-h3" ref={formHeading} tabIndex={-1}>Create a share</h3>
       <div className="share-field">
         <label htmlFor={`${ids}-title`}>Title</label>
         <input
@@ -196,7 +230,7 @@ function NewShareForm({
           <span className="share-caption" aria-live="polite">
             {chosen.size} of {plural(photos.length, 'photo')} selected
           </span>
-          <button type="button" className="share-text-btn" onClick={() => setChosen(new Set(photos.map((p) => p.id)))}>
+          <button type="button" className="share-text-btn" onClick={() => setChosen(new Set(photos.slice(0, 500).map((p) => p.id)))}>
             Select all
           </button>
           <button type="button" className="share-text-btn" onClick={() => setChosen(new Set())}>
@@ -209,7 +243,7 @@ function NewShareForm({
             return (
               <li key={photo.id}>
                 <label className="share-pick">
-                  <input type="checkbox" checked={chosen.has(photo.id)} onChange={() => toggle(photo.id)} />
+                  <input type="checkbox" checked={chosen.has(photo.id)} disabled={!chosen.has(photo.id) && chosen.size >= 500} onChange={() => toggle(photo.id)} />
                   {photo.thumb_url ? (
                     <img src={photo.thumb_url} alt="" loading="lazy" />
                   ) : (
@@ -225,23 +259,40 @@ function NewShareForm({
         </ul>
       </fieldset>
 
+      <fieldset className="share-modes">
+        <legend>Who can open it</legend>
+        <label className="share-mode">
+          <input type="radio" name={`${ids}-mode`} value="link" checked={mode === 'link'} onChange={() => setMode('link')} />
+          <Link2 size={16} aria-hidden />
+          <span>Anyone with the link</span>
+        </label>
+        <label className="share-mode">
+          <input type="radio" name={`${ids}-mode`} value="public" checked={mode === 'public'} onChange={() => setMode('public')} />
+          <Globe size={16} aria-hidden />
+          <span>Public, also on the public map</span>
+        </label>
+      </fieldset>
+
       <p className="share-audience">
-        <Link2 size={16} aria-hidden />
+        {mode === 'link' ? <Link2 size={16} aria-hidden /> : <Globe size={16} aria-hidden />}
         <span>
-          Anyone with the link can see the selected photos, their dates and the city each was taken in, without an
-          account. Exact locations and the rest of this trip stay private.
+          {mode === 'link'
+            ? 'Anyone with the link can view the selected photos, their dates and approximate locations, without an account.'
+            : 'Anyone can discover the selected photos on the public map and view their dates and approximate locations, without an account. Only share photos of people who agreed to be shown publicly.'}{' '}
+          Exact locations and the rest of this trip stay private.
         </span>
       </p>
 
-      {chosen.size === 0 ? <p className="share-caption">Select at least one photo to create a link.</p> : null}
+      {chosen.size === 0 ? <p className="share-caption">Select at least one photo to create a share.</p> : null}
+      {photos.length > 500 ? <p className="share-caption">A share can contain up to 500 photos.</p> : null}
       {failed ? (
         <p className="share-error" role="alert">
-          The link could not be created. Try again.
+          The share could not be created. Try again.
         </p>
       ) : null}
       <div className="share-form-actions">
         <button type="submit" className="btn btn-primary" disabled={saving || chosen.size === 0 || !title.trim()}>
-          {saving ? 'Creating…' : 'Create link'}
+          Preview share
         </button>
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
           Cancel
@@ -252,17 +303,41 @@ function NewShareForm({
 }
 
 /**
- * Share settings for one trip (doc 3.2): the trip's active links, each with
- * Copy and Revoke, and a form for a new link to selected photos. A link share
- * is not public: only people who are given the link can open it.
+ * Share settings for one trip: manage link/public shares and create a fixed
+ * selection of photos. Link-only shares are not discoverable on the public map.
  */
-export default function ShareSettings({ trip, photos }: ShareSettingsProps) {
+export default function ShareSettings({ trip }: ShareSettingsProps) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [creating, setCreating] = useState(false)
+  const [picker, setPicker] = useState<{ status: 'idle' | 'loading' | 'error' } | { status: 'ready'; photos: Photo[] }>({ status: 'idle' })
+  const pickerRequest = useRef<AbortController | null>(null)
   const [created, setCreated] = useState<string | null>(null)
   const [message, setMessage] = useState('')
   const heading = useRef<HTMLHeadingElement>(null)
-  const candidates = shareable(photos)
+  // The trip gallery is paginated. Fetch the complete selection independently,
+  // so opening a share never silently excludes unloaded photos.
+  useEffect(() => () => pickerRequest.current?.abort(), [])
+
+  async function openPicker() {
+    pickerRequest.current?.abort()
+    const controller = new AbortController()
+    pickerRequest.current = controller
+    setPicker({ status: 'loading' })
+    try {
+      const page = await loadAllPages(
+        (cursor, signal) => listTripPhotos(trip.id, signal, cursor),
+        controller.signal,
+      )
+      if (controller.signal.aborted) return
+      const eligible = shareable(page.items)
+      setPicker({ status: 'ready', photos: eligible })
+      setCreating(eligible.length > 0)
+    } catch {
+      if (!controller.signal.aborted) setPicker({ status: 'error' })
+    } finally {
+      if (pickerRequest.current === controller) pickerRequest.current = null
+    }
+  }
 
   const refresh = useCallback(
     async (signal?: AbortSignal) => {
@@ -285,9 +360,9 @@ export default function ShareSettings({ trip, photos }: ShareSettingsProps) {
     <section className="share" aria-labelledby="share-title">
       <div className="share-head">
         <h2 id="share-title" className="share-h2" ref={heading} tabIndex={-1}>
-          Share by link
+          Sharing
         </h2>
-        <p className="share-caption">Only people you send a link to can open it. You can revoke a link at any time.</p>
+        <p className="share-caption">Link shares are accessible to anyone with the URL. Public shares can also be found on the public map. You can revoke either type.</p>
       </div>
 
       <p className="visually-hidden" role="status">
@@ -295,10 +370,10 @@ export default function ShareSettings({ trip, photos }: ShareSettingsProps) {
       </p>
       {message ? <p className="share-message">{message}</p> : null}
 
-      {load.status === 'loading' ? <p className="share-caption">Loading links…</p> : null}
+      {load.status === 'loading' ? <p className="share-caption">Loading shares…</p> : null}
       {load.status === 'error' ? (
         <div role="alert" className="share-status">
-          <p>Your links could not be loaded.</p>
+          <p>Your shares could not be loaded.</p>
           <button
             type="button"
             className="btn btn-secondary"
@@ -313,7 +388,7 @@ export default function ShareSettings({ trip, photos }: ShareSettingsProps) {
       ) : null}
 
       {load.status === 'ready' && load.shares.length > 0 ? (
-        <ul className="share-links" aria-label="Active links">
+        <ul className="share-links" aria-label="Active shares">
           {load.shares.map((share) => (
             <ShareRow
               key={share.id}
@@ -324,7 +399,7 @@ export default function ShareSettings({ trip, photos }: ShareSettingsProps) {
                 setLoad((current) =>
                   current.status === 'ready' ? { status: 'ready', shares: current.shares.filter((s) => s.id !== revoked.id) } : current,
                 )
-                setMessage(`Link "${revoked.title}" revoked. It no longer opens.`)
+                setMessage(`Share "${revoked.title}" revoked. New visits are blocked.`)
                 // The row and its buttons are gone, so keep keyboard focus in the panel.
                 heading.current?.focus()
               }}
@@ -333,33 +408,47 @@ export default function ShareSettings({ trip, photos }: ShareSettingsProps) {
         </ul>
       ) : null}
       {load.status === 'ready' && load.shares.length === 0 && !creating ? (
-        <p className="share-caption">This trip has no active links.</p>
+        <p className="share-caption">This trip has no active shares.</p>
       ) : null}
 
       {creating ? (
         <NewShareForm
           trip={trip}
-          photos={candidates}
-          onCancel={() => setCreating(false)}
+          photos={picker.status === 'ready' ? picker.photos : []}
+          onCancel={() => {
+            setCreating(false)
+            setPicker({ status: 'idle' })
+          }}
           onCreated={(share) => {
             setCreating(false)
             setCreated(share.id)
-            setMessage(`Link created for ${plural(share.photo_ids.length, 'photo')}. Copy it and send it to the people you choose.`)
+            setMessage(
+              share.mode === 'public'
+                ? `Public share created for ${plural(share.photo_ids.length, 'photo')}. It can now appear on the public map.`
+                : `Link created for ${plural(share.photo_ids.length, 'photo')}. Copy it to share the collection.`,
+            )
             setLoad((current) => ({
               status: 'ready',
               shares: [share, ...(current.status === 'ready' ? current.shares : [])],
             }))
           }}
         />
-      ) : candidates.length > 0 ? (
-        <div>
-          <button type="button" className="btn btn-action" onClick={() => setCreating(true)}>
-            <Plus size={16} aria-hidden />
-            New link
-          </button>
-        </div>
       ) : (
-        <p className="share-caption">Upload photos to this trip before sharing it.</p>
+        <div>
+          {picker.status === 'error' ? (
+            <p role="alert" className="share-error">Photos could not be loaded. Try again.</p>
+          ) : null}
+          {picker.status === 'loading' ? (
+            <p role="status" className="share-caption">Loading all trip photos…</p>
+          ) : null}
+          <button type="button" className="btn btn-action" disabled={picker.status === 'loading'} onClick={() => void openPicker()}>
+            <Plus size={16} aria-hidden />
+            New share
+          </button>
+          {picker.status === 'ready' && picker.photos.length === 0 ? (
+            <p className="share-caption">No processed photos are ready to share.</p>
+          ) : null}
+        </div>
       )}
     </section>
   )

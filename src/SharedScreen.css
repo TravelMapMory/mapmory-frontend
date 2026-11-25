@@ -171,3 +171,15 @@
     height: 280px;
   }
 }
+
+/* A public share names its audience with the same badge as everywhere else: icon plus word. */
+.shared-eyebrow--public {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.shared-eyebrow--public .vis-badge {
+  letter-spacing: normal;
+  text-transform: none;
+}

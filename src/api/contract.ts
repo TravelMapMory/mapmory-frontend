@@ -188,3 +188,40 @@ export interface ApiPlace {
 export interface ApiPlaceSearch {
   items: ApiPlace[]
 }
+
+/** `Share`: one share as its owner manages it. Only the owner receives `token`. */
+export interface ApiShare {
+  id: string
+  trip_id: string
+  mode: 'link' | 'public'
+  title: string
+  description: string | null
+  photo_ids: string[]
+  token: string
+  created_at: string
+  revoked_at: string | null
+}
+
+/** `ShareList`, GET /api/trips/{id}/shares. */
+export interface ApiShareList {
+  items: ApiShare[]
+}
+
+/** `SharedPhoto`: a coarse position only (city centre or 0.01°), never the exact one. */
+export interface ApiSharedPhoto {
+  id: string
+  display_image: ApiDisplayImage | null
+  capture_time_local: string | null
+  city: string | null
+  country: string | null
+  display_lat: number | null
+  display_lng: number | null
+}
+
+/** `SharedCollection`, GET /api/s/{token} and GET /api/public/shares/{id}. */
+export interface ApiSharedCollection {
+  title: string
+  description: string | null
+  created_at: string
+  photos: ApiSharedPhoto[]
+}

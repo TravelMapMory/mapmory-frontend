@@ -12,6 +12,8 @@ import {
   toPhoto,
   toPhotoPage,
   toPlace,
+  toShare,
+  toSharedCollection,
   toSummary,
   toTripDetail,
   toTripPage,
@@ -26,12 +28,17 @@ import type {
   ApiPage,
   ApiPhoto,
   ApiPlaceSearch,
+  ApiShare,
+  ApiShareList,
+  ApiSharedCollection,
   ApiRegisteredBatch,
   ApiRegisterUpload,
   ApiTrip,
 } from './contract'
 import { addRegistration, hasOpenRegistrations, loadRegistrations, updateRegistration } from './uploadRegistry'
 import { ApiError, request } from './http'
+import { PUBLIC_CLUSTER_LIMIT } from './limits'
+import { normalizeBBox } from './publicGrid'
 import { loadAllPages } from './paging'
 import {
   mockCreateShare,
@@ -41,6 +48,8 @@ import {
   mockListTrips,
   mockMapPhotos,
   mockPatchLocation,
+  mockPublicMap,
+  mockPublicShare,
   mockRevokeShare,
   mockSearchPlaces,
   mockSharedCollection,
@@ -60,6 +69,8 @@ import type {
   Page,
   Photo,
   Place,
+  PublicMapPage,
+  PublicMapQuery,
   Share,
   SharedCollection,
   TripDetail,
@@ -82,6 +93,8 @@ type Endpoint =
   | 'createShare'
   | 'revokeShare'
   | 'sharedCollection'
+  | 'publicMap'
+  | 'publicShare'
 
 /** Endpoints mapmory-backend serves today. */
 const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
@@ -95,16 +108,18 @@ const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
   'mapPhotos',
   'searchPlaces',
   'patchLocation',
+  'listShares',
+  'createShare',
+  'revokeShare',
+  'sharedCollection',
+  'publicMap',
+  'publicShare',
 ])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
 
-/** Sharing is a mock-only capability until the backend supports public links. */
-export const sharingAvailable = !backendEnabled
-
-function mockSharingUnavailable(): ApiError {
-  return new ApiError(503, 'not_implemented', 'Persistent sharing is not available yet.')
-}
+/** Sharing works in the demo and against the backend (backend #19, #24, #25). */
+export const sharingAvailable = true
 
 function live(endpoint: Endpoint): boolean {
   return backendEnabled && LIVE.has(endpoint)
@@ -401,23 +416,68 @@ export async function restoreUploads(tripId: string, signal?: AbortSignal): Prom
   return items
 }
 
-/** Sharing remains mock-backed only until the persistent share API exists. */
-export function listShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
-  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
-  return mockListShares(tripId, signal)
+/** GET /api/trips/{id}/shares: the trip's live shares, newest first. */
+export async function listShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
+  if (!live('listShares')) return mockListShares(tripId, signal)
+  const list = await request<ApiShareList>('GET', `/api/trips/${encodeURIComponent(tripId)}/shares`, { signal })
+  return list.items.map((share) => toShare(share, window.location.origin))
 }
 
-export function createShare(tripId: string, input: CreateShareInput): Promise<Share> {
-  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
-  return mockCreateShare(tripId, input)
+/** POST /api/trips/{id}/shares */
+export async function createShare(tripId: string, input: CreateShareInput): Promise<Share> {
+  if (!live('createShare')) return mockCreateShare(tripId, input)
+  const share = await request<ApiShare>('POST', `/api/trips/${encodeURIComponent(tripId)}/shares`, { body: input })
+  return toShare(share, window.location.origin)
 }
 
-export function revokeShare(id: string): Promise<void> {
-  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
-  return mockRevokeShare(id)
+/** DELETE /api/shares/{id}: the link stops working at once; the photos stay in the trip. */
+export async function revokeShare(id: string): Promise<void> {
+  if (!live('revokeShare')) return mockRevokeShare(id)
+  await request<void>('DELETE', `/api/shares/${encodeURIComponent(id)}`)
 }
 
-export function getSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
-  if (!sharingAvailable) return Promise.reject(mockSharingUnavailable())
-  return mockSharedCollection(token, signal)
+/** GET /api/s/{token}: no account needed. 404 unknown, 410 revoked. */
+export async function getSharedCollection(token: string, signal?: AbortSignal): Promise<SharedCollection> {
+  if (!live('sharedCollection')) return mockSharedCollection(token, signal)
+  return toSharedCollection(await request<ApiSharedCollection>('GET', `/api/s/${encodeURIComponent(token)}`, { signal }))
+}
+
+/** A public endpoint the backend does not serve yet: real visitors must never see demo photos. */
+function publicUnavailable(): ApiError {
+  return new ApiError(503, 'not_implemented', 'The public map is not available yet.')
+}
+
+/**
+ * GET /api/public/map?bbox=west,south,east,north&zoom=z, callable without
+ * signing in. The server groups public photos into grid cells for the zoom
+ * and returns at most 200 clusters; the browser trims to that too, so a
+ * misbehaving server cannot flood the map.
+ */
+export async function getPublicMap(query: PublicMapQuery, signal?: AbortSignal): Promise<PublicMapPage> {
+  const bbox = normalizeBBox(query.bbox)
+  const zoom = Math.round(query.zoom)
+  let page: PublicMapPage
+  if (live('publicMap')) {
+    page = await request<PublicMapPage>('GET', '/api/public/map', {
+      query: { bbox: bbox.map((v) => v.toFixed(5)).join(','), zoom },
+      signal,
+    })
+  } else if (backendEnabled) {
+    throw publicUnavailable()
+  } else {
+    page = await mockPublicMap({ bbox, zoom }, signal)
+  }
+  if (page.clusters.length <= PUBLIC_CLUSTER_LIMIT) return page
+  return { clusters: page.clusters.slice(0, PUBLIC_CLUSTER_LIMIT), truncated: true }
+}
+
+/** GET /api/public/shares/{id}: the photos of one public share, placed by city. */
+export async function getPublicShare(id: string, signal?: AbortSignal): Promise<SharedCollection> {
+  if (live('publicShare')) {
+    return toSharedCollection(
+      await request<ApiSharedCollection>('GET', `/api/public/shares/${encodeURIComponent(id)}`, { signal }),
+    )
+  }
+  if (backendEnabled) throw publicUnavailable()
+  return mockPublicShare(id, signal)
 }

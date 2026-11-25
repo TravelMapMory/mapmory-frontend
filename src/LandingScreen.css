@@ -165,3 +165,19 @@
     margin-top: 40px;
   }
 }
+
+/* The brand on public pages is a button home; it keeps the plain brand look. */
+.land-brand-btn {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.land-brand-btn:focus-visible {
+  outline: 3px solid var(--c-focus);
+  outline-offset: 4px;
+  border-radius: var(--r-xs);
+}

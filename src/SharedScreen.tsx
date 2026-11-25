@@ -1,19 +1,26 @@
 import { divIcon, latLngBounds, type LeafletKeyboardEvent, type Map as LeafletMap } from 'leaflet'
 import { MapContainer, Marker, TileLayer, ZoomControl } from 'react-leaflet'
 import { useEffect, useMemo, useState } from 'react'
-import { ImageOff, Link2Off, MapPin } from 'lucide-react'
-import { getSharedCollection } from './api/client'
+import { ArrowLeft, ImageOff, Link2Off, MapPin } from 'lucide-react'
+import { getPublicShare, getSharedCollection } from './api/client'
 import { ApiError } from './api/http'
-import type { SharedCollection, SharedPhoto } from './api/types'
+import type { SharedCollection } from './api/types'
 import { mapPinHtml } from './components/mapPinHtml'
+import VisibilityBadge from './components/VisibilityBadge'
 import { formatCaptured, plural } from './format'
 import { TILES } from './mapTiles'
+import { sharedPins, type SharedPin } from './sharedPins'
 import placeholder from './assets/photo-placeholder.svg'
 import './LandingScreen.css'
 import './SharedScreen.css'
 
+/** A link share opens by its secret token; a public share by its id, from the public map. */
+export type ShareSource = { kind: 'link'; token: string } | { kind: 'public'; shareId: string }
+
 export interface SharedScreenProps {
-  token: string
+  source: ShareSource
+  /** Returns to the public map; shown for public shares opened from it. */
+  onBackToMap?: () => void
   /** The MapMory home: the Dashboard for a signed-in owner, else the landing page. */
   onHome: () => void
 }
@@ -25,28 +32,7 @@ type Load =
   | { status: 'error' }
   | { status: 'ready'; collection: SharedCollection }
 
-/** One pin per city: shared views only ever know the city, never the exact spot (doc 3.3). */
-interface CityPin {
-  key: string
-  city: string
-  lat: number
-  lng: number
-  photos: SharedPhoto[]
-}
-
-function cityPins(photos: SharedPhoto[]): CityPin[] {
-  const pins = new Map<string, CityPin>()
-  for (const photo of photos) {
-    if (photo.display_lat === null || photo.display_lng === null || !photo.city) continue
-    const key = `${photo.city}|${photo.country ?? ''}`
-    const pin = pins.get(key) ?? { key, city: photo.city, lat: photo.display_lat, lng: photo.display_lng, photos: [] }
-    pin.photos.push(photo)
-    pins.set(key, pin)
-  }
-  return [...pins.values()]
-}
-
-function CityMarker({ pin, onSelect }: { pin: CityPin; onSelect: (key: string) => void }) {
+function CityMarker({ pin, onSelect }: { pin: SharedPin; onSelect: (key: string) => void }) {
   const count = pin.photos.length
   const label = `${plural(count, 'photo')} in ${pin.city}`
   const photo = pin.photos.find((p) => p.thumb_url)?.thumb_url ?? placeholder
@@ -75,7 +61,7 @@ function CityMarker({ pin, onSelect }: { pin: CityPin; onSelect: (key: string) =
   return <Marker position={[pin.lat, pin.lng]} icon={icon} title={label} eventHandlers={eventHandlers} />
 }
 
-function SharedMap({ pins, onSelect }: { pins: CityPin[]; onSelect: (key: string) => void }) {
+function SharedMap({ pins, onSelect }: { pins: SharedPin[]; onSelect: (key: string) => void }) {
   const [map, setMap] = useState<LeafletMap | null>(null)
 
   useEffect(() => {
@@ -119,10 +105,13 @@ function Unavailable({ title, text, onHome }: { title: string; text: string; onH
 
 /**
  * Recipient view (doc 3.2): what anyone with a share link sees, without
- * signing in. It shows only the photos the owner chose, placed by city, and
+ * signing in. It shows only the photos the owner chose, placed at coarse locations, and
  * nothing that would lead back to the rest of the trip or the owner's account.
  */
-export default function SharedScreen({ token, onHome }: SharedScreenProps) {
+export default function SharedScreen({ source, onHome, onBackToMap }: SharedScreenProps) {
+  const isPublic = source.kind === 'public'
+  // Plain strings stand in for `source`, whose object identity changes on every render.
+  const id = source.kind === 'public' ? source.shareId : source.token
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [retry, setRetry] = useState(0)
   const [city, setCity] = useState<string | null>(null)
@@ -130,7 +119,8 @@ export default function SharedScreen({ token, onHome }: SharedScreenProps) {
   useEffect(() => {
     const controller = new AbortController()
     setLoad({ status: 'loading' })
-    getSharedCollection(token, controller.signal)
+    const loading = isPublic ? getPublicShare(id, controller.signal) : getSharedCollection(id, controller.signal)
+    loading
       .then((collection) => setLoad({ status: 'ready', collection }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
@@ -139,9 +129,9 @@ export default function SharedScreen({ token, onHome }: SharedScreenProps) {
         else setLoad({ status: 'error' })
       })
     return () => controller.abort()
-  }, [token, retry])
+  }, [isPublic, id, retry])
 
-  const pins = useMemo(() => (load.status === 'ready' ? cityPins(load.collection.photos) : []), [load])
+  const pins = useMemo(() => (load.status === 'ready' ? sharedPins(load.collection.photos) : []), [load])
 
   let body
   if (load.status === 'loading') {
@@ -149,6 +139,14 @@ export default function SharedScreen({ token, onHome }: SharedScreenProps) {
       <p className="shared-text" role="status">
         Loading shared photos…
       </p>
+    )
+  } else if (load.status === 'not-found' && isPublic) {
+    body = (
+      <Unavailable
+        title="This share isn't public"
+        text="This collection is not publicly available. The owner may have revoked it, or the link may be incorrect."
+        onHome={onHome}
+      />
     )
   } else if (load.status === 'not-found') {
     body = (
@@ -177,13 +175,20 @@ export default function SharedScreen({ token, onHome }: SharedScreenProps) {
     )
   } else {
     const { collection } = load
-    const cities = pins.map((p) => p.city)
+    const cities = [...new Set(pins.map((p) => p.city).filter((name) => name !== 'Approximate location'))]
     const selected = pins.find((p) => p.key === city) ?? null
     const shown = selected ? selected.photos : collection.photos
     body = (
       <>
         <div className="shared-head">
-          <p className="shared-eyebrow">Shared with you</p>
+          {isPublic ? (
+            <p className="shared-eyebrow shared-eyebrow--public">
+              <VisibilityBadge visibility="public" />
+              <span>Shared publicly</span>
+            </p>
+          ) : (
+            <p className="shared-eyebrow">Shared with you</p>
+          )}
           <h1 className="shared-title">{collection.title}</h1>
           {collection.description ? <p className="shared-text">{collection.description}</p> : null}
           <p className="shared-meta">
@@ -194,7 +199,7 @@ export default function SharedScreen({ token, onHome }: SharedScreenProps) {
         {pins.length > 0 ? (
           <section className="shared-map-wrap" aria-label="Map of the shared photos">
             <SharedMap pins={pins} onSelect={setCity} />
-            <p className="shared-caption">Photos are placed by city only.</p>
+            <p className="shared-caption">Photos are shown at approximate shared locations, not exact positions.</p>
           </section>
         ) : null}
 
@@ -247,6 +252,12 @@ export default function SharedScreen({ token, onHome }: SharedScreenProps) {
           </span>
           <strong className="land-name">MapMory</strong>
         </div>
+        {onBackToMap ? (
+          <button type="button" className="btn btn-secondary" onClick={onBackToMap}>
+            <ArrowLeft size={16} aria-hidden />
+            Public map
+          </button>
+        ) : null}
       </header>
       <main className="shared-body">{body}</main>
     </div>
