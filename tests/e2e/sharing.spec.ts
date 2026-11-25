@@ -175,3 +175,23 @@ test('preview has no side effects, and back to edit retains the selection and au
   await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(page.getByRole('listitem', { name: 'A smaller Rome share' })).toHaveCount(0)
 })
+
+
+test('share preview explains privacy and warns only for selected suggested places', async ({ page }) => {
+  await boot(page)
+  await openShare(page, 'Rome with family')
+  await page.getByRole('button', { name: 'New share' }).click()
+  await page.getByRole('button', { name: 'Preview share' }).click()
+  await expect(page.getByText('Detailed place names, exact GPS coordinates, and original photo metadata stay private.', { exact: false })).toBeVisible()
+  // The Rome mock contains a selected Pantheon photo with label_status=suggested.
+  await expect(page.locator('.share-preview-notice')).toContainText('1 selected photo has an automatically suggested place label')
+  await expect(page.locator('.share-preview-notice')).toContainText('confirmation is not required')
+  // No share is created by previewing; the owner may edit the selection.
+  await page.getByRole('button', { name: 'Back to edit' }).click()
+  await page.getByRole('checkbox', { name: 'Pantheon, Rome' }).uncheck()
+  await page.getByRole('button', { name: 'Preview share' }).click()
+  await expect(page.locator('.share-preview-notice')).toHaveCount(0)
+  await expect(page.getByText('Detailed place names, exact GPS coordinates, and original photo metadata stay private.', { exact: false })).toBeVisible()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByText('This trip has no active shares.')).toBeVisible()
+})

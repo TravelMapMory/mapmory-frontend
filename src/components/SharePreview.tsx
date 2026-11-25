@@ -17,6 +17,7 @@ export interface SharePreviewProps {
 
 /** Review only: never uses owner GPS coordinates or performs a share API request. */
 export default function SharePreview({ title, description, mode, photos, saving, failed, onBack, onConfirm, onCancel }: SharePreviewProps) {
+  const unconfirmedCount = photos.filter((photo) => photo.label_status === 'suggested').length
   const heading = useRef<HTMLHeadingElement>(null)
   useEffect(() => { heading.current?.focus() }, [])
 
@@ -62,8 +63,13 @@ export default function SharePreview({ title, description, mode, photos, saving,
       </div>
       <p className="share-audience">
         <MapPin size={16} aria-hidden />
-        <span>Recipients will see approximate shared positions, not exact GPS coordinates. The final positions are determined by the backend when this share is created. Unselected photos stay private.</span>
+        <span>Recipients see city and country labels with approximate map positions. Detailed place names, exact GPS coordinates, and original photo metadata stay private. The backend determines the final positions when the share is created. Unselected photos stay private.</span>
       </p>
+      {unconfirmedCount > 0 ? (
+        <p className="share-preview-notice" role="status">
+          {plural(unconfirmedCount, 'selected photo')} {unconfirmedCount === 1 ? 'has' : 'have'} an automatically suggested place label that has not been confirmed. You can review it in the trip before sharing; confirmation is not required.
+        </p>
+      ) : null}
       {mode === 'public' ? (
         <p className="share-audience">Only publish photos of identifiable people if you have permission to share them publicly.</p>
       ) : null}

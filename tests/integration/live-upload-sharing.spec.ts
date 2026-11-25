@@ -40,8 +40,25 @@ interface SharedPhoto {
   exif_lng?: never
   lat?: never
   lng?: never
+  place_name?: never
+  label_status?: never
+  location_source?: never
 }
 interface Collection { title: string; photos: SharedPhoto[] }
+
+/** Inspect the raw anonymous payload, not only the TypeScript view (types cannot hide leaked JSON fields). */
+function expectSanitizedCollection(collection: Collection) {
+  expect(Array.isArray(collection.photos)).toBeTruthy()
+  for (const photo of collection.photos) {
+    for (const forbidden of ['lat', 'lng', 'exif_lat', 'exif_lng', 'place_name', 'label_status', 'location_source', 'trip_id', 'original_url']) {
+      expect(Object.prototype.hasOwnProperty.call(photo, forbidden), `anonymous photo leaked ${forbidden}`).toBe(false)
+    }
+    expect(photo).toHaveProperty('display_lat')
+    expect(photo).toHaveProperty('display_lng')
+    expect(photo).toHaveProperty('city')
+    expect(photo).toHaveProperty('country')
+  }
+}
 
 const headers = (idToken: string) => ({ Authorization: `Bearer ${idToken}` })
 
@@ -127,6 +144,7 @@ test('live storage: process two photos, share a selected photo, and revoke both 
   expect(recipientResponse.status()).toBe(200)
   const recipient = (await recipientResponse.json()) as Collection
   expect(recipient.photos.map((p) => p.id)).toEqual([gps.id])
+  expectSanitizedCollection(recipient)
   const serialized = JSON.stringify(recipient)
   for (const forbidden of ['exif_lat', 'exif_lng', 'exif', 'original_url', 'trip_id']) {
     expect(serialized, `recipient must not contain ${forbidden}`).not.toContain(`"${forbidden}"`)
@@ -150,6 +168,7 @@ test('live storage: process two photos, share a selected photo, and revoke both 
   expect(publicView.status()).toBe(200)
   const publicCollection = (await publicView.json()) as Collection
   expect(publicCollection.photos.map((p) => p.id)).toEqual([gps.id])
+  expectSanitizedCollection(publicCollection)
 
   // Public map has a hard cap, so not every share is guaranteed visible in a busy test DB.
   // A public share's own detail endpoint must still be accessible anonymously.
