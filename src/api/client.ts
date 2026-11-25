@@ -416,7 +416,6 @@ export async function restoreUploads(tripId: string, signal?: AbortSignal): Prom
   return items
 }
 
-/** Sharing remains mock-backed only until the persistent share API exists. */
 /** GET /api/trips/{id}/shares: the trip's live shares, newest first. */
 export async function listShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
   if (!live('listShares')) return mockListShares(tripId, signal)
