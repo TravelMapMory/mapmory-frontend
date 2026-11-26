@@ -1,8 +1,8 @@
 import { divIcon, latLngBounds, type LeafletKeyboardEvent, type Map as LeafletMap } from 'leaflet'
 import { MapContainer, Marker, TileLayer, ZoomControl } from 'react-leaflet'
-import { useEffect, useMemo, useState } from 'react'
-import { ArrowLeft, ImageOff, Link2Off, MapPin } from 'lucide-react'
-import { getPublicShare, getSharedCollection } from './api/client'
+import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
+import { ArrowLeft, Flag, ImageOff, Link2Off, MapPin } from 'lucide-react'
+import { getPublicShare, getSharedCollection, reportShare } from './api/client'
 import { ApiError } from './api/http'
 import type { SharedCollection } from './api/types'
 import { mapPinHtml } from './components/mapPinHtml'
@@ -13,6 +13,82 @@ import { sharedPins, type SharedPin } from './sharedPins'
 import placeholder from './assets/photo-placeholder.svg'
 import './LandingScreen.css'
 import './SharedScreen.css'
+
+const REPORT_MAX = 500
+
+/**
+ * Reporting a public share (doc 3.5): anyone viewing it can explain what is
+ * wrong. The share then leaves the public map until the team reviews it.
+ */
+function ReportShare({ shareId }: { shareId: string }) {
+  const [open, setOpen] = useState(false)
+  const [reason, setReason] = useState('')
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle')
+  const ids = useId()
+  const length = Array.from(reason.trim()).length
+
+  async function submit(event: FormEvent) {
+    event.preventDefault()
+    if (length === 0 || length > REPORT_MAX) return
+    setState('sending')
+    try {
+      await reportShare(shareId, reason.trim())
+      setState('sent')
+    } catch {
+      setState('failed')
+    }
+  }
+
+  if (state === 'sent') {
+    return (
+      <p className="shared-report-done" role="status">
+        Thank you. The MapMory team will review this share; it is hidden from the public map until then.
+      </p>
+    )
+  }
+  if (!open) {
+    return (
+      <button type="button" className="shared-report-open" onClick={() => setOpen(true)}>
+        <Flag size={14} aria-hidden />
+        Report this share
+      </button>
+    )
+  }
+  return (
+    <form className="shared-report" onSubmit={(e) => void submit(e)} aria-labelledby={`${ids}-title`}>
+      <h2 id={`${ids}-title`} className="shared-h2">
+        Report this share
+      </h2>
+      <label htmlFor={`${ids}-reason`}>What is wrong with it?</label>
+      <textarea
+        id={`${ids}-reason`}
+        className="shared-report-input"
+        rows={3}
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        aria-describedby={`${ids}-count`}
+        aria-invalid={length > REPORT_MAX}
+        disabled={state === 'sending'}
+      />
+      <p id={`${ids}-count`} className="shared-caption">
+        {length} / {REPORT_MAX}
+      </p>
+      {state === 'failed' ? (
+        <p className="shared-report-error" role="alert">
+          The report could not be sent. Try again.
+        </p>
+      ) : null}
+      <div className="shared-report-actions">
+        <button type="submit" className="btn btn-primary" disabled={state === 'sending' || length === 0 || length > REPORT_MAX}>
+          {state === 'sending' ? 'Sending…' : 'Send report'}
+        </button>
+        <button type="button" className="btn btn-secondary" onClick={() => setOpen(false)} disabled={state === 'sending'}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  )
+}
 
 /** A link share opens by its secret token; a public share by its id, from the public map. */
 export type ShareSource = { kind: 'link'; token: string } | { kind: 'public'; shareId: string }
@@ -239,6 +315,8 @@ export default function SharedScreen({ source, onHome, onBackToMap }: SharedScre
             </ul>
           )}
         </section>
+
+        {source.kind === 'public' ? <ReportShare shareId={source.shareId} /> : null}
       </>
     )
   }

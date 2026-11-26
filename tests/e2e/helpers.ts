@@ -16,14 +16,43 @@ export async function openRome(page: Page) {
 }
 
 export async function checkLayout(page: Page) {
-  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)).toBeLessThanOrEqual(1)
-  const controls = page.locator('button:visible, input:visible, select:visible')
+  await expect.poll(() =>
+    page.evaluate(() =>
+      document.documentElement.scrollWidth - window.innerWidth
+    )
+  ).toBeLessThanOrEqual(1)
+
+  const controls = page.locator(
+    'button:visible, input:visible, select:visible'
+  )
+
   for (const control of await controls.all()) {
     const box = await control.boundingBox()
     if (!box) continue
+
+    const viewportWidth = page.viewportSize()!.width
+    const hasOverflow =
+      box.x < -1 || box.x + box.width > viewportWidth + 1
+
+    if (hasOverflow) {
+      const diagnostics = await diagnoseOverflow(page)
+
+      console.error('[checkLayout] Overflow detected:', {
+        viewportWidth,
+        control: await control.evaluate((element) => ({
+          tag: element.tagName,
+          className: element.getAttribute('class'),
+          label: element.getAttribute('aria-label'),
+          text: element.textContent?.trim().slice(0, 80),
+        })),
+        boundingBox: box,
+        overflowingElements: diagnostics,
+      })
+    }
+
     expect(box.width).toBeGreaterThan(0)
     expect(box.x).toBeGreaterThanOrEqual(-1)
-    expect(box.x + box.width).toBeLessThanOrEqual(page.viewportSize()!.width + 1)
+    expect(box.x + box.width).toBeLessThanOrEqual(viewportWidth + 1)
   }
 }
 
@@ -58,4 +87,32 @@ export async function failNext(page: Page, operation: import('../../src/api/acce
     options.failures ??= {}
     options.failures[operation] = 1
   }, operation)
+}
+
+export async function diagnoseOverflow(page: Page) {
+  return page.evaluate(() => {
+    const viewportWidth = document.documentElement.clientWidth
+
+    return [...document.querySelectorAll<HTMLElement>('body *')]
+      .map((element) => {
+        const rect = element.getBoundingClientRect()
+
+        return {
+          tag: element.tagName,
+          className:
+            typeof element.className === 'string'
+              ? element.className
+              : '',
+          label: element.getAttribute('aria-label'),
+          x: rect.x,
+          right: rect.right,
+          width: rect.width,
+        }
+      })
+      .filter((item) => item.width > 0 && (
+        item.x < -1 || item.right > viewportWidth + 1
+      ))
+      .sort((a, b) => b.right - a.right)
+      .slice(0, 20)
+  })
 }

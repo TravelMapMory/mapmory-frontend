@@ -183,3 +183,47 @@
   letter-spacing: normal;
   text-transform: none;
 }
+
+.shared-report-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  margin-top: 24px;
+  padding: 0 4px;
+  background: none;
+  border: 0;
+  color: var(--c-text-2, #5b6576);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.shared-report {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 560px;
+}
+
+.shared-report-input {
+  font: inherit;
+  padding: 8px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm, 8px);
+}
+
+.shared-report-error {
+  color: #b42318;
+  margin: 0;
+}
+
+.shared-report-done {
+  margin-top: 24px;
+}
+
+.shared-report-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

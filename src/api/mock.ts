@@ -1073,3 +1073,39 @@ export async function mockPublicShare(id: string, signal?: AbortSignal): Promise
     signal,
   )
 }
+
+/** DELETE /api/trips/{id}: the trip, its photos and its shares go; links stop working at once. */
+export async function mockDeleteTrip(id: string): Promise<void> {
+  await beforeOperation('deleteTrip')
+  const index = trips.findIndex((t) => t.id === id)
+  if (index < 0) throw new NotFoundError('Trip')
+  trips.splice(index, 1)
+  for (let i = photos.length - 1; i >= 0; i--) if (photos[i].trip_id === id) photos.splice(i, 1)
+  for (let i = shares.length - 1; i >= 0; i--) if (shares[i].trip_id === id) shares.splice(i, 1)
+  saveShares()
+  return delay(undefined)
+}
+
+/** DELETE /api/me: every trip, photo and share of the demo owner goes. */
+export async function mockDeleteAccount(): Promise<void> {
+  await beforeOperation('deleteAccount')
+  trips.splice(0, trips.length)
+  photos.splice(0, photos.length)
+  shares.splice(0, shares.length)
+  saveShares()
+  return delay(undefined)
+}
+
+/**
+ * POST /api/shares/{id}/report (doc 3.5): only a listed public share can be
+ * reported; it then leaves the public map until the team reviews it.
+ */
+export async function mockReportShare(id: string, reason: string): Promise<void> {
+  await beforeOperation('reportShare')
+  const row = shares.find((s) => s.id === id)
+  if (!row || !isListedPublic(row)) throw new ApiError(404, 'not_found', 'Share not found')
+  if (!reason.trim()) throw new ApiError(400, 'invalid_request', 'reason is required')
+  row.reported_at = new Date().toISOString()
+  saveShares()
+  return delay(undefined)
+}

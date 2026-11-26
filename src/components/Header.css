@@ -85,21 +85,52 @@
   color: var(--c-primary);
   background: var(--c-page);
 }
+
 @media (max-width: 600px) {
   .hdr {
     gap: 8px;
     padding: 0 12px 0 16px;
   }
+
   .hdr-signout-label {
     display: none;
   }
+
   .hdr-tab {
     padding: 0 10px;
   }
+
+  .hdr-brand {
+    gap: 6px;
+  }
 }
-/* On the narrowest phones the tab labels carry the meaning, so drop their icons to fit Sign out. */
+
+/*
+ * At narrow phone widths, keep the brand icon, navigation labels,
+ * and account actions visible without overflowing the header.
+ */
 @media (max-width: 420px) {
+  .hdr {
+    gap: 4px;
+    padding: 0 8px;
+  }
+
+  .hdr-name {
+    display: none;
+  }
+
+  .hdr-tab {
+    padding: 0 8px;
+  }
+
   .hdr-tab svg {
     display: none;
+  }
+
+  .hdr-signout {
+    flex: none;
+    justify-content: center;
+    width: 36px;
+    padding: 0;
   }
 }

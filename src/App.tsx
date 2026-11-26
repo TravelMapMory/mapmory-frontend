@@ -2,14 +2,16 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Header, { type Screen } from './components/Header'
 import DashboardScreen from './DashboardScreen'
 import AuthScreen from './AuthScreen'
-import { firebaseEnabled, logOut, watchSignedIn } from './auth'
+import { deleteSignIn, firebaseEnabled, logOut, reauthenticateForDeletion, watchSignedIn } from './auth'
+import { completeAccountDeletion } from './accountDeletion'
 import LandingScreen from './LandingScreen'
 import PublicHeader from './components/PublicHeader'
 import MapScreen from './MapScreen'
 import NotFoundScreen from './NotFoundScreen'
 import PublicMapScreen from './PublicMapScreen'
 import SharedScreen from './SharedScreen'
-import { sharingAvailable } from './api/client'
+import { deleteAccount, sharingAvailable } from './api/client'
+import DeleteAccountPanel from './components/DeleteAccountPanel'
 import TripScreen from './TripScreen'
 import { isOwnerRoute, navigate, routeTitle, useRoute, type Route } from './router'
 import './App.css'
@@ -66,6 +68,8 @@ export default function App() {
   /** The owner page a signed-out visitor asked for, opened after they log in. */
   const returnTo = useRef<Route | null>(null)
   /** Files chosen on the Dashboard, handed to the trip page once. */
+  const [deletingAccount, setDeletingAccount] = useState(false)
+  const [deletionNotice, setDeletionNotice] = useState('')
   const [pendingUpload, setPendingUpload] = useState<{ tripId: string; files: File[] } | null>(null)
 
   const redirect = useMemo(() => redirectFor(route, signedIn), [route, signedIn])
@@ -98,6 +102,27 @@ export default function App() {
   function signIn() {
     if (!firebaseEnabled) writeSignedIn(true)
     setSignedIn(true)
+  }
+  // Reauthenticate before touching persisted data. After the backend commit,
+  // Firebase deletion can still fail independently, so report that outcome.
+  async function confirmDeleteAccount(password: string) {
+    if (firebaseEnabled) {
+      const result = await completeAccountDeletion(password, {
+        reauthenticate: reauthenticateForDeletion,
+        deleteData: deleteAccount,
+        deleteIdentity: deleteSignIn,
+      })
+      setDeletionNotice(result.status === 'identity-retained'
+        ? 'Your MapMory data was deleted, but your Firebase sign-in account could not be removed. You have been signed out. Please contact the MapMory team to finish deleting your sign-in account.'
+        : 'Your MapMory data and sign-in account were deleted.')
+    } else {
+      await deleteAccount()
+      writeSignedIn(false)
+      setDeletionNotice('Your MapMory demo account and its content were deleted.')
+    }
+    setDeletingAccount(false)
+    setSignedIn(false)
+    navigate({ name: 'landing' })
   }
   async function signOut() {
     if (firebaseEnabled) await logOut()
@@ -132,6 +157,7 @@ export default function App() {
         onSignIn={() => navigate({ name: 'login' })}
         onSignUp={() => navigate({ name: 'signup' })}
         onExplore={() => navigate({ name: 'public-map' })}
+        deletionNotice={deletionNotice}
       />
     )
   }
@@ -188,7 +214,10 @@ export default function App() {
 
   return (
     <div className="app">
-      <Header current={tab} onNavigate={openTab} onSignOut={signOut} />
+      <Header current={tab} onNavigate={openTab} onSignOut={signOut} onDeleteAccount={() => setDeletingAccount(true)} />
+      {deletingAccount ? (
+        <DeleteAccountPanel onConfirm={confirmDeleteAccount} requirePassword={firebaseEnabled} onCancel={() => setDeletingAccount(false)} />
+      ) : null}
       <main className="app-body">
         {route.name === 'dashboard' ? (
           <DashboardScreen onShowOnMap={showOnMap} onOpenTrip={openTrip} onUploadPhotos={uploadTo} />
@@ -211,6 +240,7 @@ export default function App() {
             initialFiles={pendingUpload?.tripId === route.tripId ? pendingUpload.files : undefined}
             onBack={() => openTab('dashboard')}
             onShowOnMap={showOnMap}
+            onDeleted={() => navigate({ name: 'dashboard' })}
           />
         ) : null}
       </main>

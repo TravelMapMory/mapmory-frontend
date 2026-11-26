@@ -48,8 +48,11 @@ import {
   mockListTrips,
   mockMapPhotos,
   mockPatchLocation,
+  mockDeleteAccount,
+  mockDeleteTrip,
   mockPublicMap,
   mockPublicShare,
+  mockReportShare,
   mockRevokeShare,
   mockSearchPlaces,
   mockSharedCollection,
@@ -95,6 +98,9 @@ type Endpoint =
   | 'sharedCollection'
   | 'publicMap'
   | 'publicShare'
+  | 'deleteTrip'
+  | 'deleteAccount'
+  | 'reportShare'
 
 /** Endpoints mapmory-backend serves today. */
 const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
@@ -114,6 +120,9 @@ const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
   'sharedCollection',
   'publicMap',
   'publicShare',
+  'deleteTrip',
+  'deleteAccount',
+  'reportShare',
 ])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
@@ -487,4 +496,22 @@ export async function getPublicShare(id: string, signal?: AbortSignal): Promise<
   }
   if (backendEnabled) throw publicUnavailable()
   return mockPublicShare(id, signal)
+}
+
+/** DELETE /api/trips/{id}: removes the trip with its photos and shares. Cannot be undone. */
+export async function deleteTrip(id: string): Promise<void> {
+  if (!live('deleteTrip')) return mockDeleteTrip(id)
+  await request<void>('DELETE', `/api/trips/${encodeURIComponent(id)}`)
+}
+
+/** DELETE /api/me: removes all of the owner's MapMory data (doc 3.6). The sign-in is deleted separately. */
+export async function deleteAccount(): Promise<void> {
+  if (!live('deleteAccount')) return mockDeleteAccount()
+  await request<void>('DELETE', '/api/me')
+}
+
+/** POST /api/shares/{id}/report: no account needed; hides the public share until the team reviews it. */
+export async function reportShare(id: string, reason: string): Promise<void> {
+  if (!live('reportShare')) return mockReportShare(id, reason)
+  await request<void>('POST', `/api/shares/${encodeURIComponent(id)}/report`, { body: { reason } })
 }

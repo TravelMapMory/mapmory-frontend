@@ -8,7 +8,10 @@ import { initializeApp } from 'firebase/app'
 import {
   connectAuthEmulator,
   createUserWithEmailAndPassword,
+  deleteUser,
+  EmailAuthProvider,
   getAuth,
+  reauthenticateWithCredential,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
@@ -64,4 +67,41 @@ export async function logIn(email: string, password: string): Promise<void> {
 
 export function logOut(): Promise<void> {
   return signOut(firebaseAuth())
+}
+
+/**
+ * Confirm the owner's password before any irreversible MapMory data deletion.
+ * Firebase requires a recent login for deleting an Auth identity; doing this
+ * first avoids predictably leaving an identity behind. We currently support
+ * email/password accounts; other providers must not bypass this step.
+ */
+export async function reauthenticateForDeletion(password: string): Promise<void> {
+  const current = firebaseAuth().currentUser
+  if (!current?.email || !current.providerData.some((provider) => provider.providerId === 'password')) {
+    throw new Error('Reauthentication requires an email/password account. Sign in with email and password before deleting.')
+  }
+  if (!password) throw new Error('Enter your password to continue.')
+  await reauthenticateWithCredential(current, EmailAuthProvider.credential(current.email, password))
+}
+
+export type IdentityDeletionResult =
+  | { status: 'deleted' }
+  | { status: 'identity-retained'; error: unknown }
+
+/**
+ * Run only AFTER the backend has deleted the user's MapMory data. Firebase is
+ * a separate system: even after reauthentication its delete can still fail.
+ * Preserve that failure as an explicit partial-completion result, and sign out
+ * so the user is not silently taken to a newly recreated empty account.
+ */
+export async function deleteSignIn(): Promise<IdentityDeletionResult> {
+  const current = firebaseAuth().currentUser
+  if (!current) return { status: 'identity-retained', error: new Error('No signed-in Firebase user to delete.') }
+  try {
+    await deleteUser(current)
+    return { status: 'deleted' }
+  } catch (error) {
+    await signOut(firebaseAuth())
+    return { status: 'identity-retained', error }
+  }
 }
