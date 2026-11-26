@@ -6,7 +6,7 @@
   max-width: 640px;
   padding: 20px;
   background: var(--c-surface);
-  border: 2px solid var(--c-action);
+  border: 2px solid var(--c-link);
   border-radius: var(--r-md);
 }
 

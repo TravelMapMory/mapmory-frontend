@@ -46,8 +46,12 @@ export interface GettingStartedProps {
 
 /**
  * A first-run walkthrough of the main flow (design doc 2.2 use case 1): create
- * a trip, upload photos, check their places. Each step ticks itself off from
- * the owner's data; the guide disappears once all are done, or when hidden.
+ * a trip, upload photos, check their places, drawn as a boarding pass. The stub
+ * shows progress, the route shows the three steps, and only the current step
+ * gets its explanation and button. Each step ticks itself off from the owner's
+ * data. Once all are done the ticket is stamped "Ready to share" and points to
+ * sharing; it stays until the owner closes it with Done, so finishing is seen
+ * rather than the guide silently vanishing. Hiding it at any step is remembered.
  */
 export default function GettingStarted({ accountId, trips, summary, onCreateTrip, onUpload, onOpenTrip }: GettingStartedProps) {
   const [hidden, setHidden] = useState(() => readHidden(accountId))
@@ -70,78 +74,109 @@ export default function GettingStarted({ accountId, trips, summary, onCreateTrip
     {
       done: trips.length > 0,
       title: 'Create a trip',
+      short: 'Trip',
       text: 'A trip holds the photos of one journey, such as “Japan 2025”.',
       action: { label: 'Start a trip', run: onCreateTrip, enabled: true },
     },
     {
       done: photoCount > 0,
       title: 'Upload photos',
+      short: 'Photos',
       text: 'MapMory reads where and when each photo was taken. Nothing is shared yet.',
       action: { label: 'Choose photos', run: onUpload, enabled: trips.length > 0 },
     },
     {
       done: photoCount > 0 && (reviewedOnePlace || toReview === 0),
       title: 'Check the places',
+      short: 'Places',
       text: toReview > 0
-        ? 'Review or confirm the place of one photo to finish getting started. You can review the remaining photos later.'
+        ? 'Confirm where one photo was taken to finish. The rest can wait.'
         : 'Your uploaded photos have locations and no suggestions awaiting confirmation.',
       action: reviewTripId && onOpenTrip
         ? { label: 'Review places', run: () => onOpenTrip(reviewTripId), enabled: true }
         : null,
     },
   ]
+  if (hidden) return null
+
   const completed = steps.filter((step) => step.done).length
-  if (hidden || completed === steps.length) return null
+  const finished = completed === steps.length
+  const current = steps.find((step) => !step.done) ?? steps[steps.length - 1]
+  const hide = () => {
+    writeHidden(accountId)
+    // The focused button is about to unmount; keep keyboard focus in the page, not on <body>.
+    document.getElementById('main')?.focus({ preventScroll: true })
+    setHidden(true)
+  }
 
   return (
     <section className="guide" aria-labelledby="guide-title">
-      <div className="guide-head">
-        <div>
-          <h2 id="guide-title" className="guide-title">
-            Getting started
-          </h2>
-          <p className="guide-progress">
-            {completed} of {steps.length} done · then open a trip and choose Share when you are ready
+      <div className="guide-stub">
+        <h2 id="guide-title" className="guide-stub-label">
+          Getting started
+        </h2>
+        <p className="guide-stub-count">
+          <b aria-hidden>
+            {completed}/{steps.length}
+          </b>
+          <span aria-hidden>done</span>
+          <span className="visually-hidden">
+            {completed} of {steps.length} done
+          </span>
+        </p>
+      </div>
+
+      <div className="guide-main">
+        <div className="guide-routebar">
+          <ol className="guide-route">
+            {steps.map((step) => {
+              const state = step.done ? 'done' : step === current ? 'now' : 'next'
+              return (
+                <li key={step.title} className="guide-stop" data-state={state}>
+                  {step.done ? <Check size={13} strokeWidth={3} aria-hidden /> : null}
+                  <span aria-hidden>{step.short}</span>
+                  <span className="visually-hidden">
+                    {step.title} ({state === 'done' ? 'done' : state === 'now' ? 'current step' : 'to do'})
+                  </span>
+                </li>
+              )
+            })}
+          </ol>
+          {finished ? (
+            <span className="guide-stamp" aria-hidden>
+              Ready to share
+            </span>
+          ) : null}
+        </div>
+        <div className="guide-now">
+          <h3 className="guide-now-title">{finished ? 'You’re all set' : current.title}</h3>
+          <p className="guide-now-text">
+            {finished
+              ? 'Your photos are on your map. To show a trip to family or friends, open it and choose Share.'
+              : current.text}
           </p>
         </div>
-        <button
-          type="button"
-          className="guide-hide"
-          aria-label="Hide the getting started guide"
-          onClick={() => {
-            writeHidden(accountId)
-            setHidden(true)
-          }}
-        >
+        {finished ? (
+          <button type="button" className="btn btn-action guide-action" onClick={hide}>
+            Done
+          </button>
+        ) : current.action ? (
+          <button
+            type="button"
+            className="btn btn-action guide-action"
+            onClick={current.action.run}
+            disabled={!current.action.enabled}
+          >
+            {current.action.label}
+          </button>
+        ) : null}
+      </div>
+
+      {finished ? null : (
+        <button type="button" className="guide-hide" aria-label="Hide the getting started guide" onClick={hide}>
           <X size={16} aria-hidden />
         </button>
-      </div>
-      <ol className="guide-steps">
-        {steps.map((step, index) => (
-          <li key={step.title} className="guide-step" data-done={step.done}>
-            <span className="guide-mark" aria-hidden>
-              {step.done ? <Check size={14} /> : index + 1}
-            </span>
-            <div className="guide-text">
-              <p className="guide-step-title">
-                {step.title}
-                <span className="visually-hidden">{step.done ? ' (done)' : ' (to do)'}</span>
-              </p>
-              <p className="guide-step-text">{step.text}</p>
-            </div>
-            {!step.done && step.action ? (
-              <button
-                type="button"
-                className="btn btn-secondary guide-action"
-                onClick={step.action.run}
-                disabled={!step.action.enabled}
-              >
-                {step.action.label}
-              </button>
-            ) : null}
-          </li>
-        ))}
-      </ol>
+      )}
     </section>
   )
 }

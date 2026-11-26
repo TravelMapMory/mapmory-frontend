@@ -29,3 +29,7 @@ landmark it shows.
 Under CC BY and CC BY-SA the author and licence must be credited wherever the image
 is shown or distributed; this file is that credit. CC0 and public-domain images carry
 no such obligation and are listed only for provenance.
+
+## Map tiles
+
+- Map tiles are credited on the map itself through Leaflet's attribution control: © OpenStreetMap contributors (Map, Minimal), OpenTopoMap (Terrain, CC BY-SA) and Esri World Imagery (Satellite).

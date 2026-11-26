@@ -28,8 +28,8 @@
 }
 
 .upl-drop[data-dragging='true'] {
-  border-color: var(--c-action);
-  background: #eef4fc;
+  border-color: var(--c-link);
+  background: var(--c-accent);
 }
 
 .upl-drop p {
@@ -37,7 +37,7 @@
 }
 
 .upl-choose {
-  color: var(--c-action);
+  color: var(--c-link);
   font-weight: 600;
   text-decoration: underline;
   cursor: pointer;
@@ -63,7 +63,7 @@
 .upl-progress progress {
   width: 100%;
   height: 8px;
-  accent-color: var(--c-action);
+  accent-color: var(--c-link);
 }
 
 .upl-progress p {

@@ -1,35 +1,59 @@
 /*
-  Design tokens for the MapMory frontend, from design doc 4.3. Change a value
-  here to change it everywhere.
+  Design tokens for the MapMory frontend. Revamp (local branch): an airmail
+  look drawn from the logo, Geist for UI text and Bricolage Grotesque for display type.
+  Shape rule: buttons and badges are pills, cards 18px, panels 24px, inputs 12px.
  */
 :root {
-  /* Palette (doc 4.3) */
-  --c-primary: #152238;
-  --c-action: #2f6fd0;
-  --c-accent: #ddf3ea;
-  --c-page: #f5f7fa;
+  /* Airmail palette, from the logo: flat navy ink, the pin's amber for the
+     main action (with navy text), logo blue for text links, pale
+     aerogramme-blue paper with a map grid, sky tints. Contrast checked to WCAG AA. */
+  --c-primary: #2e2e6c;
+  --c-primary-hover: #21194c;
+  /* Amber fills only: navy text on it is 8.7:1, white would fail. */
+  --c-action: #fbb04a;
+  --c-action-hover: #f59a23;
+  --c-on-action: #21194c;
+  /* Text links, selected states and form accents: 6.6:1 on the page. */
+  --c-link: #2451ac;
+  --c-accent: #e3f1fc;
+  --c-accent-strong: #bfe0f8;
+  --c-page: #eef3f9;
   --c-surface: #ffffff;
-  --c-text: #1a2433;
-  --c-text-2: #5b6576;
-  --c-border: #dde2ea;
-  --c-focus: #2f6fd0;
+  --c-surface-2: #f6f9fc;
+  --c-text: #21194c;
+  --c-text-2: #4a4b68;
+  --c-border: #dde3ee;
+  --c-border-strong: #807e98;
+  --c-focus: #2451ac;
+  --c-danger: #a3123a;
 
   /* Visibility status: always paired with an icon and a word (doc 4.3). */
-  --c-public: #b45309;
-  --c-private: #5b6576;
+  --c-public: #8a5300;
+  --c-private: #4a4b68;
 
-  /* Map pin ring tints */
-  --c-mint-bg: #d1fae5;
-  --c-amber-bg: #fef3c7;
+  /* Logo colours for marks only (pins, routes, stubs), never for text. */
+  --c-coral: #f9644e;
+  --c-sky: #41b0f5;
+  /* Done/success tint, from the logo green. */
+  --c-success-bg: #e2f3ea;
+  /* Lines of the background map grid. */
+  --c-grid: rgb(46 46 108 / 0.07);
 
-  --r-xs: 8px;
-  --r-sm: 10px;
-  --r-md: 16px;
-  --r-lg: 20px;
-  --r-pill: 100px;
+  --r-xs: 10px;
+  --r-sm: 12px;
+  --r-md: 18px;
+  --r-lg: 24px;
+  --r-pill: 999px;
 
-  --shadow-raised: 0 4px 6px rgba(21, 34, 56, 0.15);
-  --shadow-float: 0 8px 24px rgba(21, 34, 56, 0.08);
+  /* Shadows tinted to the ink hue, never pure black. */
+  --shadow-raised: 0 1px 2px rgba(33, 25, 76, 0.06), 0 4px 12px rgba(33, 25, 76, 0.07);
+  --shadow-float: 0 2px 4px rgba(33, 25, 76, 0.05), 0 16px 40px rgba(33, 25, 76, 0.12);
 
-  --font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Bricolage Grotesque Variable', 'Geist Variable', system-ui, sans-serif;
+  /* Ticket voice: dates, counts and routes read like a boarding pass. */
+  --font-mono: 'Geist Mono Variable', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur: 220ms;
 }

@@ -8,7 +8,8 @@ import MapModeSwitch from './components/MapModeSwitch'
 import PhotoClusters from './components/PhotoClusters'
 import PlaceTrips from './components/PlaceTrips'
 import PlaceSearch from './components/PlaceSearch'
-import { TILES } from './mapTiles'
+import { ANIMATE_ZOOM, BASEMAPS, useBasemap } from './mapTiles'
+import MapLayers from './components/MapLayers'
 import { plural } from './format'
 import { placeKey } from './placeKey'
 import './MapScreen.css'
@@ -57,6 +58,8 @@ export interface MapScreenProps {
  */
 export default function MapScreen({ tripId = null, onOpenTrip, onPublicMap }: MapScreenProps) {
   const [map, setMap] = useState<LeafletMap | null>(null)
+  const [basemap, setBasemap] = useBasemap()
+  const tiles = BASEMAPS[basemap]
   const [trips, setTrips] = useState<TripSummary[]>([])
   const [filters, setFilters] = useState<Filters>({ tripId: tripId ?? '', from: '', to: '', q: '' })
   const [textFilter, setTextFilter] = useState('')
@@ -164,18 +167,27 @@ export default function MapScreen({ tripId = null, onOpenTrip, onPublicMap }: Ma
       <div className="mapscreen-map">
         <MapContainer
           ref={setMap}
-          className={TILES.desaturate ? 'mapscreen-canvas mapscreen-canvas--grey' : 'mapscreen-canvas'}
+          className="mapscreen-canvas"
           center={START_CENTRE}
           zoom={START_ZOOM}
           zoomControl={false}
           worldCopyJump
-          zoomAnimation={false}
+          zoomAnimation={ANIMATE_ZOOM}
         >
-          <TileLayer url={TILES.url} attribution={TILES.attribution} />
+          <TileLayer
+            key={basemap}
+            className={tiles.desaturate ? 'basemap-grey' : undefined}
+            url={tiles.url}
+            attribution={tiles.attribution}
+            maxNativeZoom={tiles.maxNativeZoom}
+            maxZoom={19}
+          />
           <ZoomControl position="bottomright" />
           <PhotoClusters photos={photos} onSelect={setSelected} />
           <ViewportWatcher onMoveEnd={onMoveEnd} />
         </MapContainer>
+
+        <MapLayers value={basemap} onChange={setBasemap} />
 
         <div className="mapscreen-find">
           <PlaceSearch

@@ -1,8 +1,9 @@
 import { useId, useState, type FormEvent } from 'react'
-import { ArrowLeft, Eye, EyeOff, MapPin } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
 import { authErrorMessage, firebaseEnabled, logIn, signUp } from './auth'
 import './LandingScreen.css'
 import './AuthScreen.css'
+import BrandMark from './components/BrandMark'
 
 export type AuthMode = 'signup' | 'login'
 
@@ -55,9 +56,7 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
     <div className="land">
       <header className="land-hdr">
         <div className="land-brand">
-          <span className="land-logo">
-            <MapPin size={18} strokeWidth={2.6667} aria-hidden />
-          </span>
+          <BrandMark />
           <strong className="land-name">MapMory</strong>
         </div>
         <button type="button" className="btn btn-secondary" onClick={onBack}>

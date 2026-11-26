@@ -1,0 +1,155 @@
+/*
+ * Motion layer for the revamp, in one place. Every rule says something:
+ * screens cross-fade on navigation, lists arrive in order, photos fade in once
+ * loaded instead of popping, and popovers grow from
+ * their trigger. Only transform and opacity animate. Everything sits behind
+ * prefers-reduced-motion: no-preference, so reduced motion gets a still UI.
+ * Entrance animations use fill-mode `backwards`, so hover transforms still
+ * apply once they finish.
+ */
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  .app-body {
+    scroll-behavior: smooth;
+  }
+
+  /* Screens: the router wraps navigation in a view transition (router.ts); the header stays put. */
+  ::view-transition-old(root) {
+    animation: motion-fade-out 160ms var(--ease-out) both;
+  }
+
+  ::view-transition-new(root) {
+    animation: motion-fade-in 300ms var(--ease-out) both;
+  }
+
+  .hdr {
+    view-transition-name: site-header;
+  }
+
+  /* Lists arrive in reading order, 45ms apart, capped at the ninth item. */
+  .dash-stats > *,
+  .dash-trips > *,
+  .dash-recent > *,
+  .trip-gallery > *,
+  .shared-gallery > *,
+  .land-feature-list > * {
+    animation: motion-rise 520ms var(--ease-out) backwards;
+  }
+
+  :is(.dash-stats, .dash-trips, .dash-recent, .trip-gallery, .shared-gallery, .land-feature-list) > :nth-child(2) {
+    animation-delay: 45ms;
+  }
+  :is(.dash-stats, .dash-trips, .dash-recent, .trip-gallery, .shared-gallery, .land-feature-list) > :nth-child(3) {
+    animation-delay: 90ms;
+  }
+  :is(.dash-stats, .dash-trips, .dash-recent, .trip-gallery, .shared-gallery, .land-feature-list) > :nth-child(4) {
+    animation-delay: 135ms;
+  }
+  :is(.dash-stats, .dash-trips, .dash-recent, .trip-gallery, .shared-gallery, .land-feature-list) > :nth-child(5) {
+    animation-delay: 180ms;
+  }
+  :is(.dash-stats, .dash-trips, .dash-recent, .trip-gallery, .shared-gallery, .land-feature-list) > :nth-child(6) {
+    animation-delay: 225ms;
+  }
+  :is(.dash-stats, .dash-trips, .dash-recent, .trip-gallery, .shared-gallery, .land-feature-list) > :nth-child(7) {
+    animation-delay: 270ms;
+  }
+  :is(.dash-stats, .dash-trips, .dash-recent, .trip-gallery, .shared-gallery, .land-feature-list) > :nth-child(8) {
+    animation-delay: 315ms;
+  }
+  :is(.dash-stats, .dash-trips, .dash-recent, .trip-gallery, .shared-gallery, .land-feature-list) > :nth-child(n + 9) {
+    animation-delay: 360ms;
+  }
+
+  /* Photos fade in once decoded (main.tsx marks loaded images) instead of popping in. */
+  .trip-card-cover img,
+  .trip-tile-img img,
+  .dash-recent-item img,
+  .shared-tile img,
+  .pmap-share-cover,
+  .viewer-figure img {
+    opacity: 0;
+    transition: opacity 420ms var(--ease-out);
+  }
+
+  :is(.trip-card-cover, .trip-tile-img, .dash-recent-item, .shared-tile) img[data-loaded],
+  .pmap-share-cover[data-loaded],
+  .viewer-figure img[data-loaded] {
+    opacity: 1;
+  }
+
+
+  /* Popovers grow from their trigger. */
+  .acct-panel {
+    transform-origin: top right;
+    animation: motion-pop 200ms var(--ease-out) backwards;
+  }
+
+  .upl,
+  .share-link,
+  .trip-delete,
+  .share-confirm {
+    animation: motion-rise 320ms var(--ease-out) backwards;
+  }
+
+  /* The photo viewer: the backdrop fades and the photo settles into place. */
+  .viewer[open]::backdrop {
+    animation: motion-fade-in 220ms var(--ease-out) both;
+  }
+
+  .viewer[open] .viewer-figure {
+    animation: motion-zoom-in 320ms var(--ease-out) backwards;
+  }
+
+  /* Touch feedback on cards that open something. */
+  .dash-recent-item,
+  .trip-tile,
+  .shared-tile {
+    transition:
+      transform 260ms var(--ease-out),
+      box-shadow 260ms var(--ease-out);
+  }
+
+  .dash-recent-item:hover,
+  .shared-tile:hover {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes motion-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes motion-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+
+@keyframes motion-pop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+@keyframes motion-zoom-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+

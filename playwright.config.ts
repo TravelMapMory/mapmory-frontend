@@ -9,6 +9,8 @@ export default defineConfig({
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
     baseURL: 'http://127.0.0.1:4173',
+    // Motion is cosmetic: tests check the settled UI, and axe must not scan text mid-fade.
+    contextOptions: { reducedMotion: 'reduce' },
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
