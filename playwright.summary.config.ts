@@ -14,9 +14,10 @@ export default defineConfig({
     },
   ],
 
+  // Two dev servers run side by side with different env; Vite 8.4 locks one dev server per project unless told not to.
   webServer: [
     {
-      command: 'npx vite --host 127.0.0.1 --port 4181 --strictPort',
+      command: 'npx vite --host 127.0.0.1 --port 4181 --strictPort --bypass-lock',
       url: 'http://127.0.0.1:4181/',
       reuseExistingServer: false,
       env: {
@@ -24,7 +25,7 @@ export default defineConfig({
       },
     },
     {
-      command: 'npx vite --host 127.0.0.1 --port 4182 --strictPort',
+      command: 'npx vite --host 127.0.0.1 --port 4182 --strictPort --bypass-lock',
       url: 'http://127.0.0.1:4182/',
       reuseExistingServer: false,
       env: {
