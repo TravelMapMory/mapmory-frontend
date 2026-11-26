@@ -2,6 +2,7 @@ import type { Page } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { boot, openMap, openTrip, dashboard, checkLayout, tabTo } from './helpers'
 
+/** Tabs through every visible enabled control and checks each shows a focus indicator. */
 async function keyboardControls(page: Page) {
   const controls = page.locator('button:visible:not([disabled]), input:visible:not([disabled]), select:visible:not([disabled])')
   for (const target of await controls.all()) {

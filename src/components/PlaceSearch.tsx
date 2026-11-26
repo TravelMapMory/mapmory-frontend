@@ -41,6 +41,7 @@ export default function PlaceSearch({ label, placeholder, onSelect, focusOnMount
   if (activeQuery !== query) {
     setActiveQuery(query)
     setActive(-1)
+    setSettled(null)
   }
   const current = settled?.query === query ? settled : null
   const results = current?.results ?? []

@@ -53,14 +53,14 @@ export default function PlaceTrips({ photos, pinnedIds, onClose, onOpenTrip }: P
   const [photoIndex, setPhotoIndex] = useState(0)
   const places = [...new Set(photos.map((p) => p.city ?? p.place_name).filter(Boolean))]
 
-  // Opening the panel moves focus into it, so keyboard and screen-reader
-  // users land on what they just opened (and phones scroll it into view).
   const [seenPhotos, setSeenPhotos] = useState(photos)
   if (seenPhotos !== photos) {
     setSeenPhotos(photos)
     setTripIndex(0)
     setPhotoIndex(0)
   }
+  // Opening the panel moves focus into it, so keyboard and screen-reader
+  // users land on what they just opened (and phones scroll it into view).
   useEffect(() => {
     headingRef.current?.focus()
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- new photos at the place are the trigger to move focus.
