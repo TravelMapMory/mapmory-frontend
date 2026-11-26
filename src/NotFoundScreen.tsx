@@ -19,7 +19,7 @@ export default function NotFoundScreen({ signedIn, onHome }: NotFoundScreenProps
           <strong className="land-name">MapMory</strong>
         </div>
       </header>
-      <main className="nf-body">
+      <main id="main" tabIndex={-1} className="nf-body">
         <span className="nf-icon">
           <MapPinOff size={28} aria-hidden />
         </span>

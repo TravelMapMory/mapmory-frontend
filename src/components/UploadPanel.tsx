@@ -119,6 +119,8 @@ export default function UploadPanel({ tripId, photos, initialFiles, onBatchDone,
   const located = shown.filter((i) => i.state === 'ready').length
   const unlocated = shown.filter((i) => i.state === 'needs-location').length
   const failedCount = shown.filter((i) => i.state === 'failed').length
+  // The next step once a batch is done: photos without a location wait to be placed.
+  const nextToPlace = shown.find((i) => i.state === 'needs-location' && i.photo)?.photo ?? null
 
   return (
     <section className="upl" aria-labelledby={`${inputId}-title`}>
@@ -137,6 +139,11 @@ export default function UploadPanel({ tripId, photos, initialFiles, onBatchDone,
                 ? `${done} of ${plural(items.length, 'photo')} done`
                 : `Done: ${located} on the map, ${unlocated} need a location, ${failedCount} failed`}
             </p>
+            {done === items.length && nextToPlace ? (
+              <button type="button" className="btn btn-primary upl-next" onClick={() => onSetLocation(nextToPlace)}>
+                Place the {unlocated === 1 ? 'photo' : 'first photo'} without a location
+              </button>
+            ) : null}
           </div>
           <ul className="upl-list">
             {shown.map((item) => {

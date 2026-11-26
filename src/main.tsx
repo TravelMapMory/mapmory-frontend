@@ -11,6 +11,9 @@ if (!container) {
 
 createRoot(container).render(
   <StrictMode>
+    <a className="skip-link" href="#main">
+      Skip to content
+    </a>
     <App />
   </StrictMode>,
 )

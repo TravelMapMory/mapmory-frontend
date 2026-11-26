@@ -40,8 +40,8 @@ export interface TripScreenProps {
   initialFiles?: File[]
   onBack: () => void
   onShowOnMap: (tripId: string) => void
-  /** Called after the trip was deleted; the trip page no longer exists then. */
-  onDeleted: () => void
+  /** Called with the trip's title after it was deleted; the trip page no longer exists then. */
+  onDeleted: (title: string) => void
 }
 
 /**
@@ -54,7 +54,7 @@ function DeleteTripConfirm({
   onCancel,
 }: {
   trip: TripDetail
-  onDeleted: () => void
+  onDeleted: (title: string) => void
   onCancel: () => void
 }) {
   const [deleting, setDeleting] = useState(false)
@@ -71,7 +71,7 @@ function DeleteTripConfirm({
     setFailed(false)
     try {
       await deleteTrip(trip.id)
-      onDeleted()
+      onDeleted(trip.title)
     } catch {
       setFailed(true)
       setDeleting(false)

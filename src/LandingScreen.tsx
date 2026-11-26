@@ -50,7 +50,7 @@ export default function LandingScreen({ onSignIn, onSignUp, onExplore, deletionN
         </button>
       </header>
 
-      <main className="land-body">
+      <main id="main" tabIndex={-1} className="land-body">
         {deletionNotice ? <p role="status" className="land-delete-notice">{deletionNotice}</p> : null}
         <section className="land-hero" aria-labelledby="land-title">
           <div className="land-hero-text">

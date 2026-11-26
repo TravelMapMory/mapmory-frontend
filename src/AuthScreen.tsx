@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
-import { ArrowLeft, MapPin } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, MapPin } from 'lucide-react'
 import { authErrorMessage, firebaseEnabled, logIn, signUp } from './auth'
 import './LandingScreen.css'
 import './AuthScreen.css'
@@ -26,6 +26,7 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -65,7 +66,7 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
         </button>
       </header>
 
-      <main className="auth-body">
+      <main id="main" tabIndex={-1} className="auth-body">
         <section className="auth-card" aria-labelledby={`${id}-title`}>
           <h1 id={`${id}-title`} className="auth-title">
             {title}
@@ -87,13 +88,31 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
             </div>
             <div className="auth-field">
               <label htmlFor={`${id}-password`}>Password</label>
-              <input
-                id={`${id}-password`}
-                name="password"
-                type="password"
-                autoComplete={signup ? 'new-password' : 'current-password'}
-                required={firebaseEnabled}
-              />
+              <div className="auth-password">
+                <input
+                  id={`${id}-password`}
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={signup ? 'new-password' : 'current-password'}
+                  required={firebaseEnabled}
+                  minLength={signup && firebaseEnabled ? 6 : undefined}
+                  aria-describedby={signup ? `${id}-password-hint` : undefined}
+                />
+                <button
+                  type="button"
+                  className="auth-reveal"
+                  aria-pressed={showPassword}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  onClick={() => setShowPassword((value) => !value)}
+                >
+                  {showPassword ? <EyeOff size={18} aria-hidden /> : <Eye size={18} aria-hidden />}
+                </button>
+              </div>
+              {signup ? (
+                <p id={`${id}-password-hint`} className="auth-hint">
+                  At least 6 characters. We will email you a link to confirm your address.
+                </p>
+              ) : null}
             </div>
             {error ? (
               <p className="auth-error" role="alert">

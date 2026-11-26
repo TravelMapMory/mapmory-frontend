@@ -89,3 +89,40 @@
     padding: 24px 20px;
   }
 }
+
+.auth-password {
+  position: relative;
+}
+
+.auth-password input {
+  box-sizing: border-box;
+  width: 100%;
+  padding-right: 48px;
+}
+
+.auth-reveal {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 40px;
+  transform: translateY(-50%);
+  background: none;
+  border: 0;
+  border-radius: var(--r-sm, 8px);
+  color: var(--c-text-2);
+  cursor: pointer;
+}
+
+.auth-reveal:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: -2px;
+}
+
+.auth-hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--c-text-2);
+}

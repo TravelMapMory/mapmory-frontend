@@ -10,6 +10,9 @@ const messages: Record<string, string> = {
   'auth/user-disabled': 'This account has been disabled.',
   'auth/too-many-requests': 'Too many attempts. Wait a moment and try again.',
   'auth/network-request-failed': 'Could not reach the sign-in service. Check your connection and try again.',
+  'auth/requires-recent-login': 'For your security, sign in again and then retry.',
+  'auth/operation-not-allowed': 'Email sign-in is not enabled for this site yet. Please contact the MapMory team.',
+  'auth/invalid-api-key': 'Sign-in is misconfigured on this site. Please contact the MapMory team.',
 }
 
 /** A message the user can act on; Firebase's own text and codes stay out of the UI. */

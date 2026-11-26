@@ -1,0 +1,118 @@
+.verify {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px 16px;
+  max-width: 1104px;
+  margin: 16px auto 0;
+  padding: 14px 20px;
+  background: #eef4fd;
+  border: 1px solid #c8daf6;
+  border-radius: var(--r-md, 12px);
+}
+
+.verify-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--c-action);
+}
+
+.verify-text {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+
+.verify-title {
+  margin: 0 0 2px;
+  font-size: 16px;
+}
+
+.verify-text p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.verify-status:empty {
+  display: none;
+}
+
+.verify-status,
+.verify-error {
+  margin-top: 6px !important;
+  font-size: 13px;
+}
+
+.verify-error {
+  color: #b42318;
+}
+
+.verify-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.verify--done {
+  background: var(--c-mint-bg, #d1fae5);
+  border-color: #9fdcc0;
+}
+
+.verify--done .verify-icon {
+  color: #15803d;
+}
+
+/* Over the map: a compact card just below the place search box (the header
+   is 65px and the search box ends 56px into the map), so it always sits on
+   the map, on desktop and on phone, and never changes the map's size. */
+.verify--floating {
+  position: absolute;
+  top: 133px;
+  left: 16px;
+  z-index: 1000;
+  gap: 8px 10px;
+  max-width: min(440px, calc(100vw - 32px));
+  margin: 0;
+  padding: 10px 12px;
+  box-shadow: 0 10px 30px rgba(21, 34, 56, 0.18);
+}
+
+.verify--floating .verify-icon {
+  display: none;
+}
+
+.verify--floating .verify-text {
+  flex-basis: 100%;
+}
+
+.verify--floating .verify-title {
+  font-size: 15px;
+}
+
+.verify--floating .verify-text p {
+  font-size: 13px;
+}
+
+.verify--floating .verify-actions {
+  gap: 6px;
+}
+
+.verify--floating .btn {
+  min-height: 36px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+@media (max-width: 600px) {
+  .verify {
+    margin: 12px 16px 0;
+  }
+
+  .verify--floating {
+    top: 129px;
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    margin: 0;
+  }
+}

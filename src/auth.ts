@@ -13,7 +13,9 @@ import {
   getAuth,
   reauthenticateWithCredential,
   onAuthStateChanged,
+  sendEmailVerification,
   signInWithEmailAndPassword,
+  type User,
   signOut,
   updateProfile,
   type Auth,
@@ -57,12 +59,65 @@ export function watchSignedIn(onChange: (signedIn: boolean) => void): () => void
 }
 
 export async function signUp(name: string, email: string, password: string): Promise<void> {
-  const { user } = await createUserWithEmailAndPassword(firebaseAuth(), email, password)
+  const { user } = await createUserWithEmailAndPassword(firebaseAuth(), email.trim(), password)
   if (name.trim()) await updateProfile(user, { displayName: name.trim() })
+  // Ask Firebase to send a verification link. Signing up never fails on it:
+  // the owner can resend from the verification banner.
+  try {
+    await sendVerification(user)
+  } catch {
+    // Network or quota trouble: the banner's Resend button covers it.
+  }
+}
+
+/**
+ * Sends the verification email with a link back to this site. Firebase refuses
+ * a return address whose domain is not authorised in the project; the email
+ * then goes out without one, so it is always sent.
+ */
+async function sendVerification(user: User): Promise<void> {
+  try {
+    await sendEmailVerification(user, { url: `${window.location.origin}/dashboard` })
+  } catch (error) {
+    const code = typeof error === 'object' && error && 'code' in error ? String(error.code) : ''
+    if (code !== 'auth/unauthorized-continue-uri' && code !== 'auth/invalid-continue-uri') throw error
+    await sendEmailVerification(user)
+  }
+}
+
+/** Who is signed in, for the account menu and the verification banner; null when nobody is. */
+export interface Account {
+  name: string
+  email: string
+  emailVerified: boolean
+}
+
+export function currentAccount(): Account | null {
+  const user = firebaseAuth().currentUser
+  if (!user) return null
+  const email = user.email ?? ''
+  return { name: user.displayName?.trim() || email, email, emailVerified: user.emailVerified }
+}
+
+/** Sends the verification email again. */
+export async function resendVerification(): Promise<void> {
+  const user = firebaseAuth().currentUser
+  if (!user) throw new Error('Not signed in')
+  await sendVerification(user)
+}
+
+/** Asks Firebase whether the address was verified since sign-in, for example in another tab. */
+export async function refreshVerification(): Promise<boolean> {
+  const user = firebaseAuth().currentUser
+  if (!user) return false
+  await user.reload()
+  // A fresh ID token carries email_verified to the backend too.
+  await user.getIdToken(true)
+  return user.emailVerified
 }
 
 export async function logIn(email: string, password: string): Promise<void> {
-  await signInWithEmailAndPassword(firebaseAuth(), email, password)
+  await signInWithEmailAndPassword(firebaseAuth(), email.trim(), password)
 }
 
 export function logOut(): Promise<void> {

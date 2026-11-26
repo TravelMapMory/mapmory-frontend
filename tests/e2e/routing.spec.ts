@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures'
-import { boot, openMap, openTrip } from './helpers'
+import { boot, openMap, openTrip, signOut } from './helpers'
 
 test('each page has its own address and Back/Forward move between them', async ({ page }) => {
   await boot(page)
@@ -33,7 +33,7 @@ test('a signed-out visitor opening an owner page logs in and lands on that page'
   await boot(page)
   await openTrip(page, 'Rome with family')
   const tripUrl = page.url()
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await signOut(page)
   await expect(page).toHaveURL(/\/$/)
   await page.goto(tripUrl)
   await expect(page).toHaveURL(/\/login$/)

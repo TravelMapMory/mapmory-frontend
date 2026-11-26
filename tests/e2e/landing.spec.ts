@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures'
-import { checkLayout } from './helpers'
+import { checkLayout, signOut } from './helpers'
 
 test('signed-out visitors see the landing page with the three main features', async ({ page }) => {
   await page.goto('/')
@@ -34,7 +34,7 @@ test('creating an account with filled details opens the Dashboard', async ({ pag
   await page.getByRole('button', { name: 'Get started', exact: true }).click()
   await page.getByLabel('Name').fill('Kristian')
   await page.getByLabel('Email').fill('demo@example.com')
-  await page.getByLabel('Password').fill('secret')
+  await page.getByLabel('Password', { exact: true }).fill('secret')
   await page.getByRole('button', { name: 'Create account', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
 })
@@ -43,12 +43,12 @@ test('Sign in opens log in, any details open the Dashboard, and sign out returns
   await page.goto('/')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Log in to MapMory', exact: true })).toBeVisible()
-  await page.getByLabel('Password').press('Enter')
+  await page.getByLabel('Password', { exact: true }).press('Enter')
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
   await checkLayout(page)
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await signOut(page)
   await expect(page.getByRole('button', { name: 'Get started', exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('button', { name: 'Get started', exact: true })).toBeVisible()
