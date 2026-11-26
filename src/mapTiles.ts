@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Map as LeafletMap } from 'leaflet'
 
 /** One selectable basemap: its tiles, credits and a single preview tile of Europe for the layers menu. */
 export interface BasemapSpec {
@@ -62,6 +63,18 @@ export type Basemap = keyof typeof BASEMAPS
  * viewers who ask for reduced motion (Leaflet does not check that itself).
  */
 export const ANIMATE_ZOOM = !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+/**
+ * Leaflet 1.9.4 finishes a zoom animation from a timer that survives
+ * map.remove(), so a map unmounted mid-zoom (switching My photos and Public
+ * right after the map frames its pins) throws "_leaflet_pos". The finishing
+ * step is skipped once the map's panes are gone.
+ */
+type ZoomEndPatch = { _onZoomTransitionEnd: () => void; _mapPane?: HTMLElement }
+const zoomEnd = (LeafletMap.prototype as unknown as ZoomEndPatch)._onZoomTransitionEnd
+;(LeafletMap.prototype as unknown as ZoomEndPatch)._onZoomTransitionEnd = function (this: ZoomEndPatch) {
+  if (this._mapPane) zoomEnd.call(this)
+}
 
 const STORAGE_KEY = 'mapmory.basemap'
 

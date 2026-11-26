@@ -229,29 +229,33 @@ test('the layers button picks a basemap, closes on Escape or an outside click, a
 test.describe('with motion on', () => {
   test.use({ contextOptions: { reducedMotion: 'no-preference' } })
 
-  test('switching between My photos and Public never pushes the map past the page, so no scrollbar flashes', async ({ page }) => {
-    // The phone layout puts the panel under the map and scrolls on purpose.
-    test.skip(test.info().project.name === 'phone', 'phone map page scrolls by design')
+  test('switching between My photos and Public never pushes the page past its settled height, so no scrollbar flashes', async ({ page }) => {
     await boot(page)
     await openMap(page)
     const modes = page.getByRole('navigation', { name: 'Map mode' })
     for (const name of ['Public', 'My photos']) {
-      const overflow = await modes.getByRole('button', { name, exact: true }).evaluate(async (button) => {
+      const { before, worst, settled } = await modes.getByRole('button', { name, exact: true }).evaluate(async (button) => {
+        const overflow = () => {
+          const body = document.querySelector('.app-body')
+          return body ? body.scrollHeight - body.clientHeight : 0
+        }
+        const before = overflow()
         let worst = 0
         const start = performance.now()
         ;(button as HTMLButtonElement).click()
         await new Promise<void>((resolve) => {
           const tick = () => {
-            const body = document.querySelector('.app-body')
-            if (body) worst = Math.max(worst, body.scrollHeight - body.clientHeight)
+            worst = Math.max(worst, overflow())
             if (performance.now() - start < 700) requestAnimationFrame(tick)
             else resolve()
           }
           tick()
         })
-        return worst
+        await new Promise((resolve) => setTimeout(resolve, 600))
+        return { before, worst, settled: overflow() }
       })
-      expect(overflow, `overflow while switching to ${name}`).toBeLessThanOrEqual(0)
+      // Phone and tablet map pages scroll by design; only overflow beyond both settled screens would flash.
+      expect(worst, `overflow while switching to ${name}`).toBeLessThanOrEqual(Math.max(before, settled))
     }
   })
 })
