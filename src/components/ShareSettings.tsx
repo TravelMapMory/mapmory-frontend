@@ -4,6 +4,7 @@ import { createShare, listShares, listTripPhotos, revokeShare } from '../api/cli
 import { loadAllPages } from '../api/paging'
 import type { Photo, Share, ShareMode, TripDetail } from '../api/types'
 import { formatUploaded, plural } from '../format'
+import { photoLocationLabel } from '../photoLocation'
 import SharePreview from './SharePreview'
 import './ShareSettings.css'
 
@@ -248,7 +249,7 @@ function NewShareForm({
         </div>
         <ul className="share-grid">
           {photos.map((photo) => {
-            const label = photo.place_name ?? 'Photo without a location'
+            const label = photoLocationLabel(photo)
             return (
               <li key={photo.id}>
                 <label className="share-pick">

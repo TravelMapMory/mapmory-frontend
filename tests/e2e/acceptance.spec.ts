@@ -87,7 +87,8 @@ test('place search selects suggestions and Escape closes suggestions before corr
   await page.keyboard.press('Enter')
   await tabTo(page, page.getByRole('button', { name: 'Save location', exact: true }))
   await page.keyboard.press('Enter')
-  await expect(page.locator('.trip-saved')).toHaveText('Location saved: Rome, Italy.')
+  // The result label includes the country, but the saved place name is Rome.
+  await expect(page.locator('.trip-saved')).toHaveText('Location saved: Rome.')
   await expect(page.getByRole('button', { name: 'Set location', exact: true })).toHaveCount(0)
   await expect(page.getByText('The capture time never changes;', { exact: false })).toHaveCount(0)
 })

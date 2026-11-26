@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { CalendarDays, ChevronLeft, ChevronRight, FolderOpen, ImageOff, X } from 'lucide-react'
 import type { MapPhoto } from '../api/types'
 import { formatCaptured, plural } from '../format'
+import { photoLocationLabel, photoPlaceName } from '../photoLocation'
 import './PlaceTrips.css'
 
 /** The owner's photos from one trip at a place. */
@@ -111,7 +112,7 @@ export default function PlaceTrips({ photos, pinnedIds, onClose, onOpenTrip }: P
           onKeyDown={onMediaKey}
         >
           {photo.display_url ? (
-            <img src={photo.display_url} alt={photo.place_name ? `Photo at ${photo.place_name}` : 'Photo'} />
+            <img src={photo.display_url} alt={photoPlaceName(photo) ? `Photo at ${photoPlaceName(photo)}` : 'Photo'} />
           ) : (
             <div className="pa-media-empty">
               <ImageOff size={24} aria-hidden />
@@ -139,7 +140,7 @@ export default function PlaceTrips({ photos, pinnedIds, onClose, onOpenTrip }: P
         </div>
 
         <div className="pa-body">
-          <p className="pa-place">{photo.place_name ?? 'Unnamed place'}</p>
+          <p className="pa-place">{photoLocationLabel(photo)}</p>
           {photo.capture_time_local ? (
             <p className="pa-meta">
               <CalendarDays size={14} aria-hidden />
