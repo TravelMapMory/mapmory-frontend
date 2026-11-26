@@ -385,3 +385,22 @@
   border-radius: var(--r-sm);
   background: var(--c-surface);
 }
+
+.land-foot {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 48px 40px;
+  font-size: 14px;
+}
+.land-foot a,
+.auth-privacy a {
+  color: var(--c-link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 600px) {
+  .land-foot {
+    padding: 0 16px 32px;
+  }
+}

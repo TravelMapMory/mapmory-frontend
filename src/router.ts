@@ -11,6 +11,7 @@ import { flushSync } from 'react-dom'
  *   /login            log in           /map?trip={id}     Map, one trip selected
  *   /s/{token}        shared link      /trips/{id}        Trip detail
  *   /map/public       Map · Public     /public/{id}       a public share
+ *   /privacy          privacy policy
  */
 export type Route =
   | { name: 'landing' }
@@ -22,6 +23,7 @@ export type Route =
   | { name: 'shared'; token: string }
   | { name: 'public-map' }
   | { name: 'public-share'; shareId: string }
+  | { name: 'privacy' }
   | { name: 'not-found' }
 
 /** Pages only the signed-in owner may see. */
@@ -37,6 +39,7 @@ export function parseRoute(pathname: string, search: string): Route {
   if (path === '/dashboard') return { name: 'dashboard' }
   if (path === '/map') return { name: 'map', tripId: new URLSearchParams(search).get('trip') || null }
   if (path === '/map/public') return { name: 'public-map' }
+  if (path === '/privacy') return { name: 'privacy' }
   const trip = /^\/trips\/([^/]+)$/.exec(path)
   const shared = /^\/s\/([^/]+)$/.exec(path)
   const publicShare = /^\/public\/([^/]+)$/.exec(path)
@@ -69,6 +72,8 @@ export function routeHref(route: Route): string {
       return `/s/${encodeURIComponent(route.token)}`
     case 'public-map':
       return '/map/public'
+    case 'privacy':
+      return '/privacy'
     case 'public-share':
       return `/public/${encodeURIComponent(route.shareId)}`
   }
@@ -93,6 +98,8 @@ export function routeTitle(route: Route): string {
       return 'Public map · MapMory'
     case 'public-share':
       return 'Public share · MapMory'
+    case 'privacy':
+      return 'Privacy policy · MapMory'
     case 'not-found':
       return 'Page not found · MapMory'
     default:

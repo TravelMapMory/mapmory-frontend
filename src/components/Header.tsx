@@ -7,12 +7,15 @@ import BrandMark from './BrandMark'
 export type Screen = 'dashboard' | 'map'
 
 export interface HeaderProps {
-  current:Screen
+  /** The open tab, or null on a page that belongs to neither (the privacy policy). */
+  current: Screen | null
   onNavigate:(screen: Screen)=>void
   /** Returns to the landing page; without it the account menu is not shown. */
   onSignOut?: () => void
   /** Opens account deletion (doc 3.6). */
   onDeleteAccount?: () => void
+  /** Opens the privacy policy from the account menu. */
+  onPrivacy?: () => void
   /** The signed-in owner, for the account menu. */
   account?: { name: string; email?: string }
 }
@@ -23,7 +26,7 @@ const TABS: { id: Screen; label: string; icon: typeof MapIcon }[] = [
 
 // The navigation bar shared by Dashboard and Map (doc 4): the brand on the leading edge and the two views as tabs
 
-export default function Header({ current, onNavigate, onSignOut, onDeleteAccount, account }: HeaderProps) {
+export default function Header({ current, onNavigate, onSignOut, onDeleteAccount, onPrivacy, account }: HeaderProps) {
   return (
     <header className="hdr">
       <div className="hdr-brand">
@@ -47,12 +50,13 @@ export default function Header({ current, onNavigate, onSignOut, onDeleteAccount
           ))}
         </ul>
       </nav>
-      {onSignOut && onDeleteAccount ? (
+      {onSignOut && onDeleteAccount && onPrivacy ? (
         <AccountMenu
           name={account?.name || 'Your account'}
           detail={account?.email}
           onSignOut={onSignOut}
           onDeleteAccount={onDeleteAccount}
+          onPrivacy={onPrivacy}
         />
       ) : null}
     </header>
