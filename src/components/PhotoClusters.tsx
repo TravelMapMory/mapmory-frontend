@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 import type { MapPhoto } from '../api/types'
 import { mapPinHtml } from './mapPinHtml'
 import placeholder from '../assets/photo-placeholder.svg'
+import { ANIMATE_ZOOM } from '../mapTiles'
 
 /** Pins whose centres are closer than this many screen pixels merge into one cluster. */
 const RADIUS_PX = 88
@@ -118,7 +119,7 @@ export default function PhotoClusters({ photos, onSelect }: PhotoClustersProps) 
         const bounds = latLngBounds(cluster.photos.map((p) => [p.lat, p.lng]))
         const target = Math.min(map.getBoundsZoom(bounds.pad(0.2)), MAX_FIT_ZOOM)
         if (target > map.getZoom()) {
-          map.flyToBounds(bounds, { padding: [80, 80], maxZoom: MAX_FIT_ZOOM, duration: 0.6 })
+          map.flyToBounds(bounds, { padding: [80, 80], maxZoom: MAX_FIT_ZOOM, animate: ANIMATE_ZOOM, duration: 0.6 })
           return
         }
       }

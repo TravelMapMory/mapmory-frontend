@@ -143,7 +143,7 @@ export default function PublicMapScreen({ onOpenShare, onMyPhotos }: PublicMapSc
         const target = Math.min(map.getBoundsZoom(bounds.pad(0.2)), MAX_FIT_ZOOM)
         if (target > map.getZoom()) {
           setSelected(null)
-          map.flyToBounds(bounds, { padding: [80, 80], maxZoom: MAX_FIT_ZOOM, duration: 0.6 })
+          map.flyToBounds(bounds, { padding: [80, 80], maxZoom: MAX_FIT_ZOOM, animate: ANIMATE_ZOOM, duration: 0.6 })
           return
         }
       }
@@ -187,7 +187,7 @@ export default function PublicMapScreen({ onOpenShare, onMyPhotos }: PublicMapSc
           <PlaceSearch
             label="Find a place"
             placeholder="Find a place"
-            onSelect={(place) => map?.flyTo([place.lat, place.lng], place.zoom, { duration: 0.8 })}
+            onSelect={(place) => map?.flyTo([place.lat, place.lng], place.zoom, { animate: ANIMATE_ZOOM, duration: 0.8 })}
           />
         </div>
 

@@ -60,8 +60,8 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
     setPin(next)
     setSource(label)
     if (map) {
-      if (zoom !== undefined) map.flyTo([next.lat, next.lng], zoom, { duration: 0.6 })
-      else map.panTo([next.lat, next.lng])
+      if (zoom !== undefined) map.flyTo([next.lat, next.lng], zoom, { animate: ANIMATE_ZOOM, duration: 0.6 })
+      else map.panTo([next.lat, next.lng], { animate: ANIMATE_ZOOM })
     }
   }
 
