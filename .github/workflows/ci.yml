@@ -6,7 +6,32 @@ on:
   pull_request:
 
 jobs:
+  # The Playwright suite is the slow part (~10 min in one job), so each project
+  # runs in its own job in parallel; fail-fast is off so one run reports every
+  # project's failures.
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [checks, desktop, tablet, phone]
+    name: e2e (${{ matrix.project }})
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Acceptance tests
+        run: npx playwright test --project=${{ matrix.project }}
+
+  # Keeps the name of the required status check, so it still gates merges and
+  # deploys: it passes only when every e2e project passed too.
   build:
+    needs: e2e
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -24,8 +49,6 @@ jobs:
         run: npm run test:typecheck
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
-      - name: Acceptance tests
-        run: npm run test:acceptance
       - name: Mock/live boundary tests
         run: npm run test:boundaries
       - name: Docker build
