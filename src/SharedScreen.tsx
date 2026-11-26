@@ -147,7 +147,7 @@ function SharedMap({ pins, onSelect }: { pins: SharedPin[]; onSelect: (key: stri
 
   useEffect(() => {
     if (!map || pins.length === 0) return
-    map.fitBounds(latLngBounds(pins.map((p) => [p.lat, p.lng])), { padding: [64, 64], maxZoom: 10 })
+    map.fitBounds(latLngBounds(pins.map((p) => [p.lat, p.lng])), { padding: [64, 64], maxZoom: 10, animate: ANIMATE_ZOOM })
   }, [map, pins])
 
   return (

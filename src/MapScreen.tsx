@@ -126,7 +126,7 @@ export default function MapScreen({ tripId = null, onOpenTrip, onPublicMap }: Ma
     fitPending.current = false
     if (photos.length === 0) return
     const bounds = latLngBounds(photos.map((p) => [p.lat, p.lng]))
-    map.fitBounds(bounds, { padding: [64, 64], maxZoom: 12 })
+    map.fitBounds(bounds, { padding: [64, 64], maxZoom: 12, animate: ANIMATE_ZOOM })
   }, [map, photos, load.status])
 
   const onMoveEnd = useCallback(
@@ -193,7 +193,7 @@ export default function MapScreen({ tripId = null, onOpenTrip, onPublicMap }: Ma
           <PlaceSearch
             label="Find a place"
             placeholder="Find a place"
-            onSelect={(place) => map?.flyTo([place.lat, place.lng], place.zoom, { duration: 0.8 })}
+            onSelect={(place) => map?.flyTo([place.lat, place.lng], place.zoom, { animate: ANIMATE_ZOOM, duration: 0.8 })}
           />
         </div>
 
