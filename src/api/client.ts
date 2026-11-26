@@ -50,6 +50,7 @@ import {
   mockPatchLocation,
   mockDeleteAccount,
   mockDeleteTrip,
+  mockDeletePhoto,
   mockPublicMap,
   mockPublicShare,
   mockReportShare,
@@ -101,6 +102,7 @@ type Endpoint =
   | 'deleteTrip'
   | 'deleteAccount'
   | 'reportShare'
+  | 'deletePhoto'
 
 /** Endpoints mapmory-backend serves today. */
 const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
@@ -123,6 +125,8 @@ const LIVE: ReadonlySet<Endpoint> = new Set<Endpoint>([
   'deleteTrip',
   'deleteAccount',
   'reportShare',
+  // Backend #67; merge only after the backend that serves it is deployed.
+  'deletePhoto',
 ])
 
 const backendEnabled = Boolean(import.meta.env.VITE_API_URL)
@@ -502,6 +506,16 @@ export async function getPublicShare(id: string, signal?: AbortSignal): Promise<
 export async function deleteTrip(id: string): Promise<void> {
   if (!live('deleteTrip')) return mockDeleteTrip(id)
   await request<void>('DELETE', `/api/trips/${encodeURIComponent(id)}`)
+}
+
+/**
+ * DELETE /api/photos/{id} (backend #67): removes one photo and its stored
+ * images; the trip, its other photos and its shares stay. Cannot be undone.
+ * A 409 photo_busy means it is still uploading or processing.
+ */
+export async function deletePhoto(id: string): Promise<void> {
+  if (!live('deletePhoto')) return mockDeletePhoto(id)
+  await request<void>('DELETE', `/api/photos/${encodeURIComponent(id)}`)
 }
 
 /** DELETE /api/me: removes all of the owner's MapMory data (doc 3.6). The sign-in is deleted separately. */

@@ -19,13 +19,23 @@ import {
   Upload,
   type LucideIcon,
 } from 'lucide-react'
-import { deleteTrip, getTrip, hasUnfinishedUploads, listTripPhotos, patchPhotoLocation, sharingAvailable } from './api/client'
+import {
+  deletePhoto,
+  deleteTrip,
+  getTrip,
+  hasUnfinishedUploads,
+  listTripPhotos,
+  patchPhotoLocation,
+  sharingAvailable,
+} from './api/client'
 import { loadPages, mergePage, type FetchPage } from './api/paging'
 import LoadMore from './components/LoadMore'
 import { useLoadMore } from './useLoadMore'
 import type { LocationPatch, Photo, TripDetail } from './api/types'
 import LocationPicker from './components/LocationPicker'
 import PhotoViewer, { viewerImage } from './components/PhotoViewer'
+import DeletePhotoConfirm from './components/DeletePhotoConfirm'
+import { photoAlreadyGone } from './photoDeletion'
 import TripDetailsForm from './components/TripDetailsForm'
 import ShareSettings from './components/ShareSettings'
 import UploadPanel from './components/UploadPanel'
@@ -176,8 +186,52 @@ function ViewableThumb({ photo, onView }: { photo: Photo; onView: (photo: Photo)
   )
 }
 
+/**
+ * A failed upload has no image, so it never opens in the viewer: its tile
+ * offers Delete photo instead, with the same confirmation.
+ */
+function DeleteFailedPhoto({ photo, onDelete }: { photo: Photo; onDelete: (photo: Photo) => Promise<void> }) {
+  const [confirming, setConfirming] = useState(false)
+  const opener = useRef<HTMLButtonElement>(null)
+  const returnFocus = useRef(false)
+
+  useEffect(() => {
+    if (confirming || !returnFocus.current) return
+    returnFocus.current = false
+    opener.current?.focus()
+  }, [confirming])
+
+  if (confirming) {
+    return (
+      <DeletePhotoConfirm
+        place="This failed upload"
+        onConfirm={() => onDelete(photo)}
+        onCancel={() => {
+          returnFocus.current = true
+          setConfirming(false)
+        }}
+      />
+    )
+  }
+  return (
+    <button ref={opener} type="button" className="btn btn-secondary trip-action" onClick={() => setConfirming(true)}>
+      <Trash2 size={14} aria-hidden />
+      Delete photo
+    </button>
+  )
+}
+
 /** The owner's way to fix a photo: confirm a suggestion, or pick the place. */
-function PhotoActions({ photo, onCorrect }: { photo: Photo; onCorrect: (photo: Photo) => void }) {
+function PhotoActions({
+  photo,
+  onCorrect,
+  onDelete,
+}: {
+  photo: Photo
+  onCorrect: (photo: Photo) => void
+  onDelete: (photo: Photo) => Promise<void>
+}) {
+  if (photo.state === 'failed') return <DeleteFailedPhoto photo={photo} onDelete={onDelete} />
   if (photo.state === 'needs-location') {
     return (
       <button type="button" className="btn btn-primary trip-action" onClick={() => onCorrect(photo)}>
@@ -328,9 +382,10 @@ interface PhotoListProps {
   photos: Photo[]
   onCorrect: (photo: Photo) => void
   onView: (photo: Photo) => void
+  onDelete: (photo: Photo) => Promise<void>
 }
 
-function GalleryTiles({ photos, onCorrect, onView }: PhotoListProps) {
+function GalleryTiles({ photos, onCorrect, onView, onDelete }: PhotoListProps) {
   return (
     <ul className="trip-gallery">
       {photos.map((photo) => {
@@ -351,7 +406,7 @@ function GalleryTiles({ photos, onCorrect, onView }: PhotoListProps) {
                 {formatCaptured(photo.capture_time_local) ?? 'No capture time'}
                 {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
               </p>
-              <PhotoActions photo={photo} onCorrect={onCorrect} />
+              <PhotoActions photo={photo} onCorrect={onCorrect} onDelete={onDelete} />
             </div>
           </li>
         )
@@ -361,15 +416,15 @@ function GalleryTiles({ photos, onCorrect, onView }: PhotoListProps) {
 }
 
 /** Photos in capture order; undated ones (already last) get their own group when dated ones exist too. */
-function Gallery({ photos, onCorrect, onView }: PhotoListProps) {
+function Gallery({ photos, ...actions }: PhotoListProps) {
   const dated = photos.filter((p) => captureTime(p) !== null)
   const undated = photos.filter((p) => captureTime(p) === null)
-  if (dated.length === 0 || undated.length === 0) return <GalleryTiles photos={photos} onCorrect={onCorrect} onView={onView} />
+  if (dated.length === 0 || undated.length === 0) return <GalleryTiles photos={photos} {...actions} />
   return (
     <>
-      <GalleryTiles photos={dated} onCorrect={onCorrect} onView={onView} />
+      <GalleryTiles photos={dated} {...actions} />
       <h3 className="trip-day-title trip-undated-title">No capture date</h3>
-      <GalleryTiles photos={undated} onCorrect={onCorrect} onView={onView} />
+      <GalleryTiles photos={undated} {...actions} />
     </>
   )
 }
@@ -393,7 +448,7 @@ function journeyDays(photos: Photo[]): [string, Photo[]][] {
 }
 
 /** Journey log (doc 3.2): the trip day by day, in capture order. */
-function Journey({ photos, onCorrect, onView }: PhotoListProps) {
+function Journey({ photos, onCorrect, onView, onDelete }: PhotoListProps) {
   const ordered = journeyDays(photos)
   // Days count from the trip's first day, so a day without photos still advances the number.
   const first = ordered[0]?.[0]
@@ -423,7 +478,7 @@ function Journey({ photos, onCorrect, onView }: PhotoListProps) {
                     </p>
                     {status ? <StatusBadge status={status} /> : null}
                   </div>
-                  <PhotoActions photo={photo} onCorrect={onCorrect} />
+                  <PhotoActions photo={photo} onCorrect={onCorrect} onDelete={onDelete} />
                 </li>
               )
             })}
@@ -512,6 +567,24 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, 
   }, [refresh])
 
   const reload = useCallback(() => void refresh(), [refresh])
+
+  /**
+   * Deletes one photo (frontend #59). Only a confirmed success changes the
+   * page: a failure rejects, so the confirmation keeps the photo and says why.
+   * Afterwards the trip reloads, so counts, cover, places to review, the
+   * journey and share selections match the server without a page reload.
+   */
+  async function removePhoto(photo: Photo) {
+    try {
+      await deletePhoto(photo.id)
+    } catch (error) {
+      // Already gone (deleted in another tab or on another device): that is what the owner asked for.
+      if (!photoAlreadyGone(error)) throw error
+    }
+    setCorrecting((open) => (open?.id === photo.id ? null : open))
+    setMessage('Photo deleted.')
+    void refresh()
+  }
 
   async function saveLocation(photo: Photo, patch: LocationPatch) {
     const updated = await patchPhotoLocation(photo.id, patch)
@@ -724,9 +797,19 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, 
             ) : null}
           </div>
         ) : view === 'gallery' ? (
-          <Gallery photos={photos} onCorrect={setCorrecting} onView={(photo) => setViewing(photo.id)} />
+          <Gallery
+            photos={photos}
+            onCorrect={setCorrecting}
+            onView={(photo) => setViewing(photo.id)}
+            onDelete={removePhoto}
+          />
         ) : (
-          <Journey photos={photos} onCorrect={setCorrecting} onView={(photo) => setViewing(photo.id)} />
+          <Journey
+            photos={photos}
+            onCorrect={setCorrecting}
+            onView={(photo) => setViewing(photo.id)}
+            onDelete={removePhoto}
+          />
         )}
 
         {load.nextCursor ? (
@@ -749,6 +832,7 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, 
           hasMore={load.nextCursor !== null}
           moreState={moreState}
           onLoadMore={loadMorePhotos}
+          onDelete={removePhoto}
         />
       ) : null}
     </div>

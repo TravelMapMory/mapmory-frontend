@@ -150,6 +150,32 @@
   outline-color: #fff;
 }
 
+.viewer-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  align-self: center;
+  min-height: 40px;
+  padding: 0 14px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  border-radius: var(--r-sm, 8px);
+  color: #fecaca;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.viewer-delete:hover {
+  background: rgba(180, 35, 24, 0.35);
+  color: #fff;
+}
+
+.viewer-delete:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
 .viewer-shortcuts {
   margin: 0;
   color: #c9d1dd;
