@@ -171,12 +171,12 @@ export interface ApiMeSummary {
   recently_uploaded: ApiPhoto[]
 }
 
-/** `Place`: one GET /api/places/search hit, a city or a country. */
+/** `Place`: one named location from GET /api/places/search. */
 export interface ApiPlace {
   id: string
   name: string
   label: string
-  kind: 'city' | 'country'
+  kind: 'city' | 'country' | 'locality' | 'street' | 'amenity'
   lat: number
   lng: number
   zoom: number

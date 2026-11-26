@@ -76,10 +76,10 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
     <div className="lpick">
       <PlaceSearch
         label="Search for the place"
-        placeholder="City or country"
+        placeholder="Search a place, district or street"
         showLabel
         autoFocus
-        onSelect={(found) => place(found, found.label, found.kind === 'country' ? 5 : 12)}
+        onSelect={(found) => place(found, found.label, found.zoom)}
       />
       {previous ? (
         <button
