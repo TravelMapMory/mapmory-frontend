@@ -18,7 +18,7 @@ export default function PrivacyScreen() {
         <ul>
           <li>MapMory is a student project. Your photos and trips are private until you share them.</li>
           <li>We keep your original photos, the place and time stored in them, and the trip text you type.</li>
-          <li>Your email address and password stay with Google&rsquo;s sign-in service. Our database does not store them.</li>
+          <li>Google&rsquo;s sign-in service (Firebase) handles your email address and password. Our database does not store them.</li>
           <li>The exact position of a photo is sent to Geoapify to find the city name. Shares show only approximate positions.</li>
           <li>The map in your browser loads from outside services. They can see your IP address.</li>
           <li>You can delete a trip, or your whole account, in the app.</li>
@@ -29,7 +29,7 @@ export default function PrivacyScreen() {
         <h2 id="pp-who">Who runs MapMory and how to reach us</h2>
         <p>
           MapMory is run by the MapMory student team as a project in the Design of Web Services course at Aalto University, 2026.
-          It is not a company and has no staff to answer requests.
+          It is not a company.
         </p>
         <p>
           To ask a question about privacy, open an issue on our <a href={ISSUES_URL}>GitHub issue tracker</a>.
@@ -38,6 +38,7 @@ export default function PrivacyScreen() {
           <strong>Issues are public.</strong> Do not post personal data, photos, locations or share links in an issue. If you want
           your data removed, you can do it yourself in the app (see &ldquo;Deleting your data&rdquo;).
         </p>
+        <p>If someone else&rsquo;s public share shows you, use Report on that share page.</p>
       </section>
 
       <section aria-labelledby="pp-data">
@@ -51,8 +52,8 @@ export default function PrivacyScreen() {
             Firebase sends you the email to confirm your address.
           </li>
           <li>
-            Our server only receives a sign-in token from Firebase. It stores an ID that ties your data to your Firebase account.
-            It does not store your email address or name.
+            With each request our server receives a sign-in token from Firebase. The token includes your email address, but the server
+            uses only your account ID from it. It stores that ID to tie your data to your Firebase account. It does not store your email address or name.
           </li>
         </ul>
 
@@ -61,7 +62,7 @@ export default function PrivacyScreen() {
           <li>You upload JPEG or PNG files up to 25 MB. They go from your browser straight to Google Cloud Storage.</li>
           <li>
             The original file is kept exactly as you uploaded it, including any location, time and camera details inside it.
-            We never show or share the original. Only you can see your own photos through the app.
+            We never show or share the original. Unless you share them, only you can see your photos in the app.
           </li>
           <li>
             Our server reads the GPS position, the capture time and the orientation from the original. It saves the position and
@@ -119,7 +120,8 @@ export default function PrivacyScreen() {
           </li>
           <li>
             <strong>Geoapify</strong> finds place names. Our server sends it a photo&rsquo;s exact latitude and longitude after an
-            upload, again when you correct the position, and again for a retry. If the lookup fails, we retry up to three more times when you open the trip.
+            upload, and again when you move a photo by hand on the map (not when you pick a place from the search list). If the lookup
+            fails, we retry up to three more times when you open the trip.
             It also receives the text of place searches and the city and country text used when you create a share. Geoapify sees
             our server&rsquo;s IP address, not yours.
           </li>
@@ -147,7 +149,7 @@ export default function PrivacyScreen() {
             <strong>Google sign-in servers</strong> (googleapis.com) are contacted when you sign up, log in, stay signed in or delete your account.
           </li>
         </ul>
-        <p>Fonts and images are served from mapmory.app itself. Your browser does not contact Geoapify.</p>
+        <p>Fonts, scripts and the app&rsquo;s own pictures are served from mapmory.app itself. Your browser does not contact Geoapify.</p>
       </section>
 
       <section aria-labelledby="pp-sharing">
@@ -163,15 +165,16 @@ export default function PrivacyScreen() {
           </li>
           <li>
             People who open a share see its title, description and date, and for each photo the display image, capture time, city,
-            country and an approximate position. They do not see your name, email, trip title or trip notes.
+            country and an approximate position. The share title starts as your trip title, and you can change it before you share.
+            People who open a share do not see your name, email address or trip notes.
           </li>
           <li>
             The approximate position is the centre of the city when known. Otherwise it is the exact position rounded to about 1 km.
             Exact coordinates are not sent in a share.
           </li>
           <li>
-            Anyone can report a public share. A reported public share is hidden from the public map and its public page until a team member checks it.
-            Its link version keeps working.
+            Anyone can report a public share. A reported public share is hidden from the public map and its public page until a team member reviews the report by hand.
+            Nobody is notified automatically, so this can take a while. Its link version keeps working.
           </li>
           <li>
             <strong>Revoking</strong> a share stops it at once. Image links already issued can keep working for up to 1 hour. Anyone who
@@ -190,13 +193,15 @@ export default function PrivacyScreen() {
         </p>
         <h3>Delete your account</h3>
         <p>
-          In the account menu, choose &ldquo;Delete account&hellip;&rdquo; and enter your password. We remove all your trips and photos, then your
-          record in our database, then your sign-in account at Firebase. If the last step fails, you are signed out and your MapMory data is already gone,
-          but your sign-in account remains. The app tells you if this happens.
+          In the account menu, choose &ldquo;Delete account&hellip;&rdquo; and enter your password. We remove all your trips and photos and your
+          record in our database, then the photo files in Cloud Storage, then your sign-in account at Firebase. As with trips, photo files that
+          fail to delete can stay behind. If deleting the sign-in account fails, you are signed out and your MapMory data is already gone,
+          but your sign-in account remains. The app tells you if this happens. You can then sign in again and choose &ldquo;Delete account&hellip;&rdquo;
+          once more to remove it.
         </p>
         <h3>What can remain</h3>
         <ul>
-          <li>Cloud Storage keeps deleted files recoverable for 7 days before they are gone for good.</li>
+          <li>Cloud Storage keeps deleted files recoverable for 7 days (its soft-delete setting) before it deletes them.</li>
           <li>
             Logs, and backups kept by Google Cloud, Supabase or Firebase, can hold data for a while. We have not set our own retention
             period for them and make no promise about them.
@@ -213,16 +218,17 @@ export default function PrivacyScreen() {
         </p>
         <ul>
           <li>
-            <strong>Sign-in session</strong> (IndexedDB, set by Firebase): <code>firebaseLocalStorageDb</code> holds who you are signed in as, and
-            <code> firebase-heartbeat-database</code> holds the Firebase SDK version and date.
+            <strong>Sign-in session</strong> (IndexedDB, set by Firebase): <code>firebaseLocalStorageDb</code> holds who you are signed in as and your sign-in tokens, and{' '}
+            <code>firebase-heartbeat-database</code> holds the Firebase SDK version and date.
           </li>
           <li>
             <code>mapmory.basemap</code> (local storage): the map style you chose.
           </li>
           <li>
             <code>mapmory.uploads.&#123;trip id&#125;</code> (local storage): the files you are uploading to a trip, with their original
-            file names and the temporary upload address, so an interrupted upload can be resumed. Unfinished entries are kept for 7 days and
-            finished ones for 1 day.
+            file names and the temporary upload address, so an interrupted upload can be resumed. The app stops using an unfinished entry after 7 days and a finished
+            one after 1 day, and removes old entries the next time you upload to that trip. Signing out or deleting your account does not clear
+            these entries. You can clear them in your browser&rsquo;s site settings.
           </li>
           <li>
             <code>mapmory.guide.places-reviewed.&#123;account id&#125;</code> and <code>mapmory.guide.hidden.&#123;account id&#125;</code> (local storage):
@@ -237,8 +243,7 @@ export default function PrivacyScreen() {
       <section aria-labelledby="pp-changes">
         <h2 id="pp-changes">Changes to this policy</h2>
         <p>
-          When the app changes in a way that affects your data, we update this page and its effective date. This version is effective
-          27 November 2026.
+          We update this page when the app changes how it handles your data; the date above shows the current version.
         </p>
       </section>
     </article>
