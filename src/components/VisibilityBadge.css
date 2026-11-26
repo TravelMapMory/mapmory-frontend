@@ -15,3 +15,7 @@
 .vis-badge[data-visibility='public'] {
   color:var(--c-public);
 }
+.vis-badge[data-visibility='review'] {
+  background:#fff8eb;
+  color:#93370d;
+}

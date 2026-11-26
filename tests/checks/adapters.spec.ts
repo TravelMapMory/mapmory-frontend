@@ -251,6 +251,19 @@ test('a place search hit keeps every field the map and correction dialog use', (
   }
   expect(toPlace(kyoto)).toEqual(kyoto)
   expect(toPlace({ ...kyoto, kind: 'country', city: null, zoom: 5 }).city).toBeNull()
+  for (const [kind, zoom] of [['locality', 14], ['street', 16], ['amenity', 17]] as const) {
+    const detailed: ApiPlace = {
+      ...kyoto,
+      id: `helsinki-${kind}`,
+      name: 'Rautatientori',
+      label: 'Rautatientori, Helsinki, Finland',
+      kind,
+      zoom,
+      city: 'Helsinki',
+      country: 'Finland',
+    }
+    expect(toPlace(detailed)).toEqual(detailed)
+  }
 })
 
 // Contract 0.0.9 (backend link and public shares).
@@ -265,10 +278,12 @@ test('a share turns its token into the recipient address and drops the raw token
     token: 'abcdefghijklmnopqrstuv',
     created_at: '2026-11-22T20:00:00Z',
     revoked_at: null,
+    under_review: true,
   }
   const result = toShare(share, 'https://mapmory.app')
   expect(result.url).toBe('https://mapmory.app/s/abcdefghijklmnopqrstuv')
   expect(result.mode).toBe('public')
+  expect(result.under_review).toBe(true)
   expect(result.photo_ids).toEqual(['p1', 'p2'])
   expect('token' in result).toBe(false)
 })

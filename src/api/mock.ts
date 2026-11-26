@@ -322,8 +322,14 @@ function summarise(trip: TripRow): ApiTrip {
     countries: distinct(located.map((p) => p.country)),
     start_date: dated[0] ?? null,
     end_date: dated[dated.length - 1] ?? null,
-    visibility: 'private',
+    ...shareState(trip.id),
   }
+}
+
+/** Like the backend: public while a live public share exists, under review while one of them is reported. */
+function shareState(tripId: string): Pick<ApiTrip, 'visibility' | 'under_review'> {
+  const live = shares.filter((s) => s.trip_id === tripId && s.mode === 'public' && s.revoked_at === null)
+  return { visibility: live.length > 0 ? 'public' : 'private', under_review: live.some((s) => Boolean(s.reported_at)) }
 }
 /**
  * Simulated network latency, so loading states are actually exercised.
@@ -787,7 +793,7 @@ export async function mockUploadPhotos(
 }
 
 /** A share row: the owner's view plus the secret token its link carries. */
-interface ShareRow extends Omit<Share, 'url'> {
+interface ShareRow extends Omit<Share, 'url' | 'under_review'> {
   token: string
   /** Doc 3.5: a reported public share is hidden from the public map until the team reviews it. */
   reported_at?: string | null
@@ -928,8 +934,9 @@ function shareUrl(token: string): string {
   return `${window.location.origin}/s/${token}`
 }
 
-function toShare({ token, ...row }: ShareRow): Share {
-  return { ...row, url: shareUrl(token) }
+/** The owner's view of a row, like the backend: a pending report marks it under review. */
+function toShare({ token, reported_at, ...row }: ShareRow): Share {
+  return { ...row, url: shareUrl(token), under_review: Boolean(reported_at) }
 }
 
 /** Only photos with an image can be shared; processing and failed ones have nothing to show. */
@@ -943,12 +950,11 @@ function newToken(): string {
   return btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_')
 }
 
-/** The owner's active links for a trip, newest first. Revoked links are history, not shown. */
+/** The owner's active shares (links and public) for a trip, newest first, like the backend. Revoked ones are history. */
 export async function mockListShares(tripId: string, signal?: AbortSignal): Promise<Share[]> {
   await beforeOperation('listShares', signal)
-  // Share settings manage links only; public shares arrive with the public share mode.
   const items = shares
-    .filter((s) => s.trip_id === tripId && s.mode === 'link' && s.revoked_at === null)
+    .filter((s) => s.trip_id === tripId && s.revoked_at === null)
     .sort((a, b) => b.created_at.localeCompare(a.created_at))
     .map(toShare)
   return delay(items, undefined, signal)

@@ -52,6 +52,7 @@ export function toTripSummary(trip: ApiTrip): TripSummary {
     end_date: trip.end_date ?? null,
     // Trips are private until the owner shares one (doc 3.3).
     visibility: trip.visibility ?? 'private',
+    under_review: trip.under_review ?? false,
   }
 }
 

@@ -28,6 +28,7 @@ test('a backend trip becomes a private trip card with neutral aggregates', () =>
     start_date: null,
     end_date: null,
     visibility: 'private',
+    under_review: false,
   })
 })
 

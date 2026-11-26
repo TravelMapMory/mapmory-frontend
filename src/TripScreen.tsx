@@ -558,7 +558,9 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, 
 
       <header className="trip-head">
         <div className="trip-head-text">
-          <VisibilityBadge visibility={trip.visibility} />
+          <span className="trip-badges">
+            <VisibilityBadge visibility={trip.visibility} underReview={trip.under_review} />
+          </span>
           <h1 className="trip-title">{trip.title}</h1>
           <p className="trip-meta">
             {[dates, plural(trip.photo_count, 'photo'), trip.cities.length > 0 ? trip.cities.join(' · ') : null]

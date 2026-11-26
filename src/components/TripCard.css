@@ -43,6 +43,8 @@
   position: absolute;
   top: 10px;
   left: 10px;
+  display: flex;
+  gap: 6px;
 }
 
 .trip-card-badge .vis-badge {

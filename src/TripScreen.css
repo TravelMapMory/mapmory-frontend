@@ -52,6 +52,12 @@
   border: 1px solid var(--c-border);
 }
 
+.trip-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .trip-title {
   margin: 0;
   font-size: 28px;

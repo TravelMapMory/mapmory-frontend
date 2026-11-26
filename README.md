@@ -267,6 +267,8 @@ docker build \
   -t mapmory-frontend .
 ```
 
+The image also takes `VITE_API_URL` and the four `VITE_FIREBASE_*` settings as build args. Left empty, it serves the mock data with the demo sign-in. The `deploy` job passes each one from the Actions variable of the same name and refuses to build when `VITE_API_URL` is set without `VITE_FIREBASE_API_KEY`. In production, `VITE_API_URL` is `https://mapmory.app`, because Caddy serves `/api` from the same origin. Set these variables only once the API runs in database mode; the order is in [backend #53](https://github.com/TravelMapMory/mapmory-backend/issues/53).
+
 ### Photo metadata
 
 The upload prototype accepts JPEG and PNG images up to 25,000,000 bytes (25 MB).
