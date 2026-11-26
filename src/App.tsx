@@ -102,13 +102,12 @@ export default function App() {
 
   // Firebase knows the name and email once the session is restored; the demo has none.
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- reads Firebase's current user, an external system.
     setAccount(signedIn && firebaseEnabled ? currentAccount() : null)
   }, [signedIn])
 
   // Leaving the trip page drops files it was given, so Back/Forward cannot upload them twice.
-  useEffect(() => {
-    if (pendingUpload && !(route.name === 'trip' && route.tripId === pendingUpload.tripId)) setPendingUpload(null)
-  }, [route, pendingUpload])
+  if (pendingUpload && !(route.name === 'trip' && route.tripId === pendingUpload.tripId)) setPendingUpload(null)
 
   // Signing in leaves the log-in page through the redirect above.
   function signIn() {

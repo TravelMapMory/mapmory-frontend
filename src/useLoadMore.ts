@@ -22,6 +22,7 @@ export function useLoadMore<T>(fetchPage: FetchPage<T>, context: unknown) {
     setState('idle')
   }, [])
 
+  // oxlint-disable-next-line react/exhaustive-effect-dependencies -- a new context is the reset trigger; the body only cancels.
   useEffect(() => cancel, [context, cancel])
 
   const loadMore = useCallback(

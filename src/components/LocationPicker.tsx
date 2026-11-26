@@ -89,7 +89,7 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
         label="Search for the place"
         placeholder="Search a place, district or street"
         showLabel
-        autoFocus
+        focusOnMount
         onSelect={(found: Place) => place(found, found.label, found.zoom, {
           name: found.name, kind: found.kind, city: found.city, country: found.country,
         })}

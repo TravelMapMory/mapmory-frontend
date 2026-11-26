@@ -73,6 +73,7 @@ export default function TripDetailsForm({ trip, onSaved, onCancel }: TripDetails
   }
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape cancels from any focused descendant; the container itself is not a control.
     <form
       className="trip-edit"
       aria-labelledby={`${ids}-heading`}

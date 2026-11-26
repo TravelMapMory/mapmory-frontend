@@ -1,4 +1,5 @@
 import { expect, type Locator, type Page } from '@playwright/test'
+import type { AcceptanceOptions, MockOperation } from '../../src/api/acceptanceOptions'
 
 /** Reach controls through the keyboard rather than assigning focus directly. */
 export async function tabTo(page: Page, target: Locator) {
@@ -56,7 +57,8 @@ export async function checkLayout(page: Page) {
   }
 }
 
-export async function boot(page: Page, options: import('../../src/api/acceptanceOptions').AcceptanceOptions = {}) {
+/** Starts the app with the given acceptance-mock options and signs in through the onboarding flow. */
+export async function boot(page: Page, options: AcceptanceOptions = {}) {
   await page.addInitScript((value) => {
     Object.assign(globalThis, { __MAPMORY_ACCEPTANCE__: value })
   }, options)
@@ -81,11 +83,12 @@ export async function openMap(page: Page, count = 11) {
   await expect(page.locator('.mp-count')).toHaveText(`${count} ${count === 1 ? 'photo' : 'photos'} on the map`)
 }
 
-export async function failNext(page: Page, operation: import('../../src/api/acceptanceOptions').MockOperation) {
-  await page.evaluate((operation) => {
-    const options = (globalThis as typeof globalThis & { __MAPMORY_ACCEPTANCE__: import('../../src/api/acceptanceOptions').AcceptanceOptions }).__MAPMORY_ACCEPTANCE__
+/** Makes the next call of the given mock operation fail once. */
+export async function failNext(page: Page, operation: MockOperation) {
+  await page.evaluate((name) => {
+    const options = (globalThis as typeof globalThis & { __MAPMORY_ACCEPTANCE__: AcceptanceOptions }).__MAPMORY_ACCEPTANCE__
     options.failures ??= {}
-    options.failures[operation] = 1
+    options.failures[name] = 1
   }, operation)
 }
 
