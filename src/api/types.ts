@@ -133,13 +133,13 @@ export interface MapPhotoPage {
   items: MapPhoto[]
   truncated: boolean
 }
-/** One `GET /api/places/search` hit: a world place, not one of the owner's photos. */
+/** One `GET /api/places/search` hit: a named place, not one of the owner's photos. */
 export interface Place {
   id: string
   name: string
   /** "Paris, France" style label for lists. */
   label: string
-  kind: 'city' | 'country'
+  kind: 'city' | 'country' | 'locality' | 'street' | 'amenity'
   lat: number
   lng: number
   /** Map zoom that frames the place. */

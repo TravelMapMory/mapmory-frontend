@@ -251,6 +251,19 @@ test('a place search hit keeps every field the map and correction dialog use', (
   }
   expect(toPlace(kyoto)).toEqual(kyoto)
   expect(toPlace({ ...kyoto, kind: 'country', city: null, zoom: 5 }).city).toBeNull()
+  for (const [kind, zoom] of [['locality', 14], ['street', 16], ['amenity', 17]] as const) {
+    const detailed: ApiPlace = {
+      ...kyoto,
+      id: `helsinki-${kind}`,
+      name: 'Rautatientori',
+      label: 'Rautatientori, Helsinki, Finland',
+      kind,
+      zoom,
+      city: 'Helsinki',
+      country: 'Finland',
+    }
+    expect(toPlace(detailed)).toEqual(detailed)
+  }
 })
 
 // Contract 0.0.9 (backend link and public shares).
