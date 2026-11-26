@@ -47,6 +47,12 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: (trip: TripSummary
   const [failed, setFailed] = useState(false)
   const [titleError, setTitleError] = useState<string | null>(null)
   const inputId = useId()
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  // The form opens from the owner's own click, so the name field takes focus once, as autoFocus would.
+  useEffect(() => {
+    inputRef.current?.focus()
+  }, [])
 
   async function submit(event: FormEvent) {
     event.preventDefault()
@@ -68,6 +74,7 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: (trip: TripSummary
   }
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape cancels from any focused descendant; the container itself is not a control.
     <form
       className="dash-create"
       onSubmit={submit}
@@ -91,7 +98,7 @@ function CreateTripForm({ onCreated, onCancel }: { onCreated: (trip: TripSummary
           aria-invalid={titleError !== null}
           aria-describedby={titleError ? `${inputId}-error` : undefined}
           required
-          autoFocus
+          ref={inputRef}
         />
         <button type="submit" className="btn btn-primary" disabled={saving || !title.trim()}>
           {saving ? 'Creating…' : 'Create'}
@@ -149,6 +156,7 @@ function UploadForm({
   }, [complete])
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape cancels from any focused descendant; the container itself is not a control.
     <form
       className="upl"
       onSubmit={(event) => event.preventDefault()}

@@ -63,6 +63,15 @@ function ViewportWatcher({ onMoveEnd }: { onMoveEnd: (map: LeafletMap) => void }
   return null
 }
 
+/** A fetch's identity: the same object means the same request, so a new one is loading until it settles. */
+interface PublicRequest {
+  query: PublicMapQuery
+  retry: number
+}
+
+/** How a request ended. */
+type Settled = { request: PublicRequest; status: 'ready' | 'error' | 'unavailable' }
+
 type Load = { status: 'loading' } | { status: 'ready' } | { status: 'error' } | { status: 'unavailable' }
 
 export interface PublicMapScreenProps {
@@ -86,7 +95,7 @@ export default function PublicMapScreen({ onOpenShare, onMyPhotos }: PublicMapSc
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [query, setQuery] = useState<PublicMapQuery | null>(null)
   const [page, setPage] = useState<PublicMapPage>({ clusters: [], truncated: false })
-  const [load, setLoad] = useState<Load>({ status: 'loading' })
+  const [settled, setSettled] = useState<Settled | null>(null)
   const [retry, setRetry] = useState(0)
   const [selected, setSelected] = useState<PublicCluster | null>(null)
   const moveTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
@@ -94,9 +103,7 @@ export default function PublicMapScreen({ onOpenShare, onMyPhotos }: PublicMapSc
   const ids = useId()
 
   // The first request waits for the map, which knows the visible area.
-  useEffect(() => {
-    if (map) setQuery(queryFor(map))
-  }, [map])
+  if (map && query === null) setQuery(queryFor(map))
 
   const onMoveEnd = useCallback((m: LeafletMap) => {
     saveView(m)
@@ -108,23 +115,26 @@ export default function PublicMapScreen({ onOpenShare, onMyPhotos }: PublicMapSc
   }, [])
   useEffect(() => () => clearTimeout(moveTimer.current), [])
 
+  /** One identity per distinct fetch (area or retry click), so loading is derived instead of set. */
+  const request = useMemo<PublicRequest | null>(() => (query ? { query, retry } : null), [query, retry])
+  const load: Load = request && settled?.request === request ? { status: settled.status } : { status: 'loading' }
+
   // The previous clusters stay on the map while the next area loads, so pins do not blink.
   useEffect(() => {
-    if (!query) return
+    if (!request) return
     const controller = new AbortController()
-    setLoad({ status: 'loading' })
-    getPublicMap(query, controller.signal)
+    getPublicMap(request.query, controller.signal)
       .then((next) => {
         setPage(next)
-        setLoad({ status: 'ready' })
+        setSettled({ request, status: 'ready' })
       })
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
-        if (error instanceof ApiError && error.code === 'not_implemented') setLoad({ status: 'unavailable' })
-        else setLoad({ status: 'error' })
+        if (error instanceof ApiError && error.code === 'not_implemented') setSettled({ request, status: 'unavailable' })
+        else setSettled({ request, status: 'error' })
       })
     return () => controller.abort()
-  }, [query, retry])
+  }, [request])
 
   useEffect(() => {
     if (selected) headingRef.current?.focus()
@@ -206,6 +216,7 @@ export default function PublicMapScreen({ onOpenShare, onMyPhotos }: PublicMapSc
         ) : null}
       </div>
 
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape clears the selection from any focused descendant; the panel itself is not a control. */}
       <aside
         className="mapscreen-panel"
         aria-label="Public photos"

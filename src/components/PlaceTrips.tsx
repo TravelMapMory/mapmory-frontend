@@ -55,10 +55,15 @@ export default function PlaceTrips({ photos, pinnedIds, onClose, onOpenTrip }: P
 
   // Opening the panel moves focus into it, so keyboard and screen-reader
   // users land on what they just opened (and phones scroll it into view).
-  useEffect(() => {
+  const [seenPhotos, setSeenPhotos] = useState(photos)
+  if (seenPhotos !== photos) {
+    setSeenPhotos(photos)
     setTripIndex(0)
     setPhotoIndex(0)
+  }
+  useEffect(() => {
     headingRef.current?.focus()
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- new photos at the place are the trigger to move focus.
   }, [photos])
 
   const trip = trips[Math.min(tripIndex, trips.length - 1)]
@@ -104,10 +109,12 @@ export default function PlaceTrips({ photos, pinnedIds, onClose, onOpenTrip }: P
       </div>
 
       <article className="pa-card" aria-label={tripName(trip)}>
+        {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- arrow keys on the picture step through photos; the buttons give the same action. */}
         <div
           className="pa-media"
           role="group"
           aria-label={`Photos in ${trip.title}`}
+          // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- arrow keys step photos, so the keyboard must be able to reach the picture.
           tabIndex={manyPhotos ? 0 : undefined}
           onKeyDown={onMediaKey}
         >

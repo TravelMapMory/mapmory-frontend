@@ -201,6 +201,7 @@ function NewShareForm({
   }
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape cancels from any focused descendant; the container itself is not a control.
     <form
       className="share-form"
       onSubmit={submit}
@@ -362,6 +363,7 @@ export default function ShareSettings({ trip }: ShareSettingsProps) {
 
   useEffect(() => {
     const controller = new AbortController()
+    // oxlint-disable-next-line react/set-state-in-effect -- refresh sets state only after its request resolves, never synchronously.
     void refresh(controller.signal)
     return () => controller.abort()
   }, [refresh])

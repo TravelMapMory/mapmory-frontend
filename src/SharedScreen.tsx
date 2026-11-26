@@ -110,6 +110,16 @@ type Load =
   | { status: 'error' }
   | { status: 'ready'; collection: SharedCollection }
 
+/** What a request that has not settled yet looks like; one shared object keeps `load` stable between renders. */
+const LOADING: Load = { status: 'loading' }
+
+/** A fetch's identity: the same object means the same request, so a new one is loading until it settles. */
+interface ShareRequest {
+  isPublic: boolean
+  id: string
+  retry: number
+}
+
 function CityMarker({ pin, onSelect }: { pin: SharedPin; onSelect: (key: string) => void }) {
   const count = pin.photos.length
   const label = `${plural(count, 'photo')} in ${pin.city}`
@@ -203,24 +213,26 @@ export default function SharedScreen({ source, onHome, onBackToMap }: SharedScre
   const isPublic = source.kind === 'public'
   // Plain strings stand in for `source`, whose object identity changes on every render.
   const id = source.kind === 'public' ? source.shareId : source.token
-  const [load, setLoad] = useState<Load>({ status: 'loading' })
+  const [settled, setSettled] = useState<{ request: ShareRequest; load: Load } | null>(null)
   const [retry, setRetry] = useState(0)
   const [city, setCity] = useState<string | null>(null)
 
+  const request = useMemo<ShareRequest>(() => ({ isPublic, id, retry }), [isPublic, id, retry])
+  const load = settled?.request === request ? settled.load : LOADING
+
   useEffect(() => {
     const controller = new AbortController()
-    setLoad({ status: 'loading' })
-    const loading = isPublic ? getPublicShare(id, controller.signal) : getSharedCollection(id, controller.signal)
+    const loading = request.isPublic ? getPublicShare(request.id, controller.signal) : getSharedCollection(request.id, controller.signal)
     loading
-      .then((collection) => setLoad({ status: 'ready', collection }))
+      .then((collection) => setSettled({ request, load: { status: 'ready', collection } }))
       .catch((error: unknown) => {
         if (controller.signal.aborted) return
-        if (error instanceof ApiError && error.status === 404) setLoad({ status: 'not-found' })
-        else if (error instanceof ApiError && error.status === 410) setLoad({ status: 'revoked' })
-        else setLoad({ status: 'error' })
+        if (error instanceof ApiError && error.status === 404) setSettled({ request, load: { status: 'not-found' } })
+        else if (error instanceof ApiError && error.status === 410) setSettled({ request, load: { status: 'revoked' } })
+        else setSettled({ request, load: { status: 'error' } })
       })
     return () => controller.abort()
-  }, [isPublic, id, retry])
+  }, [request])
 
   const pins = useMemo(() => (load.status === 'ready' ? sharedPins(load.collection.photos) : []), [load])
 

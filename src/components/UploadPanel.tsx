@@ -64,6 +64,8 @@ function describe(item: UploadItem): string | null {
 export default function UploadPanel({ tripId, photos, initialFiles, onBatchDone, onSetLocation }: UploadPanelProps) {
   const [items, setItems] = useState<UploadItem[]>([])
   const files = useRef(new Map<string, File>())
+  /** Ids whose File is still held in `files`, so only those offer Retry; kept as state because refs cannot be read while rendering. */
+  const [retryable, setRetryable] = useState<ReadonlySet<string>>(new Set())
   const inputId = useId()
 
   const start = useCallback(
@@ -71,6 +73,7 @@ export default function UploadPanel({ tripId, photos, initialFiles, onBatchDone,
       if (chosen.length === 0) return
       const batch = chosen.map((file) => ({ client_file_id: clientFileId(file), file }))
       batch.forEach((b) => files.current.set(b.client_file_id, b.file))
+      setRetryable((current) => new Set([...current, ...batch.map((b) => b.client_file_id)]))
       setItems((current) => {
         const next = [...current]
         for (const b of batch) {
@@ -165,7 +168,7 @@ export default function UploadPanel({ tripId, photos, initialFiles, onBatchDone,
                     <Icon size={14} aria-hidden className={busy ? 'upl-spin' : undefined} />
                     {label}
                   </span>
-                  {item.state === 'failed' && files.current.has(item.client_file_id) ? (
+                  {item.state === 'failed' && retryable.has(item.client_file_id) ? (
                     <button
                       type="button"
                       className="btn btn-secondary upl-act"
