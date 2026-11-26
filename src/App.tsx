@@ -10,6 +10,7 @@ import PublicHeader from './components/PublicHeader'
 import MapScreen from './MapScreen'
 import NotFoundScreen from './NotFoundScreen'
 import PublicMapScreen from './PublicMapScreen'
+import PrivacyScreen from './PrivacyScreen'
 import SharedScreen from './SharedScreen'
 import { deleteAccount, sharingAvailable } from './api/client'
 import DeleteAccountPanel from './components/DeleteAccountPanel'
@@ -127,7 +128,7 @@ export default function App() {
         deleteIdentity: deleteSignIn,
       })
       setDeletionNotice(result.status === 'identity-retained'
-        ? 'Your MapMory data was deleted, but your Firebase sign-in account could not be removed. You have been signed out. Please contact the MapMory team to finish deleting your sign-in account.'
+        ? 'Your MapMory data was deleted, but your Firebase sign-in account could not be removed. You have been signed out. To remove it, sign in again and choose Delete account… once more.'
         : 'Your MapMory data and sign-in account were deleted.')
     } else {
       await deleteAccount()
@@ -219,12 +220,23 @@ export default function App() {
       </div>
     )
   }
+  // The policy is public: signed-out visitors read it under the public header, owners under theirs.
+  if (route.name === 'privacy' && !signedIn) {
+    return (
+      <div className="app">
+        <PublicHeader onHome={() => navigate({ name: 'landing' })} onSignIn={() => navigate({ name: 'login' })} />
+        <main className="app-body" id="main" tabIndex={-1}>
+          <PrivacyScreen />
+        </main>
+      </div>
+    )
+  }
   if (route.name === 'not-found') {
     return <NotFoundScreen signedIn={signedIn} onHome={() => navigate({ name: signedIn ? 'dashboard' : 'landing' })} />
   }
 
   // A trip page belongs to the Dashboard, so that tab stays current there.
-  const tab: Screen = route.name === 'map' || route.name === 'public-map' ? 'map' : 'dashboard'
+  const tab: Screen | null = route.name === 'privacy' ? null : route.name === 'map' || route.name === 'public-map' ? 'map' : 'dashboard'
 
   return (
     <div className="app">
@@ -233,6 +245,7 @@ export default function App() {
         onNavigate={openTab}
         onSignOut={signOut}
         onDeleteAccount={() => setDeletingAccount(true)}
+        onPrivacy={() => navigate({ name: 'privacy' })}
         account={account ? { name: account.name, email: account.email } : { name: 'Demo account' }}
       />
       {account && !account.emailVerified ? (
@@ -267,6 +280,7 @@ export default function App() {
         {route.name === 'public-map' ? (
           <PublicMapScreen onOpenShare={openPublicShare} onMyPhotos={() => navigate({ name: 'map', tripId: null })} />
         ) : null}
+        {route.name === 'privacy' ? <PrivacyScreen /> : null}
         {route.name === 'trip' ? (
           <TripScreen
             key={route.tripId}
