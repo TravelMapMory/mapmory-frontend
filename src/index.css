@@ -46,7 +46,11 @@ h3 {
   letter-spacing: -0.01em;
 }
 
-/* Screens ease in when they mount, so navigation reads as a state change. */
+/*
+ * Screens fade in when they mount, so navigation reads as a state change.
+ * Opacity only: a translate pushes full-height screens such as the map past
+ * .app-body for a moment, which flashes a scrollbar and shifts the layout.
+ */
 @media (prefers-reduced-motion: no-preference) {
   main > * {
     animation: screen-in 360ms var(--ease-out) backwards;
@@ -56,7 +60,6 @@ h3 {
 @keyframes screen-in {
   from {
     opacity: 0;
-    transform: translateY(6px);
   }
 }
 

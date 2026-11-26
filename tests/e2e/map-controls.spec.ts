@@ -225,3 +225,33 @@ test('the layers button picks a basemap, closes on Escape or an outside click, a
   await checkLayout(page)
 })
 
+
+test.describe('with motion on', () => {
+  test.use({ contextOptions: { reducedMotion: 'no-preference' } })
+
+  test('switching between My photos and Public never pushes the map past the page, so no scrollbar flashes', async ({ page }) => {
+    // The phone layout puts the panel under the map and scrolls on purpose.
+    test.skip(test.info().project.name === 'phone', 'phone map page scrolls by design')
+    await boot(page)
+    await openMap(page)
+    const modes = page.getByRole('navigation', { name: 'Map mode' })
+    for (const name of ['Public', 'My photos']) {
+      const overflow = await modes.getByRole('button', { name, exact: true }).evaluate(async (button) => {
+        let worst = 0
+        const start = performance.now()
+        ;(button as HTMLButtonElement).click()
+        await new Promise<void>((resolve) => {
+          const tick = () => {
+            const body = document.querySelector('.app-body')
+            if (body) worst = Math.max(worst, body.scrollHeight - body.clientHeight)
+            if (performance.now() - start < 700) requestAnimationFrame(tick)
+            else resolve()
+          }
+          tick()
+        })
+        return worst
+      })
+      expect(overflow, `overflow while switching to ${name}`).toBeLessThanOrEqual(0)
+    }
+  })
+})
