@@ -32,6 +32,7 @@ import UploadPanel from './components/UploadPanel'
 import VisibilityBadge from './components/VisibilityBadge'
 import { formatCaptured, formatDateRange, plural, zoneNote } from './format'
 import { captureDay, captureTime, sortByCapture } from './photoOrder'
+import { photoLocationLabel, photoPlaceName } from './photoLocation'
 import './TripScreen.css'
 
 export interface TripScreenProps {
@@ -152,7 +153,7 @@ function StatusBadge({ status }: { status: Status }) {
 
 function Thumb({ photo }: { photo: Photo }) {
   return photo.thumb_url ? (
-    <img src={photo.thumb_url} alt={photo.place_name ? `Photo at ${photo.place_name}` : 'Photo without a location'} loading="lazy" />
+    <img src={photo.thumb_url} alt={photoPlaceName(photo) ? `Photo at ${photoPlaceName(photo)}` : 'Photo without a location'} loading="lazy" />
   ) : (
     <div className="trip-thumb-empty">
       <ImageOff size={22} aria-hidden />
@@ -167,7 +168,7 @@ function ViewableThumb({ photo, onView }: { photo: Photo; onView: (photo: Photo)
     <button
       type="button"
       className="trip-view"
-      aria-label={`View photo${photo.place_name ? ` at ${photo.place_name}` : ''}`}
+      aria-label={`View photo${photoPlaceName(photo) ? ` at ${photoPlaceName(photo)}` : ''}`}
       onClick={() => onView(photo)}
     >
       <Thumb photo={photo} />
@@ -329,7 +330,7 @@ function GalleryTiles({ photos, onCorrect, onView }: PhotoListProps) {
               ) : null}
             </div>
             <div className="trip-tile-body">
-              <p className="trip-tile-place">{photo.place_name ?? 'No location'}</p>
+              <p className="trip-tile-place">{photoLocationLabel(photo)}</p>
               <p className="trip-caption">
                 {formatCaptured(photo.capture_time_local) ?? 'No capture time'}
                 {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
@@ -399,7 +400,7 @@ function Journey({ photos, onCorrect, onView }: PhotoListProps) {
                     <ViewableThumb photo={photo} onView={onView} />
                   </div>
                   <div className="trip-row-text">
-                    <p className="trip-tile-place">{photo.place_name ?? 'No location'}</p>
+                    <p className="trip-tile-place">{photoLocationLabel(photo)}</p>
                     <p className="trip-caption">
                       {captureTime(photo)?.slice(11, 16) ?? 'Time unknown'}
                       {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}

@@ -12,6 +12,7 @@ import TripCard from './components/TripCard'
 import { formatUploaded, plural } from './format'
 import { sortByUpload } from './photoOrder'
 import UploadDropZone from './components/UploadDropZone'
+import { photoPlaceName, photoLocationLabel } from './photoLocation'
 import './DashboardScreen.css'
 
 export interface DashboardScreenProps {
@@ -200,7 +201,7 @@ function RecentlyUploaded({ photos }: { photos: Photo[] }) {
       ) : (
         <ul className="dash-recent">
           {sortByUpload(photos).map((photo) => {
-            const place = photo.city ?? photo.place_name
+            const place = photoPlaceName(photo)
             return (
               <li key={photo.id} className="dash-recent-item">
                 {photo.thumb_url ? (
@@ -209,8 +210,8 @@ function RecentlyUploaded({ photos }: { photos: Photo[] }) {
                   <div className="dash-recent-thumb-empty" aria-hidden />
                 )}
                 <span className="dash-recent-caption">
-                  {place ? (
-                    <span className="dash-recent-place">{place}</span>
+                  {photo.lat !== null && photo.lng !== null ? (
+                    <span className="dash-recent-place">{photoLocationLabel(photo)}</span>
                   ) : (
                     <span className="dash-recent-place dash-recent-missing">
                       <MapPinOff size={12} aria-hidden />

@@ -4,6 +4,7 @@ import type { Photo } from '../api/types'
 import { formatCaptured, zoneNote } from '../format'
 import type { MoreState } from './LoadMore'
 import { viewerPosition } from './viewerPosition'
+import { photoLocationLabel, photoPlaceName } from '../photoLocation'
 import './PhotoViewer.css'
 
 export interface PhotoViewerProps {
@@ -39,7 +40,7 @@ function ViewerPhoto({ photo }: { photo: Photo }) {
   return source ? (
     <img
       src={source}
-      alt={photo.place_name ? `Photo at ${photo.place_name}` : 'Photo without a location'}
+      alt={photoPlaceName(photo) ? `Photo at ${photoPlaceName(photo)}` : 'Photo without a location'}
       onError={onImageError}
     />
   ) : (
@@ -114,7 +115,7 @@ export default function PhotoViewer({
   }, [])
 
   const photo = missing ? null : photos[index]
-  const place = photo ? (photo.place_name ?? 'No location') : 'Photo unavailable'
+  const place = photo ? photoLocationLabel(photo) : 'Photo unavailable'
 
   return (
     // The backdrop click is a mouse shortcut; Escape (onCancel) and the Close button are its keyboard equivalents.
