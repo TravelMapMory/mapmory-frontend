@@ -95,6 +95,8 @@ test('a failed page keeps the loaded photos and can be retried', async ({ page }
 
 test('a failed trip page on the Dashboard can be retried', async ({ page }) => {
   await boot(page, PAGED)
+  // The heading shows before the first page loads; arm the failure only for the second page.
+  await expect(page.locator('.trip-card')).toHaveCount(2)
   await failNext(page, 'listTrips')
   await page.getByRole('button', { name: 'Load more trips' }).click()
   await expect(page.getByRole('alert')).toHaveText('More trips could not be loaded.')
