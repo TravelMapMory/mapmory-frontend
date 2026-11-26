@@ -15,6 +15,7 @@ import UploadDropZone from './components/UploadDropZone'
 import './DashboardScreen.css'
 
 export interface DashboardScreenProps {
+  accountId?: string
   onShowOnMap: (tripId: string) => void
   /** Opens trip detail; without it Open trip renders disabled. */
   onOpenTrip?: (tripId: string) => void
@@ -232,7 +233,7 @@ function RecentlyUploaded({ photos }: { photos: Photo[] }) {
  * Summary data is displayed only when available; the screen never
  * recomputes statistics from trip records.
  */
-export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhotos, notice, onDismissNotice }: DashboardScreenProps) {
+export default function DashboardScreen({ accountId = 'demo', onShowOnMap, onOpenTrip, onUploadPhotos, notice, onDismissNotice }: DashboardScreenProps) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [creating, setCreating] = useState(false)
   const [choosingUpload, setChoosingUpload] = useState(false)
@@ -323,6 +324,8 @@ export default function DashboardScreen({ onShowOnMap, onOpenTrip, onUploadPhoto
 
       {load.status === 'ready' ? (
         <GettingStarted
+          key={accountId}
+          accountId={accountId}
           trips={load.trips}
           summary={load.summary}
           onCreateTrip={() => setCreating(true)}

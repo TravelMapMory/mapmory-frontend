@@ -3,25 +3,40 @@ import { Check, X } from 'lucide-react'
 import type { MeSummary, TripSummary } from '../api/types'
 import './GettingStarted.css'
 
-const DISMISS_KEY = 'mapmory.guide.hidden'
+export function placesReviewedKey(accountId: string): string {
+  return `mapmory.guide.places-reviewed.${accountId}`
+}
 
-function readHidden(): boolean {
+function hasReviewedPlace(accountId: string): boolean {
   try {
-    return localStorage.getItem(DISMISS_KEY) === '1'
+    return localStorage.getItem(placesReviewedKey(accountId)) === '1'
   } catch {
     return false
   }
 }
 
-function writeHidden() {
+function dismissKey(accountId: string): string {
+  return `mapmory.guide.hidden.${accountId}`
+}
+
+function readHidden(accountId: string): boolean {
   try {
-    localStorage.setItem(DISMISS_KEY, '1')
+    return localStorage.getItem(dismissKey(accountId)) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeHidden(accountId: string) {
+  try {
+    localStorage.setItem(dismissKey(accountId), '1')
   } catch {
     // Storage can be blocked; the guide then hides until the next reload.
   }
 }
 
 export interface GettingStartedProps {
+  accountId: string
   trips: TripSummary[]
   summary: MeSummary | null
   onCreateTrip: () => void
@@ -34,12 +49,23 @@ export interface GettingStartedProps {
  * a trip, upload photos, check their places. Each step ticks itself off from
  * the owner's data; the guide disappears once all are done, or when hidden.
  */
-export default function GettingStarted({ trips, summary, onCreateTrip, onUpload, onOpenTrip }: GettingStartedProps) {
-  const [hidden, setHidden] = useState(readHidden)
+export default function GettingStarted({ accountId, trips, summary, onCreateTrip, onUpload, onOpenTrip }: GettingStartedProps) {
+  const [hidden, setHidden] = useState(() => readHidden(accountId))
 
   const photoCount = summary?.photo_count ?? trips.reduce((sum, trip) => sum + trip.photo_count, 0)
+  // The trip aggregates identify missing GPS, not unconfirmed place suggestions.
+  // Prefer a recently uploaded photo requiring review, then a trip missing GPS,
+  // and finally a loaded trip when the summary reports older suggestions.
   const needsPlace = trips.find((trip) => trip.photo_count > trip.located_count)
   const toReview = summary?.to_review_count ?? (needsPlace ? 1 : 0)
+  // The walkthrough requires one successful review, not the entire backlog.
+  // Completion is recorded explicitly because preexisting confirmed labels do
+  // not prove that this user has completed the onboarding step.
+  const reviewedOnePlace = hasReviewedPlace(accountId)
+  const suggestedTrip = summary?.recently_uploaded.find(
+    (photo) => photo.state === 'needs-location' || photo.label_status === 'suggested',
+  )?.trip_id
+  const reviewTripId = suggestedTrip ?? needsPlace?.id ?? (toReview > 0 ? trips[0]?.id : undefined)
   const steps = [
     {
       done: trips.length > 0,
@@ -54,13 +80,14 @@ export default function GettingStarted({ trips, summary, onCreateTrip, onUpload,
       action: { label: 'Choose photos', run: onUpload, enabled: trips.length > 0 },
     },
     {
-      done: photoCount > 0 && toReview === 0,
+      done: photoCount > 0 && (reviewedOnePlace || toReview === 0),
       title: 'Check the places',
-      text: 'Photos without a location, or with a suggested place, wait for you on their trip page.',
-      action:
-        needsPlace && onOpenTrip
-          ? { label: 'Review places', run: () => onOpenTrip(needsPlace.id), enabled: true }
-          : null,
+      text: toReview > 0
+        ? 'Review or confirm the place of one photo to finish getting started. You can review the remaining photos later.'
+        : 'Your uploaded photos have locations and no suggestions awaiting confirmation.',
+      action: reviewTripId && onOpenTrip
+        ? { label: 'Review places', run: () => onOpenTrip(reviewTripId), enabled: true }
+        : null,
     },
   ]
   const completed = steps.filter((step) => step.done).length
@@ -82,7 +109,7 @@ export default function GettingStarted({ trips, summary, onCreateTrip, onUpload,
           className="guide-hide"
           aria-label="Hide the getting started guide"
           onClick={() => {
-            writeHidden()
+            writeHidden(accountId)
             setHidden(true)
           }}
         >

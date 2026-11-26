@@ -121,12 +121,12 @@ export default function VerifyEmailBanner({ email, onVerified, floating = false 
         </h2>
         {floating ? (
           <p>
-            Open the link we sent to <strong>{email}</strong>.
+            Check <strong>{email}</strong> for a verification link.
           </p>
         ) : (
           <p>
-            We sent a link to <strong>{email}</strong>. Open it to confirm the address; you can keep using MapMory
-            meanwhile.
+            Check <strong>{email}</strong> for a verification link. Open it to confirm the address; you can keep
+            using MapMory meanwhile. If the email does not arrive or the link expires, select Resend email.
           </p>
         )}
         <p className="verify-status" role="status">

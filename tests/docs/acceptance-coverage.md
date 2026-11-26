@@ -75,3 +75,11 @@ not HTTP interception or an integration test of Go/Firebase/GCS.
 
 The tests enforce current intended behavior; passing them does not make the mock
 ready for production integration.
+
+### UX polish and Firebase verification (#52)
+
+- `e2e/polish.spec.ts`: trip-cover size, account-menu interaction, onboarding progress and dismissal, plus completion after one successful place review while other photos remain unresolved.
+- `e2e/routing.spec.ts`: missing trip has one header and one main landmark; top-level 404 retains the standalone header.
+- `e2e/accessibility.spec.ts`: keyboard and axe checks.
+- `integration/firebase-emulator.spec.ts`: Firebase signup, verification, resend, login, and account deletion. **Not part of standard `test:acceptance`**; requires a running Firebase Auth emulator and matching test env variables.
+- Manual verification: real email delivery (provider delays and expired links) and identity isolation across two Firebase accounts.

@@ -33,7 +33,7 @@ Restart Vite after changing the environment. The `.env.example` template current
 
 The interface includes a **two-step creation flow**: select photos/title/audience, then review the selected thumbnails and audience before publishing. The owner-side preview is not the backend's final location rendering; the recipient sees server-coarsened positions.
 
-Link shares can be opened by anyone possessing the unguessable link, without signing in. Public shares can also be discovered via the public map. All other trip photos remain private. The current frontend does **not** support named users/groups, owner-selected covers, public reporting/moderation or account deletion.
+Link shares can be opened by anyone possessing the unguessable link, without signing in. Public shares can also be discovered via the public map. All other trip photos remain private. The frontend supports public-share reporting, trip deletion, and account deletion when the compatible backend endpoints are available. Reported public shares are hidden pending manual moderation; the owner-facing review status is not yet exposed. Named users/groups and owner-selected share covers are not implemented.
 
 ### Prerequisites for live integration
 

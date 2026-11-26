@@ -87,6 +87,7 @@ async function sendVerification(user: User): Promise<void> {
 
 /** Who is signed in, for the account menu and the verification banner; null when nobody is. */
 export interface Account {
+  uid: string
   name: string
   email: string
   emailVerified: boolean
@@ -96,7 +97,7 @@ export function currentAccount(): Account | null {
   const user = firebaseAuth().currentUser
   if (!user) return null
   const email = user.email ?? ''
-  return { name: user.displayName?.trim() || email, email, emailVerified: user.emailVerified }
+  return { uid: user.uid, name: user.displayName?.trim() || email, email, emailVerified: user.emailVerified }
 }
 
 /** Sends the verification email again. */

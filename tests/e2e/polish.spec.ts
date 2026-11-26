@@ -67,6 +67,34 @@ test('the guide shows only what is left, and Review places opens the trip that n
   await expect(page.getByRole('heading', { name: 'Rome with family', exact: true })).toBeVisible()
 })
 
+test('checking one photo place completes onboarding even when other photos need review', async ({ page }) => {
+  await boot(page)
+  const guide = page.getByRole('region', { name: 'Getting started' })
+  await expect(guide).toContainText('2 of 3 done')
+  await expect(guide).toContainText('Review or confirm the place of one photo')
+  await guide.getByRole('button', { name: 'Review places' }).click()
+  await page.getByRole('button', { name: 'Review next' }).click()
+  await page.getByRole('button', { name: 'Confirm Pantheon, Rome', exact: true }).click()
+  // Wait for the asynchronous save and onboarding marker before navigating.
+  await expect(page.locator('.trip-saved')).toHaveText('Location saved: Pantheon, Rome.')
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('mapmory.guide.places-reviewed.demo'))).toBe('1')
+  await page.getByRole('button', { name: 'Dashboard' }).first().click()
+  await expect(page.getByRole('region', { name: 'Getting started' })).toHaveCount(0)
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'Getting started' })).toHaveCount(0)
+})
+
+test('guide dismissal is saved for the demo account, not as a browser-global preference', async ({ page }) => {
+  await boot(page, { scenario: 'empty' })
+  await page.getByRole('button', { name: 'Hide the getting started guide' }).click()
+  const keys = await page.evaluate(() => Object.keys(localStorage).filter((key) => key.startsWith('mapmory.guide.hidden')))
+  expect(keys).toContain('mapmory.guide.hidden.demo')
+  expect(keys).not.toContain('mapmory.guide.hidden')
+  expect(keys).not.toContain('mapmory.guide.hidden.another-account')
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'Getting started' })).toHaveCount(0)
+})
+
 test('deleting a trip says which trip went, and the message can be dismissed', async ({ page }) => {
   await boot(page)
   await openTrip(page, 'Weekend in Helsinki')

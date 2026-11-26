@@ -14,6 +14,7 @@ import SharedScreen from './SharedScreen'
 import { deleteAccount, sharingAvailable } from './api/client'
 import DeleteAccountPanel from './components/DeleteAccountPanel'
 import TripScreen from './TripScreen'
+import { placesReviewedKey } from './components/GettingStarted'
 import { isOwnerRoute, navigate, routeTitle, useRoute, type Route } from './router'
 import './App.css'
 
@@ -247,6 +248,7 @@ export default function App() {
       <main className="app-body" id="main" tabIndex={-1}>
         {route.name === 'dashboard' ? (
           <DashboardScreen
+            accountId={account?.uid ?? 'demo'}
             onShowOnMap={showOnMap}
             onOpenTrip={openTrip}
             onUploadPhotos={uploadTo}
@@ -272,6 +274,13 @@ export default function App() {
             initialFiles={pendingUpload?.tripId === route.tripId ? pendingUpload.files : undefined}
             onBack={() => openTab('dashboard')}
             onShowOnMap={showOnMap}
+            onPlaceReviewed={() => {
+              try {
+                localStorage.setItem(placesReviewedKey(account?.uid ?? 'demo'), '1')
+              } catch {
+                // If storage is unavailable, the owner can still complete reviews.
+              }
+            }}
             onDeleted={(title) => {
               setTripNotice(`“${title}” and its photos were deleted.`)
               navigate({ name: 'dashboard' })
