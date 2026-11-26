@@ -39,6 +39,7 @@ export interface ApiTrip {
   start_date?: string | null
   end_date?: string | null
   visibility?: 'private' | 'public'
+  under_review?: boolean
 }
 
 /** `CreateTrip`, the POST /api/trips body. */

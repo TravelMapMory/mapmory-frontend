@@ -88,6 +88,13 @@ test('revoked and unknown links say so instead of showing photos', async ({ page
 
 test('a reported public share tells its owner why it left the public map', async ({ page }) => {
   await boot(page)
+  // Flagged where the owner looks first: the Dashboard card and the trip header.
+  const card = page.getByRole('article', { name: 'Europe by rail', exact: true })
+  await expect(card.getByText('Under review')).toBeVisible()
+  await expect(page.getByRole('article', { name: 'Weekend in Helsinki', exact: true }).getByText('Under review')).toHaveCount(0)
+  await openTrip(page, 'Europe by rail')
+  await expect(page.locator('.trip-head').getByText('Under review')).toBeVisible()
+  await page.getByRole('button', { name: 'Dashboard' }).first().click()
   await openShare(page, 'Europe by rail')
   const reported = page.getByRole('listitem', { name: 'Trevi Fountain at dusk' })
   await expect(reported.getByText('Under review.')).toBeVisible()

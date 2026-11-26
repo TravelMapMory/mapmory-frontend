@@ -322,8 +322,14 @@ function summarise(trip: TripRow): ApiTrip {
     countries: distinct(located.map((p) => p.country)),
     start_date: dated[0] ?? null,
     end_date: dated[dated.length - 1] ?? null,
-    visibility: 'private',
+    ...shareState(trip.id),
   }
+}
+
+/** Like the backend: public while a live public share exists, under review while one of them is reported. */
+function shareState(tripId: string): Pick<ApiTrip, 'visibility' | 'under_review'> {
+  const live = shares.filter((s) => s.trip_id === tripId && s.mode === 'public' && s.revoked_at === null)
+  return { visibility: live.length > 0 ? 'public' : 'private', under_review: live.some((s) => Boolean(s.reported_at)) }
 }
 /**
  * Simulated network latency, so loading states are actually exercised.

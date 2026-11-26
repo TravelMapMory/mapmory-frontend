@@ -37,7 +37,7 @@ export default function TripCard({ trip, onShowOnMap, onOpen }: TripCardProps) {
           </div>
         )}
         <span className="trip-card-badge">
-          <VisibilityBadge visibility={trip.visibility} />
+          <VisibilityBadge visibility={trip.visibility} underReview={trip.under_review} />
         </span>
       </div>
 

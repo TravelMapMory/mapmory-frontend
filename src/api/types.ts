@@ -69,6 +69,8 @@ export interface TripSummary {
   end_date: string | null
   /** Trips are private until the owner creates a share. */
   visibility: 'private' | 'public'
+  /** A public share of the trip was reported and is hidden from the public map until the team reviews it. */
+  under_review: boolean
 }
 /** `GET /api/me/summary`. */
 export interface MeSummary {
