@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { photoLocationLabel, photoPlaceName } from '../../src/photoLocation'
+import { photoLocationLabel, photoPlaceName, suggestedPhotoPlaceName } from '../../src/photoLocation'
 import type { Photo } from '../../src/api/types'
 
 const base: Photo = {
@@ -25,4 +25,11 @@ test('country and coordinate-only fallbacks distinguish known and missing locati
   expect(photoLocationLabel({ ...base, city: null, country: null })).toBe('Location set')
   expect(photoLocationLabel({ ...base, lat: null, lng: null })).toBe('No location')
   expect(photoPlaceName({ ...base, lat: null, lng: null })).toBeNull()
+})
+
+
+test('city-only suggestions can be confirmed without a specific place name', () => {
+  expect(suggestedPhotoPlaceName({ ...base, label_status: 'suggested' })).toBe('Espoo')
+  expect(suggestedPhotoPlaceName({ ...base, label_status: 'confirmed' })).toBeNull()
+  expect(suggestedPhotoPlaceName({ ...base, label_status: 'suggested', lat: null })).toBeNull()
 })

@@ -105,6 +105,20 @@ test('manual correction saves, updates totals and map, and retains capture metad
   await expect(page.locator('.stat-tile-value')).toHaveText(['12', '6', '6', '1'])
 })
 
+test('same place as previous photo preserves the name as well as coordinates', async ({ page }) => {
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+  await page.getByRole('button', { name: 'Set location', exact: true }).click()
+  await page.getByRole('button', { name: 'Same place as previous photo' }).click()
+  await expect(page.locator('.lpick-chosen')).toContainText('Pantheon, Rome')
+  await page.getByRole('button', { name: 'Save location' }).click()
+  await expect(page.locator('.trip-saved')).toContainText('Location saved: Pantheon, Rome.')
+  await expect(page.locator('.trip-tile').filter({ hasText: 'Pantheon, Rome' })).toHaveCount(2)
+  await dashboard(page)
+  await openTrip(page, 'Rome with family')
+  await expect(page.locator('.trip-tile').filter({ hasText: 'Pantheon, Rome' })).toHaveCount(2)
+})
+
 test('failed correction retains chosen location and succeeds on retry', async ({ page }) => {
   await boot(page)
   await openTrip(page, 'Rome with family')
@@ -297,4 +311,31 @@ test('journey numbers located photos to match their pins, and day tabs filter th
   await page.keyboard.press('Home')
   await expect(page.getByRole('tab', { name: 'All days' })).toHaveAttribute('aria-selected', 'true')
   await checkLayout(page)
+})
+
+test('specific search selection survives saving and reload without being replaced by nearby labels', async ({ page }) => {
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+  await page.getByRole('button', { name: 'Set location', exact: true }).click()
+  const search = page.getByRole('combobox', { name: 'Search for the place' })
+  await search.fill('Täffä')
+  await page.getByRole('option', { name: 'Täffä, Espoo, Finland' }).click()
+  await page.getByRole('button', { name: 'Save location' }).click()
+  await expect(page.locator('.trip-saved')).toContainText('Location saved: Täffä')
+  await expect(page.locator('.trip-tile').filter({ hasText: 'Täffä' })).toHaveCount(1)
+  // Demo state persists across in-app navigation, but intentionally resets on full reload.
+  await dashboard(page)
+  await openTrip(page, 'Rome with family')
+  await expect(page.locator('.trip-tile').filter({ hasText: 'Täffä' })).toHaveCount(1)
+})
+
+
+test('opening an existing location cannot silently overwrite its saved place', async ({ page }) => {
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+  const tile = page.locator('.trip-tile').filter({ hasText: 'Colosseum' })
+  await tile.getByRole('button', { name: 'Change location' }).click()
+  await expect(page.getByRole('button', { name: 'Save location' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(tile).toContainText('Colosseum')
 })
