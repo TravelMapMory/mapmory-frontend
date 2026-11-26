@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright'
+import type { Page } from '@playwright/test'
 import { test, expect } from './fixtures'
 import { boot, checkLayout, openAccountMenu, tabTo } from './helpers'
 
@@ -7,7 +8,7 @@ import { boot, checkLayout, openAccountMenu, tabTo } from './helpers'
  * account, from the landing page, the sign-up form and the account menu.
  */
 /** Locates the page's level-1 heading, the marker that the policy rendered. */
-const policyHeading = (page: import('@playwright/test').Page) => page.getByRole('heading', { name: 'Privacy policy', level: 1 })
+const policyHeading = (page: Page) => page.getByRole('heading', { name: 'Privacy policy', level: 1 })
 
 test('opens signed out with the effective date and the contact link', async ({ page }) => {
   await page.goto('/privacy')

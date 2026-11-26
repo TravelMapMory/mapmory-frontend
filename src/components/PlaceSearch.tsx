@@ -9,7 +9,7 @@ export interface PlaceSearchProps {
   label: string
   placeholder?: string
   onSelect: (place: Place) => void
-  autoFocus?: boolean
+  focusOnMount?: boolean
   /** Shows the label above the field instead of only to screen readers. */
   showLabel?: boolean
 }
@@ -22,41 +22,45 @@ const DEBOUNCE_MS = 300
  * arrow keys move through the results, Enter picks one, Escape closes the
  * list. Used by "Find a place" on the map and by location correction.
  */
-export default function PlaceSearch({ label, placeholder, onSelect, autoFocus, showLabel = false }: PlaceSearchProps) {
+export default function PlaceSearch({ label, placeholder, onSelect, focusOnMount, showLabel = false }: PlaceSearchProps) {
   const [query, setQuery] = useState('')
-  const [results, setResults] = useState<Place[]>([])
+  /** The newest search to finish; it counts only while its query is still the one typed. */
+  const [settled, setSettled] = useState<{ query: string; results: Place[]; failed: boolean } | null>(null)
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
-  const [searching, setSearching] = useState(false)
-  const [failed, setFailed] = useState(false)
   const id = useId()
   const listId = `${id}-list`
   const inputRef = useRef<HTMLInputElement>(null)
 
+  // A field opened by the owner's own action takes focus once, as autoFocus would, so they can type at once.
   useEffect(() => {
-    setResults([])
+    if (focusOnMount) inputRef.current?.focus()
+  }, [focusOnMount])
+
+  const [activeQuery, setActiveQuery] = useState(query)
+  if (activeQuery !== query) {
+    setActiveQuery(query)
     setActive(-1)
-    setFailed(false)
-    if (query.trim().length < 2) {
-      setResults([])
-      setSearching(false)
-      return
-    }
+    setSettled(null)
+  }
+  const current = settled?.query === query ? settled : null
+  const results = current?.results ?? []
+  const failed = current?.failed ?? false
+  const searching = query.trim().length >= 2 && current === null
+
+  useEffect(() => {
+    if (query.trim().length < 2) return
     const controller = new AbortController()
-    setSearching(true)
     const timer = setTimeout(() => {
       searchPlaces(query, controller.signal)
         .then((places) => {
-          setResults(places)
+          setSettled({ query, results: places, failed: false })
           setActive(places.length > 0 ? 0 : -1)
-          setSearching(false)
         })
         .catch(() => {
           if (!controller.signal.aborted) {
-            setResults([])
+            setSettled({ query, results: [], failed: true })
             setActive(-1)
-            setFailed(true)
-            setSearching(false)
           }
         })
     }, DEBOUNCE_MS)
@@ -115,12 +119,10 @@ export default function PlaceSearch({ label, placeholder, onSelect, autoFocus, s
           aria-controls={listId}
           aria-activedescendant={expanded && active >= 0 ? `${listId}-${active}` : undefined}
           autoComplete="off"
-          autoFocus={autoFocus}
           placeholder={placeholder ?? label}
           value={query}
           onChange={(event) => {
             setQuery(event.target.value)
-            setResults([])
             setActive(-1)
             setOpen(true)
           }}
@@ -142,12 +144,13 @@ export default function PlaceSearch({ label, placeholder, onSelect, autoFocus, s
           </button>
         ) : null}
       </div>
-      <ul id={listId} role="listbox" aria-label={label} className="psearch-list" hidden={!expanded}>
+      <div id={listId} role="listbox" aria-label={label} className="psearch-list" hidden={!expanded}>
         {results.map((place, index) => (
-          <li
+          <div
             key={place.id}
             id={`${listId}-${index}`}
             role="option"
+            tabIndex={-1}
             aria-selected={index === active}
             className="psearch-option"
             // mousedown, not click: click would arrive after the input's blur closed the list.
@@ -159,14 +162,14 @@ export default function PlaceSearch({ label, placeholder, onSelect, autoFocus, s
           >
             {place.kind === 'country' ? <Earth size={14} aria-hidden /> : <MapPin size={14} aria-hidden />}
             <span>{place.label}</span>
-          </li>
+          </div>
         ))}
         {status && expanded ? (
-          <li className="psearch-status" role="presentation">
+          <div className="psearch-status" role="presentation">
             {status}
-          </li>
+          </div>
         ) : null}
-      </ul>
+      </div>
     </div>
   )
 }

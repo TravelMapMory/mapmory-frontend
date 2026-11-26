@@ -239,20 +239,20 @@ test.describe('with motion on', () => {
           const body = document.querySelector('.app-body')
           return body ? body.scrollHeight - body.clientHeight : 0
         }
-        const before = overflow()
-        let worst = 0
+        const startOverflow = overflow()
+        let peak = 0
         const start = performance.now()
         ;(button as HTMLButtonElement).click()
         await new Promise<void>((resolve) => {
           const tick = () => {
-            worst = Math.max(worst, overflow())
+            peak = Math.max(peak, overflow())
             if (performance.now() - start < 700) requestAnimationFrame(tick)
             else resolve()
           }
           tick()
         })
         await new Promise((resolve) => setTimeout(resolve, 600))
-        return { before, worst, settled: overflow() }
+        return { before: startOverflow, worst: peak, settled: overflow() }
       })
       // Phone and tablet map pages scroll by design; only overflow beyond both settled screens would flash.
       expect(worst, `overflow while switching to ${name}`).toBeLessThanOrEqual(Math.max(before, settled))

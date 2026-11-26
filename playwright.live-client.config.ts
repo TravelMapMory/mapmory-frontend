@@ -8,7 +8,7 @@ export default defineConfig({
     baseURL: 'http://127.0.0.1:4174',
   },
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 4174 --strictPort',
+    command: 'npm run dev -- --host 127.0.0.1 --port 4174 --strictPort --bypass-lock',
     url: 'http://127.0.0.1:4174',
     reuseExistingServer: false,
     env: {

@@ -1,5 +1,5 @@
 
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
 
 /**
  * Load the actual frontend API client through Vite.
@@ -7,7 +7,7 @@ import { expect, test } from '@playwright/test'
  * The path is a browser URL, not a TypeScript import path.
  * A dynamic path lets Vite resolve the module at runtime.
  */
-async function getDashboardSummary(page: import('@playwright/test').Page) {
+async function getDashboardSummary(page: Page) {
   return page.evaluate(async () => {
     const modulePath = '/src/api/client.ts'
     const { getSummary } = await import(/* @vite-ignore */ modulePath)

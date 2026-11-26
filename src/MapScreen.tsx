@@ -25,6 +25,19 @@ interface Filters {
   q: string
 }
 
+/** A fetch's identity: the same object means the same request, so a new one is loading until it settles. */
+interface MapRequest {
+  query: MapPhotoQuery
+  bbox: BBox | null
+  retry: number
+}
+
+/** How a request ended. */
+interface Settled {
+  request: MapRequest
+  status: 'ready' | 'error'
+}
+
 type Load = { status: 'loading' } | { status: 'error' } | { status: 'ready' }
 
 function toBBox(map: LeafletMap): BBox {
@@ -66,10 +79,10 @@ export default function MapScreen({ tripId = null, onOpenTrip, onPublicMap }: Ma
   const [bbox, setBBox] = useState<BBox | null>(null)
   const [photos, setPhotos] = useState<MapPhoto[]>([])
   const [truncated, setTruncated] = useState(false)
-  const [load, setLoad] = useState<Load>({ status: 'loading' })
+  const [settled, setSettled] = useState<Settled | null>(null)
   const [retry, setRetry] = useState(0)
   const [selected, setSelected] = useState<MapPhoto[] | null>(null)
-  const fitPending = useRef(true)
+  const framedQuery = useRef<MapPhotoQuery | null>(null)
   const ids = useId()
 
   useEffect(() => {
@@ -99,35 +112,40 @@ export default function MapScreen({ tripId = null, onOpenTrip, onPublicMap }: Ma
     [filters],
   )
 
-  // A new filter starts over: no viewport restriction, and frame the result.
-  useEffect(() => {
-    fitPending.current = true
+  // A new filter starts over: no viewport restriction, and nothing selected. State adjusts during render, so no stale-viewport request is sent first.
+  const [viewQuery, setViewQuery] = useState(query)
+  if (viewQuery !== query) {
+    setViewQuery(query)
     setBBox(null)
     setSelected(null)
-  }, [query])
+  }
+
+  /** One identity per distinct fetch (filters, viewport, retry click), so loading is derived instead of set. */
+  const request = useMemo<MapRequest>(() => ({ query, bbox, retry }), [query, bbox, retry])
+  const load: Load = settled?.request === request ? { status: settled.status } : { status: 'loading' }
 
   useEffect(() => {
     const controller = new AbortController()
-    setLoad({ status: 'loading' })
-    getMapPhotos({ ...query, bbox: bbox ?? undefined }, controller.signal)
+    getMapPhotos({ ...request.query, bbox: request.bbox ?? undefined }, controller.signal)
       .then((page) => {
         setPhotos(page.items)
         setTruncated(page.truncated)
-        setLoad({ status: 'ready' })
+        setSettled({ request, status: 'ready' })
       })
       .catch(() => {
-        if (!controller.signal.aborted) setLoad({ status: 'error' })
+        if (!controller.signal.aborted) setSettled({ request, status: 'error' })
       })
     return () => controller.abort()
-  }, [query, bbox, retry])
+  }, [request])
 
+  // A new filter frames its result once, the first time that result is ready.
   useEffect(() => {
-    if (!map || load.status !== 'ready' || !fitPending.current) return
-    fitPending.current = false
+    if (!map || load.status !== 'ready' || framedQuery.current === query) return
+    framedQuery.current = query
     if (photos.length === 0) return
     const bounds = latLngBounds(photos.map((p) => [p.lat, p.lng]))
     map.fitBounds(bounds, { padding: [64, 64], maxZoom: 12, animate: ANIMATE_ZOOM })
-  }, [map, photos, load.status])
+  }, [map, photos, load.status, query])
 
   const onMoveEnd = useCallback(
     (m: LeafletMap) => {
@@ -212,6 +230,7 @@ export default function MapScreen({ tripId = null, onOpenTrip, onPublicMap }: Ma
         ) : null}
       </div>
 
+      {/* oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape clears the selection from any focused descendant; the panel itself is not a control. */}
       <aside
         className="mapscreen-panel"
         aria-label="My photos"

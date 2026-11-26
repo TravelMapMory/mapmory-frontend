@@ -46,6 +46,7 @@ export default function DeleteAccountPanel({ onConfirm, onCancel, requirePasswor
   }
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape cancels from any focused descendant; the container itself is not a control.
     <section
       className="delacct"
       aria-labelledby={`${ids}-title`}

@@ -68,6 +68,7 @@ export default function MapLayers({ value, onChange }: { value: Basemap; onChang
         <Layers size={20} aria-hidden />
       </button>
       {open ? (
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- Escape inside the panel closes it; the group itself is not a control.
         <div id={panelId} className="map-layers-panel" role="group" aria-label="Map style" onKeyDown={onKeyDown}>
           {ORDER.map((key) => (
             <button
