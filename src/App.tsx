@@ -128,7 +128,7 @@ export default function App() {
         deleteIdentity: deleteSignIn,
       })
       setDeletionNotice(result.status === 'identity-retained'
-        ? 'Your MapMory data was deleted, but your Firebase sign-in account could not be removed. You have been signed out. Please contact the MapMory team to finish deleting your sign-in account.'
+        ? 'Your MapMory data was deleted, but your Firebase sign-in account could not be removed. You have been signed out. To remove it, sign in again and choose Delete account… once more.'
         : 'Your MapMory data and sign-in account were deleted.')
     } else {
       await deleteAccount()
