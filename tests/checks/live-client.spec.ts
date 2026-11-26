@@ -174,6 +174,58 @@ test('summary uses live data without substituting mock statistics', async ({ pag
   })
 })
 
+test('summary returns null when the backend has no summary route', async ({ page }) => {
+  let requests = 0
+
+  await page.route('**/api/me/summary', async (route) => {
+    requests++
+    await route.fulfill({
+      status: 404,
+      json: { error: { code: 'not_found', message: 'Not found' } },
+    })
+  })
+
+  const result = await page.evaluate(async () => {
+    const bridgeUrl = '/tests/support/liveClientTestBridge.ts'
+    const { getSummary } = await import(/* @vite-ignore */ bridgeUrl)
+    return getSummary()
+  })
+
+  expect(requests).toBe(1)
+  expect(result).toBeNull()
+})
+
+test('summary propagates backend errors other than 404', async ({ page }) => {
+  let requests = 0
+
+  await page.route('**/api/me/summary', async (route) => {
+    requests++
+    await route.fulfill({
+      status: 500,
+      json: { error: { code: 'internal_error', message: 'Summary unavailable' } },
+    })
+  })
+
+  const result = await page.evaluate(async () => {
+    const bridgeUrl = '/tests/support/liveClientTestBridge.ts'
+    const { getSummary } = await import(/* @vite-ignore */ bridgeUrl)
+    try {
+      await getSummary()
+      return null
+    } catch (error) {
+      const e = error as { status?: number; code?: string; message?: string }
+      return { status: e.status, code: e.code, message: e.message }
+    }
+  })
+
+  expect(requests).toBe(1)
+  expect(result).toEqual({
+    status: 500,
+    code: 'internal_error',
+    message: 'Summary unavailable',
+  })
+})
+
 test('provider failure is returned without falling back to mock search', async ({ page }) => {
   let requests = 0
 
