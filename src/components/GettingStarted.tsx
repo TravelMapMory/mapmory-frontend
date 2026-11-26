@@ -104,6 +104,8 @@ export default function GettingStarted({ accountId, trips, summary, onCreateTrip
   const current = steps.find((step) => !step.done) ?? steps[steps.length - 1]
   const hide = () => {
     writeHidden(accountId)
+    // The focused button is about to unmount; keep keyboard focus in the page, not on <body>.
+    document.getElementById('main')?.focus({ preventScroll: true })
     setHidden(true)
   }
 
@@ -125,20 +127,27 @@ export default function GettingStarted({ accountId, trips, summary, onCreateTrip
       </div>
 
       <div className="guide-main">
-        <ol className="guide-route">
-          {steps.map((step) => {
-            const state = step.done ? 'done' : step === current ? 'now' : 'next'
-            return (
-              <li key={step.title} className="guide-stop" data-state={state}>
-                {step.done ? <Check size={13} strokeWidth={3} aria-hidden /> : null}
-                <span aria-hidden>{step.short}</span>
-                <span className="visually-hidden">
-                  {step.title} ({state === 'done' ? 'done' : state === 'now' ? 'current step' : 'to do'})
-                </span>
-              </li>
-            )
-          })}
-        </ol>
+        <div className="guide-routebar">
+          <ol className="guide-route">
+            {steps.map((step) => {
+              const state = step.done ? 'done' : step === current ? 'now' : 'next'
+              return (
+                <li key={step.title} className="guide-stop" data-state={state}>
+                  {step.done ? <Check size={13} strokeWidth={3} aria-hidden /> : null}
+                  <span aria-hidden>{step.short}</span>
+                  <span className="visually-hidden">
+                    {step.title} ({state === 'done' ? 'done' : state === 'now' ? 'current step' : 'to do'})
+                  </span>
+                </li>
+              )
+            })}
+          </ol>
+          {finished ? (
+            <span className="guide-stamp" aria-hidden>
+              Ready to share
+            </span>
+          ) : null}
+        </div>
         <div className="guide-now">
           <h3 className="guide-now-title">{finished ? 'You’re all set' : current.title}</h3>
           <p className="guide-now-text">
@@ -163,11 +172,7 @@ export default function GettingStarted({ accountId, trips, summary, onCreateTrip
         ) : null}
       </div>
 
-      {finished ? (
-        <span className="guide-stamp" aria-hidden>
-          Ready to share
-        </span>
-      ) : (
+      {finished ? null : (
         <button type="button" className="guide-hide" aria-label="Hide the getting started guide" onClick={hide}>
           <X size={16} aria-hidden />
         </button>

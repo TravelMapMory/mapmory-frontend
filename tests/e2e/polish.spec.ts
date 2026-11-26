@@ -90,6 +90,9 @@ test('checking one photo place completes onboarding even when other photos need 
   await checkLayout(page)
   await guide.getByRole('button', { name: 'Done', exact: true }).click()
   await expect(guide).toHaveCount(0)
+  // Focus stays in the page instead of falling back to <body>, and closing is remembered.
+  await expect(page.locator('main#main')).toBeFocused()
+  expect(await page.evaluate(() => localStorage.getItem('mapmory.guide.hidden.demo'))).toBe('1')
   await page.reload()
   await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Getting started' })).toHaveCount(0)

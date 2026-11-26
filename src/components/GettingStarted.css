@@ -88,10 +88,19 @@
   padding: 20px 56px 20px 24px;
 }
 
-.guide-route {
+/* Route and, when finished, the stamp share a row; the stamp wraps below rather than covering a step. */
+.guide-routebar {
   display: flex;
   flex-wrap: wrap;
   grid-column: 1 / -1;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.guide-route {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
   margin: 0;
@@ -164,11 +173,8 @@
   background: var(--c-surface-2);
 }
 
-/* The finished ticket: a passport-style stamp in the corner the close button used. */
+/* The finished ticket: a passport-style stamp at the end of the route. */
 .guide-stamp {
-  position: absolute;
-  top: 16px;
-  right: 18px;
   padding: 4px 10px;
   border: 2px solid currentColor;
   border-radius: 6px;
@@ -277,13 +283,13 @@
   }
 
   .guide-hide {
-    top: 6px;
-    right: 4px;
+    top: 2px;
+    right: 0;
+    width: 44px;
+    height: 44px;
   }
 
   .guide-stamp {
-    top: 14px;
-    right: 12px;
     padding: 3px 7px;
     font-size: 9.5px;
     letter-spacing: 0.1em;
