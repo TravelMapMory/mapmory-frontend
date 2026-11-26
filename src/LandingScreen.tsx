@@ -5,6 +5,7 @@ import helsinkiPhoto from './assets/pins/helsinki-uspenski.jpg'
 import romePhoto from './assets/pins/rome-trevi.jpg'
 import './LandingScreen.css'
 import BrandMark from './components/BrandMark'
+import PrivacyLink from './components/PrivacyLink'
 
 export interface LandingScreenProps {
   /** Opens the log-in form. */
@@ -127,6 +128,9 @@ export default function LandingScreen({ onSignIn, onSignUp, onExplore, deletionN
           </ul>
         </section>
       </main>
+      <footer className="land-foot">
+        <PrivacyLink />
+      </footer>
     </div>
   )
 }

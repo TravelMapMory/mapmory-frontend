@@ -4,6 +4,7 @@ import { authErrorMessage, firebaseEnabled, logIn, signUp } from './auth'
 import './LandingScreen.css'
 import './AuthScreen.css'
 import BrandMark from './components/BrandMark'
+import PrivacyLink from './components/PrivacyLink'
 
 export type AuthMode = 'signup' | 'login'
 
@@ -121,6 +122,11 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
             <button type="submit" className="btn btn-action auth-submit" disabled={busy}>
               {busy ? 'Please wait…' : submitLabel}
             </button>
+            {signup ? (
+              <p className="auth-hint auth-privacy">
+                What happens to your data is explained in the <PrivacyLink>privacy policy</PrivacyLink>.
+              </p>
+            ) : null}
           </form>
 
           <p className="auth-switch">

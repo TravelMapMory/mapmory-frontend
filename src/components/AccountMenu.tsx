@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { ChevronDown, LogOut, UserX } from 'lucide-react'
+import { ChevronDown, FileText, LogOut, UserX } from 'lucide-react'
 import './AccountMenu.css'
 
 export interface AccountMenuProps {
@@ -9,6 +9,7 @@ export interface AccountMenuProps {
   detail?: string
   onSignOut: () => void
   onDeleteAccount: () => void
+  onPrivacy: () => void
 }
 
 /** Up to two initials for the avatar: "Kristian Lalev" gives "KL", "ana@x.fi" gives "A". */
@@ -22,7 +23,7 @@ function initials(name: string): string {
  * one stray click away. A disclosure button: Escape or a click outside closes
  * it, and Escape returns focus to the button.
  */
-export default function AccountMenu({ name, detail, onSignOut, onDeleteAccount }: AccountMenuProps) {
+export default function AccountMenu({ name, detail, onSignOut, onDeleteAccount, onPrivacy }: AccountMenuProps) {
   const [open, setOpen] = useState(false)
   const root = useRef<HTMLDivElement>(null)
   const button = useRef<HTMLButtonElement>(null)
@@ -86,6 +87,19 @@ export default function AccountMenu({ name, detail, onSignOut, onDeleteAccount }
               >
                 <LogOut size={16} aria-hidden />
                 Sign out
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                className="acct-item"
+                onClick={() => {
+                  setOpen(false)
+                  onPrivacy()
+                }}
+              >
+                <FileText size={16} aria-hidden />
+                Privacy policy
               </button>
             </li>
             <li>
