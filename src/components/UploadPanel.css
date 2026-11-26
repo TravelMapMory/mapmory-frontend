@@ -163,3 +163,8 @@
     transform: rotate(360deg);
   }
 }
+
+.upl-next {
+  align-self: flex-start;
+  margin-top: 8px;
+}

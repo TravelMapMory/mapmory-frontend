@@ -25,9 +25,9 @@ MapMory includes an interactive mock-data prototype and a separate live API mode
 | Anonymous recipient view | Link token `/s/{token}` or public-share ID `/public/{id}`; selected display images and approximate locations only |
 | Public map | `/map/public`, viewport-bounded clustering and public-share discovery |
 
-Sharing supports **anyone with the link** and **public discovery**. Named recipients, groups, owner-selected share covers, reporting/moderation, and self-service account deletion are not part of this frontend implementation.
+Sharing supports **anyone with the link** and **public discovery**. Public-share reporting and owner-initiated trip/account deletion are implemented. Named recipients, groups and owner-selected share covers are not implemented. Reported public shares are hidden from discovery pending manual moderation; an owner-facing moderation-status indicator is not yet available.
 
-The Go backend must support the corresponding endpoints, PostgreSQL persistence, Firebase verification and image storage. Backend PR #58 provides sharing support; ensure it is available in the backend version you run. See [Mock and Live API Modes](docs/api-modes.md) for precise requirements and limitations.
+The Go backend must support the corresponding endpoints, PostgreSQL persistence, Firebase verification and image storage. The Go backend must include the sharing, reporting, and deletion endpoints (backend #58, #60, and #61). See [Mock and Live API Modes](docs/api-modes.md) for precise requirements and limitations.
 
 ## Getting started
 
@@ -44,6 +44,12 @@ The frontend supports mock and live API modes. Leave `VITE_API_URL` unset to use
 The backend's database settings do not switch the frontend between these modes. Live photo sharing additionally requires a compatible sharing backend, PostgreSQL, Firebase and configured photo storage.
 
 See [Mock and Live API Modes](docs/api-modes.md) for configuration details, limitations, and testing instructions.
+
+### Account verification and onboarding
+
+When Firebase is configured, sign-up requests an email verification message and the account menu shows the signed-in account. Verification is **non-blocking**: unverified owners can still create trips, upload photos, and use sharing. The reminder offers Resend email and a check for completed verification; delayed, expired, or invalid links can be replaced by requesting another email. Email delivery can vary by provider. The getting-started guide tracks trip creation, uploads, and a first successful place review or location correction; owners can review remaining photos later. It disappears when all steps are complete or when dismissed. The dismissal preference is scoped to the Firebase user ID (the demo account has its own preference).
+
+To test Firebase sign-up, verification, resend, and deletion without real email delivery, start the Firebase Auth emulator as described below, then run `MAPMORY_TEST_FIREBASE_APP_URL=http://localhost:5180 MAPMORY_TEST_FIREBASE_EMULATOR_URL=http://127.0.0.1:9099 npx playwright test --project=integration tests/integration/firebase-emulator.spec.ts` with the frontend running on port 5180 using the emulator environment settings. Standard acceptance tests do not include this integration project.
 
 ### Local development
 
@@ -419,7 +425,7 @@ This supports platforms such as Google Cloud Run.
 ## Known limitations
 
 - A compatible, configured Go backend is required for live mode; live UI adapter support does not by itself guarantee server readiness.
-- Only link and public sharing audiences are implemented. Named recipients/groups, public reporting/moderation, owner-selected share covers and self-service account deletion are not implemented by this frontend.
+- Only link and public sharing audiences are implemented. Public reporting and self-service account deletion are available; owner-facing moderation status and owner-selected share covers are not yet implemented. Named recipient/group sharing is not implemented.
 - The owner-side pre-publication preview confirms selected photos, labels and audience, **not** a pixel-accurate reproduction of the recipient map; the backend computes the share's approximate display positions.
 - Revocation blocks new recipient collection lookups. Already issued signed display-image URLs may remain usable until they expire; no original image URLs are exposed to share recipients.
 - Public-map requests are bounded and may be truncated; moving or zooming the viewport retrieves another result set.

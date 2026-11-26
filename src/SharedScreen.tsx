@@ -337,7 +337,7 @@ export default function SharedScreen({ source, onHome, onBackToMap }: SharedScre
           </button>
         ) : null}
       </header>
-      <main className="shared-body">{body}</main>
+      <main id="main" tabIndex={-1} className="shared-body">{body}</main>
     </div>
   )
 }

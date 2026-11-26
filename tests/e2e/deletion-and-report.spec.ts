@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures'
-import { boot, checkLayout, failNext, openTrip } from './helpers'
+import { boot, checkLayout, failNext, openTrip, openAccountMenu } from './helpers'
 
 // Design doc 2.2 use case 6 (remove content), 3.5 (reports) and 3.6 (account deletion).
 
@@ -53,7 +53,8 @@ test('Escape closes the trip deletion without deleting', async ({ page }) => {
 
 test('deleting the account needs an explicit confirmation and leaves an empty MapMory', async ({ page }) => {
   await boot(page)
-  await page.getByRole('button', { name: 'Delete account' }).click()
+  await openAccountMenu(page)
+  await page.getByRole('button', { name: 'Delete account…' }).click()
   const panel = page.getByRole('region', { name: 'Delete your account?' })
   await expect(panel).toContainText('cannot be undone')
   const remove = panel.getByRole('button', { name: 'Yes, delete my account' })
@@ -65,7 +66,8 @@ test('deleting the account needs an explicit confirmation and leaves an empty Ma
   await expect(panel).toHaveCount(0)
   await expect(page.locator('.trip-card')).toHaveCount(3)
 
-  await page.getByRole('button', { name: 'Delete account' }).click()
+  await openAccountMenu(page)
+  await page.getByRole('button', { name: 'Delete account…' }).click()
   await failNext(page, 'deleteAccount')
   await panel.getByRole('checkbox').check()
   await remove.click()

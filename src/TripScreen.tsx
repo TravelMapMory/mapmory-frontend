@@ -40,8 +40,10 @@ export interface TripScreenProps {
   initialFiles?: File[]
   onBack: () => void
   onShowOnMap: (tripId: string) => void
-  /** Called after the trip was deleted; the trip page no longer exists then. */
-  onDeleted: () => void
+  /** Called with the trip's title after it was deleted; the trip page no longer exists then. */
+  onDeleted: (title: string) => void
+  /** Called after the owner successfully reviews or sets one photo location. */
+  onPlaceReviewed?: () => void
 }
 
 /**
@@ -54,7 +56,7 @@ function DeleteTripConfirm({
   onCancel,
 }: {
   trip: TripDetail
-  onDeleted: () => void
+  onDeleted: (title: string) => void
   onCancel: () => void
 }) {
   const [deleting, setDeleting] = useState(false)
@@ -71,7 +73,7 @@ function DeleteTripConfirm({
     setFailed(false)
     try {
       await deleteTrip(trip.id)
-      onDeleted()
+      onDeleted(trip.title)
     } catch {
       setFailed(true)
       setDeleting(false)
@@ -420,7 +422,7 @@ function Journey({ photos, onCorrect, onView }: PhotoListProps) {
  * without GPS, and the place to correct locations. A gallery shows the
  * photos as a grid; the journey view lists them day by day.
  */
-export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, onDeleted }: TripScreenProps) {
+export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, onDeleted, onPlaceReviewed }: TripScreenProps) {
   const [load, setLoad] = useState<Load>({ status: 'loading' })
   const [view, setView] = useState<View>('gallery')
   const [correcting, setCorrecting] = useState<Photo | null>(null)
@@ -496,6 +498,7 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, 
 
   async function saveLocation(photo: Photo, patch: LocationPatch) {
     const updated = await patchPhotoLocation(photo.id, patch)
+    onPlaceReviewed?.()
     // Reload before closing, so the counts never show the pre-correction state.
     await refresh()
     // Only close this photo's panel: the owner may already have opened another one.
@@ -514,7 +517,7 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, 
   }
 
   if (load.status === 'not-found') {
-    return <NotFoundScreen signedIn onHome={onBack} />
+    return <NotFoundScreen signedIn embedded onHome={onBack} />
   }
 
   if (load.status === 'error') {

@@ -1,0 +1,126 @@
+.acct {
+  position: relative;
+}
+
+.acct-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 4px 10px 4px 4px;
+  background: none;
+  border: 1px solid var(--c-border);
+  border-radius: 999px;
+  color: var(--c-text);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.acct-button:hover {
+  background: var(--c-page);
+}
+
+.acct-button:focus-visible,
+.acct-item:focus-visible {
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+.acct-avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--c-accent);
+  color: var(--c-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.acct-name {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.acct-button[aria-expanded='true'] .acct-chevron {
+  transform: rotate(180deg);
+}
+
+.acct-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1100;
+  min-width: 240px;
+  max-width: calc(100vw - 32px);
+  padding: 8px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md, 12px);
+  box-shadow: 0 10px 30px rgba(21, 34, 56, 0.16);
+}
+
+.acct-who {
+  padding: 8px 10px 10px;
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: 6px;
+}
+
+.acct-who-name {
+  margin: 0;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.acct-who-detail {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--c-text-2);
+  overflow-wrap: anywhere;
+}
+
+.acct-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.acct-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 0 10px;
+  background: none;
+  border: 0;
+  border-radius: var(--r-sm, 8px);
+  color: var(--c-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.acct-item:hover {
+  background: var(--c-page);
+}
+
+.acct-item--danger {
+  color: #b42318;
+}
+
+@media (max-width: 600px) {
+  .acct-name,
+  .acct-chevron {
+    display: none;
+  }
+
+  .acct-button {
+    padding: 4px;
+  }
+}

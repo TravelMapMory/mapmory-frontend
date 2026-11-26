@@ -116,3 +116,14 @@ export async function diagnoseOverflow(page: Page) {
       .slice(0, 20)
   })
 }
+/** Opens the header's account menu (it holds Sign out and Delete account). */
+export async function openAccountMenu(page: Page) {
+  const button = page.getByRole('button', { name: /^Account: / })
+  if ((await button.getAttribute('aria-expanded')) !== 'true') await button.click()
+  await expect(button).toHaveAttribute('aria-expanded', 'true')
+}
+
+export async function signOut(page: Page) {
+  await openAccountMenu(page)
+  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+}

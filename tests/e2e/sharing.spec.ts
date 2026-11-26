@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { test, expect } from './fixtures'
-import { boot, checkLayout, failNext, openTrip } from './helpers'
+import { boot, checkLayout, failNext, openTrip, signOut } from './helpers'
 
 /** Opens an address inside the running app, so the in-memory mock keeps the links created in this test. */
 async function visit(page: Page, url: string) {
@@ -45,7 +45,7 @@ test('owner shares chosen photos by link and a signed-out recipient sees only th
   await expect(page.locator('.share-message')).toHaveText(/Link copied|link is selected/)
   await checkLayout(page)
 
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await signOut(page)
   await visit(page, url)
   await expect(page.getByRole('heading', { name: 'Rome for grandma' })).toBeVisible()
   await expect(page.getByText('Shared with you')).toBeVisible()
@@ -149,7 +149,7 @@ test('a public share asks for consent, is marked Public and opens without an acc
   const url = await share.getByRole('textbox').inputValue()
   await checkLayout(page)
 
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await signOut(page)
   await visit(page, url)
   await expect(page.getByRole('heading', { name: 'Rome in public' })).toBeVisible()
   await expect(page.locator('.shared-tile')).toHaveCount(3)

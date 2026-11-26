@@ -93,3 +93,39 @@ button {
 .btn-danger:hover:not(:disabled) {
   background: #912018;
 }
+
+/* Keyboard users can jump past the header straight to the page content. */
+.skip-link {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2000;
+  padding: 10px 14px;
+  background: var(--c-primary);
+  color: #fff;
+  font-weight: 600;
+  border-radius: var(--r-sm, 8px);
+  transform: translateY(-200%);
+}
+
+.skip-link:focus {
+  transform: none;
+  outline: 2px solid var(--c-focus);
+  outline-offset: 2px;
+}
+
+main:focus {
+  outline: none;
+}
+
+/* Respect the system setting for reduced motion everywhere. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures'
-import { boot, openMap, openTrip } from './helpers'
+import { boot, openMap, openTrip, signOut } from './helpers'
 
 test('each page has its own address and Back/Forward move between them', async ({ page }) => {
   await boot(page)
@@ -33,7 +33,7 @@ test('a signed-out visitor opening an owner page logs in and lands on that page'
   await boot(page)
   await openTrip(page, 'Rome with family')
   const tripUrl = page.url()
-  await page.getByRole('button', { name: 'Sign out', exact: true }).click()
+  await signOut(page)
   await expect(page).toHaveURL(/\/$/)
   await page.goto(tripUrl)
   await expect(page).toHaveURL(/\/login$/)
@@ -62,6 +62,8 @@ test('switching between sign up and log in changes the address', async ({ page }
 test('an unknown address shows Page not found with a way home', async ({ page }) => {
   await page.goto('/no-such-page')
   await expect(page.getByRole('heading', { name: 'Page not found', exact: true })).toBeVisible()
+  await expect(page.locator('.land-hdr')).toHaveCount(1)
+  await expect(page.locator('main#main')).toHaveCount(1)
   await page.getByRole('button', { name: 'Go to home page', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Get started', exact: true })).toBeVisible()
 })
@@ -71,4 +73,7 @@ test('a signed-in owner opening a missing trip sees Page not found', async ({ pa
   await page.goto('/trips/123')
   await expect(page.getByRole('heading', { name: 'Page not found', exact: true })).toBeVisible()
   await expect(page).toHaveURL(/\/trips\/123$/)
+  await expect(page.locator('header')).toHaveCount(1)
+  await expect(page.locator('main#main')).toHaveCount(1)
+  await expect(page.locator('.land-hdr')).toHaveCount(0)
 })

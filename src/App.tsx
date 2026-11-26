@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Header, { type Screen } from './components/Header'
 import DashboardScreen from './DashboardScreen'
 import AuthScreen from './AuthScreen'
-import { deleteSignIn, firebaseEnabled, logOut, reauthenticateForDeletion, watchSignedIn } from './auth'
+import { currentAccount, deleteSignIn, firebaseEnabled, logOut, reauthenticateForDeletion, watchSignedIn, type Account } from './auth'
+import VerifyEmailBanner from './components/VerifyEmailBanner'
 import { completeAccountDeletion } from './accountDeletion'
 import LandingScreen from './LandingScreen'
 import PublicHeader from './components/PublicHeader'
@@ -13,6 +14,7 @@ import SharedScreen from './SharedScreen'
 import { deleteAccount, sharingAvailable } from './api/client'
 import DeleteAccountPanel from './components/DeleteAccountPanel'
 import TripScreen from './TripScreen'
+import { placesReviewedKey } from './components/GettingStarted'
 import { isOwnerRoute, navigate, routeTitle, useRoute, type Route } from './router'
 import './App.css'
 
@@ -70,6 +72,10 @@ export default function App() {
   /** Files chosen on the Dashboard, handed to the trip page once. */
   const [deletingAccount, setDeletingAccount] = useState(false)
   const [deletionNotice, setDeletionNotice] = useState('')
+  /** Shown once on the Dashboard after a trip was deleted. */
+  const [tripNotice, setTripNotice] = useState('')
+  /** Who is signed in, for the account menu and the verification banner. */
+  const [account, setAccount] = useState<Account | null>(null)
   const [pendingUpload, setPendingUpload] = useState<{ tripId: string; files: File[] } | null>(null)
 
   const redirect = useMemo(() => redirectFor(route, signedIn), [route, signedIn])
@@ -93,6 +99,11 @@ export default function App() {
     document.title = routeTitle(route)
   }, [route])
 
+  // Firebase knows the name and email once the session is restored; the demo has none.
+  useEffect(() => {
+    setAccount(signedIn && firebaseEnabled ? currentAccount() : null)
+  }, [signedIn])
+
   // Leaving the trip page drops files it was given, so Back/Forward cannot upload them twice.
   useEffect(() => {
     if (pendingUpload && !(route.name === 'trip' && route.tripId === pendingUpload.tripId)) setPendingUpload(null)
@@ -101,6 +112,9 @@ export default function App() {
   // Signing in leaves the log-in page through the redirect above.
   function signIn() {
     if (!firebaseEnabled) writeSignedIn(true)
+    // Firebase reports the session before sign-up has saved the name, so read
+    // the account again once signing in or up has completely finished.
+    else setAccount(currentAccount())
     setSignedIn(true)
   }
   // Reauthenticate before touching persisted data. After the backend commit,
@@ -199,7 +213,7 @@ export default function App() {
     return (
       <div className="app">
         <PublicHeader onHome={() => navigate({ name: 'landing' })} onSignIn={() => navigate({ name: 'login' })} />
-        <main className="app-body">
+        <main className="app-body" id="main" tabIndex={-1}>
           <PublicMapScreen onOpenShare={openPublicShare} />
         </main>
       </div>
@@ -214,13 +228,33 @@ export default function App() {
 
   return (
     <div className="app">
-      <Header current={tab} onNavigate={openTab} onSignOut={signOut} onDeleteAccount={() => setDeletingAccount(true)} />
+      <Header
+        current={tab}
+        onNavigate={openTab}
+        onSignOut={signOut}
+        onDeleteAccount={() => setDeletingAccount(true)}
+        account={account ? { name: account.name, email: account.email } : { name: 'Demo account' }}
+      />
+      {account && !account.emailVerified ? (
+        <VerifyEmailBanner
+          email={account.email}
+          onVerified={() => setAccount({ ...account, emailVerified: true })}
+          floating={route.name === 'map' || route.name === 'public-map'}
+        />
+      ) : null}
       {deletingAccount ? (
         <DeleteAccountPanel onConfirm={confirmDeleteAccount} requirePassword={firebaseEnabled} onCancel={() => setDeletingAccount(false)} />
       ) : null}
-      <main className="app-body">
+      <main className="app-body" id="main" tabIndex={-1}>
         {route.name === 'dashboard' ? (
-          <DashboardScreen onShowOnMap={showOnMap} onOpenTrip={openTrip} onUploadPhotos={uploadTo} />
+          <DashboardScreen
+            accountId={account?.uid ?? 'demo'}
+            onShowOnMap={showOnMap}
+            onOpenTrip={openTrip}
+            onUploadPhotos={uploadTo}
+            notice={tripNotice}
+            onDismissNotice={() => setTripNotice('')}
+          />
         ) : null}
         {route.name === 'map' ? (
           <MapScreen
@@ -240,7 +274,17 @@ export default function App() {
             initialFiles={pendingUpload?.tripId === route.tripId ? pendingUpload.files : undefined}
             onBack={() => openTab('dashboard')}
             onShowOnMap={showOnMap}
-            onDeleted={() => navigate({ name: 'dashboard' })}
+            onPlaceReviewed={() => {
+              try {
+                localStorage.setItem(placesReviewedKey(account?.uid ?? 'demo'), '1')
+              } catch {
+                // If storage is unavailable, the owner can still complete reviews.
+              }
+            }}
+            onDeleted={(title) => {
+              setTripNotice(`“${title}” and its photos were deleted.`)
+              navigate({ name: 'dashboard' })
+            }}
           />
         ) : null}
       </main>
