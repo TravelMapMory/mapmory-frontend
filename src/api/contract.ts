@@ -39,6 +39,7 @@ export interface ApiTrip {
   start_date?: string | null
   end_date?: string | null
   visibility?: 'private' | 'public'
+  under_review?: boolean
 }
 
 /** `CreateTrip`, the POST /api/trips body. */
@@ -200,6 +201,8 @@ export interface ApiShare {
   token: string
   created_at: string
   revoked_at: string | null
+  /** True while a report on this public share is unresolved; it is then hidden from the public map. */
+  under_review: boolean
 }
 
 /** `ShareList`, GET /api/trips/{id}/shares. */
