@@ -78,6 +78,10 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
   )
 
   const start = initial ?? previous ?? WORLD
+  // Never reverse-geocode the same coordinates merely because the owner
+  // opened an existing location editor without making a change.
+  const unchanged = initial !== null && pin !== null && selected === null
+    && round(initial.lat) === round(pin.lat) && round(initial.lng) === round(pin.lng)
 
   return (
     <div className="lpick">
@@ -130,7 +134,7 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
         )}
       </p>
       <div>
-        <button type="button" className="btn btn-primary" disabled={!pin || saving} onClick={() => pin && onSave(selected
+        <button type="button" className="btn btn-primary" disabled={!pin || saving || unchanged} onClick={() => pin && onSave(selected
           ? { ...pin, selected_place: selected }
           : pin)}>
           {saving ? 'Saving…' : 'Save location'}

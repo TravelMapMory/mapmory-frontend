@@ -4,6 +4,7 @@ import { CircleAlert, CircleCheck, Clock, LoaderCircle, MapPinOff, RotateCcw, ty
 import { restoreUploads, uploadPhotos } from '../api/client'
 import type { Photo, PhotoState, UploadItem } from '../api/types'
 import { formatCaptured, plural } from '../format'
+import { photoPlaceName } from '../photoLocation'
 import './UploadPanel.css'
 
 export interface UploadPanelProps {
@@ -46,7 +47,7 @@ function describe(item: UploadItem): string | null {
   parts.push(taken ? `Taken ${taken}` : 'No capture time in file')
   if (photo.lat !== null && photo.lng !== null) {
     parts.push(`GPS ${photo.lat.toFixed(4)}, ${photo.lng.toFixed(4)}`)
-    parts.push(photo.place_name ? `near ${photo.place_name}` : 'no known place nearby')
+    parts.push(photoPlaceName(photo) ? `near ${photoPlaceName(photo)}` : 'place name pending')
   } else {
     parts.push('no GPS in file')
   }

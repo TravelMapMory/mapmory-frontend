@@ -284,3 +284,14 @@ test('specific search selection survives saving and reload without being replace
   await openTrip(page, 'Rome with family')
   await expect(page.locator('.trip-tile').filter({ hasText: 'Täffä' })).toHaveCount(1)
 })
+
+
+test('opening an existing location cannot silently overwrite its saved place', async ({ page }) => {
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+  const tile = page.locator('.trip-tile').filter({ hasText: 'Colosseum' })
+  await tile.getByRole('button', { name: 'Change location' }).click()
+  await expect(page.getByRole('button', { name: 'Save location' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(tile).toContainText('Colosseum')
+})
