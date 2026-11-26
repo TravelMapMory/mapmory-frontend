@@ -28,13 +28,6 @@
   background: #eef0f3;
 }
 
-/*
- * Only the OSM fallback is desaturated, and only its tile pane: the markers
- * live in sibling panes and keep their colour. Positron is already pale.
- */
-.mapscreen-canvas--grey .leaflet-tile-pane {
-  filter: grayscale(1) brightness(1.06) contrast(0.92);
-}
 
 /* Leaflet stacks its panes from z-index 400 up, so overlays sit above that. */
 .mapscreen-find {
@@ -64,7 +57,8 @@
   border-radius: var(--r-pill);
   box-shadow: var(--shadow-float);
   font-size: 14px;
-  white-space: nowrap;
+  width: max-content;
+  max-width: calc(100% - 140px);
 }
 
 /*

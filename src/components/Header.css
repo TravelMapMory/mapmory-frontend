@@ -6,30 +6,34 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   height: 64px;
   padding: 0 48px;
-  background: var(--c-surface);
+  background: rgba(238, 243, 249, 0.86);
   border-bottom: 1px solid var(--c-border);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .hdr {
+    background: var(--c-page);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
 }
 .hdr-brand {
   display: flex;
   align-items: center;
   gap: 10px;
 }
-.hdr-logo {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 32px;
-  background: var(--c-primary);
-  border-radius: var(--r-xs);
-  color: #fff;
-}
 .hdr-name {
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 20px;
   font-weight: 700;
+  letter-spacing: -0.03em;
   color: var(--c-primary);
 }
 .hdr-tabs {
@@ -47,22 +51,26 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 64px;
+  height: 36px;
   padding: 0 14px;
   background: none;
   border: 0;
-  border-bottom: 3px solid transparent;
+  border-radius: var(--r-pill);
   font-size: 14px;
   font-weight: 600;
   color: var(--c-text-2);
+  transition:
+    background-color var(--dur) var(--ease-out),
+    color var(--dur) var(--ease-out);
 }
 
 .hdr-tab:hover {
   color: var(--c-primary);
+  background: rgba(33, 25, 76, 0.05);
 }
 .hdr-tab[aria-current='page'] {
-  border-bottom-color: var(--c-primary);
-  color: var(--c-primary);
+  background: var(--c-primary);
+  color: #fff;
 }
 /* Tabs stay grouped on the trailing edge; Sign out sits after them. */
 .hdr nav {
@@ -75,15 +83,15 @@
   min-height: 36px;
   padding: 0 10px;
   background: none;
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-sm);
+  border: 1px solid var(--c-border-strong);
+  border-radius: var(--r-pill);
   font-size: 14px;
   font-weight: 600;
   color: var(--c-text-2);
 }
 .hdr-signout:hover {
   color: var(--c-primary);
-  background: var(--c-page);
+  background: var(--c-surface);
 }
 
 @media (max-width: 600px) {

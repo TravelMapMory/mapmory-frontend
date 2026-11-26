@@ -1,18 +1,20 @@
 import { divIcon, latLngBounds, type LeafletKeyboardEvent, type Map as LeafletMap } from 'leaflet'
 import { MapContainer, Marker, TileLayer, ZoomControl } from 'react-leaflet'
 import { useEffect, useId, useMemo, useState, type FormEvent } from 'react'
-import { ArrowLeft, Flag, ImageOff, Link2Off, MapPin } from 'lucide-react'
+import { ArrowLeft, Flag, ImageOff, Link2Off } from 'lucide-react'
 import { getPublicShare, getSharedCollection, reportShare } from './api/client'
 import { ApiError } from './api/http'
 import type { SharedCollection } from './api/types'
 import { mapPinHtml } from './components/mapPinHtml'
 import VisibilityBadge from './components/VisibilityBadge'
 import { formatCaptured, plural } from './format'
-import { TILES } from './mapTiles'
+import { ANIMATE_ZOOM, BASEMAPS, useBasemap } from './mapTiles'
+import MapLayers from './components/MapLayers'
 import { sharedPins, type SharedPin } from './sharedPins'
 import placeholder from './assets/photo-placeholder.svg'
 import './LandingScreen.css'
 import './SharedScreen.css'
+import BrandMark from './components/BrandMark'
 
 const REPORT_MAX = 500
 
@@ -137,8 +139,11 @@ function CityMarker({ pin, onSelect }: { pin: SharedPin; onSelect: (key: string)
   return <Marker position={[pin.lat, pin.lng]} icon={icon} title={label} eventHandlers={eventHandlers} />
 }
 
+/** The shared photos as city pins over the viewer's chosen basemap; fits the view to the pins once the map exists. */
 function SharedMap({ pins, onSelect }: { pins: SharedPin[]; onSelect: (key: string) => void }) {
   const [map, setMap] = useState<LeafletMap | null>(null)
+  const [basemap, setBasemap] = useBasemap()
+  const tiles = BASEMAPS[basemap]
 
   useEffect(() => {
     if (!map || pins.length === 0) return
@@ -146,20 +151,30 @@ function SharedMap({ pins, onSelect }: { pins: SharedPin[]; onSelect: (key: stri
   }, [map, pins])
 
   return (
-    <MapContainer
-      ref={setMap}
-      className={TILES.desaturate ? 'shared-map shared-map--grey' : 'shared-map'}
-      center={[50.5, 10]}
-      zoom={4}
-      zoomControl={false}
-      zoomAnimation={false}
-    >
-      <TileLayer url={TILES.url} attribution={TILES.attribution} />
-      <ZoomControl position="bottomright" />
-      {pins.map((pin) => (
-        <CityMarker key={pin.key} pin={pin} onSelect={onSelect} />
-      ))}
-    </MapContainer>
+    <div className="shared-map-frame">
+      <MapContainer
+        ref={setMap}
+        className="shared-map"
+        center={[50.5, 10]}
+        zoom={4}
+        zoomControl={false}
+        zoomAnimation={ANIMATE_ZOOM}
+      >
+        <TileLayer
+            key={basemap}
+            className={tiles.desaturate ? 'basemap-grey' : undefined}
+            url={tiles.url}
+            attribution={tiles.attribution}
+            maxNativeZoom={tiles.maxNativeZoom}
+            maxZoom={19}
+          />
+        <ZoomControl position="bottomright" />
+        {pins.map((pin) => (
+          <CityMarker key={pin.key} pin={pin} onSelect={onSelect} />
+        ))}
+      </MapContainer>
+      <MapLayers value={basemap} onChange={setBasemap} />
+    </div>
   )
 }
 
@@ -325,9 +340,7 @@ export default function SharedScreen({ source, onHome, onBackToMap }: SharedScre
     <div className="land shared">
       <header className="land-hdr">
         <div className="land-brand">
-          <span className="land-logo">
-            <MapPin size={18} strokeWidth={2.6667} aria-hidden />
-          </span>
+          <BrandMark />
           <strong className="land-name">MapMory</strong>
         </div>
         {onBackToMap ? (

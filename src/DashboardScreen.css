@@ -25,9 +25,11 @@
 
 .dash-title {
   margin: 0;
-  font-size: 28px;
+  font-size: 40px;
   font-weight: 700;
-  line-height: 34px;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--c-primary);
 }
 
 .dash-subtitle {
@@ -121,10 +123,17 @@
   margin: 0;
 }
 
+/* One joined panel: the 1px gap shows the border colour between tiles at every width. */
 .dash-stats {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
+  gap: 1px;
+  overflow: hidden;
+  background: var(--c-border);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-raised);
 }
 
 .dash-section {
@@ -141,8 +150,9 @@
 
 .dash-h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
+  color: var(--c-primary);
 }
 
 .dash-caption {
@@ -153,7 +163,7 @@
 .dash-trips {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
 .dash-empty {
@@ -200,8 +210,8 @@
 .dash-recent-item {
   overflow: hidden;
   background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-raised);
 }
 
 .dash-recent-item img,
@@ -256,7 +266,7 @@
   gap: 10px;
   margin: 0 0 20px;
   padding: 10px 8px 10px 14px;
-  background: var(--c-mint-bg, #d1fae5);
+  background: var(--c-success-bg);
   border: 1px solid #9fdcc0;
   border-radius: var(--r-md, 12px);
   color: #14532d;

@@ -1,15 +1,15 @@
 /* Map pin markers, built as HTML by mapPinHtml.ts. Both variants are a plain
    centred flow column, so Leaflet's divIcon can position them.
 
-   Two ring colours are literals rather than tokens: #10b981 (city ring and
-   status dot) and #d4af37 (the cluster's gold ring). The count badge is navy,
-   not amber, because amber means "Public" in the design doc (4.3). */
+   Rings use the logo colours: coral for a city pin and its status dot, sky
+   for a cluster, with a white gap like a polaroid border. The count badge is
+   navy, not amber, because amber means "Public" in the design doc (4.3). */
 
 .mpin {
   --mpin-ring: 56px;
   --mpin-ring-gap: 1px;
-  --mpin-ring-ink: #10b981;
-  --mpin-ring-tint: var(--c-mint-bg);
+  --mpin-ring-ink: var(--c-coral);
+  --mpin-ring-tint: #fff;
 
   display: inline-flex;
   flex-direction: column;
@@ -20,8 +20,8 @@
 .mpin--cluster {
   --mpin-ring: 68px;
   --mpin-ring-gap: 2px;
-  --mpin-ring-ink: #d4af37;
-  --mpin-ring-tint: var(--c-amber-bg);
+  --mpin-ring-ink: var(--c-sky);
+  --mpin-ring-tint: #fff;
 }
 
 /* The tint fills the hairline gap the design leaves between the saturated

@@ -253,3 +253,48 @@ test('full-photo viewer shows a fallback when an image cannot load', async ({ pa
       .getByRole('img'),
   ).toBeVisible()
 })
+
+test('journey numbers located photos to match their pins, and day tabs filter the list and the map', async ({ page }) => {
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+  await page.getByRole('button', { name: 'Journey', exact: true }).click()
+  await expect(page.getByRole('tablist', { name: 'Trip days' }).getByRole('tab')).toHaveCount(4)
+  await expect(page.getByRole('tab', { name: 'All days' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('.trip-pin')).toHaveText(['1', '2'])
+  await expect(page.locator('.trip-row').filter({ hasText: 'No location' })).toContainText('Not on the map')
+
+  // A stop number shows its pin.
+  const pantheon = page.getByRole('button', { name: 'Show Pantheon, Rome on the map' })
+  await pantheon.click()
+  await expect(pantheon).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.trip-pin[data-selected]')).toHaveText('2')
+
+  // Clicking anywhere on a row selects its stop.
+  await page.locator('.trip-row').filter({ hasText: 'Colosseum, Rome' }).click()
+  await expect(page.getByRole('button', { name: 'Show Colosseum, Rome on the map' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.locator('.trip-pin[data-selected]')).toHaveText('1')
+
+  // Hovering mirrors between the list and the map (pointer devices only).
+  if (test.info().project.name !== 'phone') {
+    await page.locator('.trip-row').filter({ hasText: 'Pantheon, Rome' }).hover()
+    await expect(page.locator('.trip-pin[data-hovered]')).toHaveText('2')
+    await page.locator('.leaflet-marker-icon').filter({ hasText: '1' }).hover()
+    await expect(page.locator('.trip-row[data-hovered]')).toContainText('Colosseum, Rome')
+  }
+
+  // Arrow keys, Home and End move between days and open them.
+  await page.getByRole('tab', { name: 'All days' }).focus()
+  await page.keyboard.press('ArrowRight')
+  const day1 = page.getByRole('tab', { name: 'Day 1 · Sunday, 20 September 2026' })
+  await expect(day1).toBeFocused()
+  await expect(day1).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('.trip-row .trip-tile-place')).toHaveText(['Colosseum, Rome'])
+  await expect(page.locator('.trip-pin')).toHaveText(['1'])
+  await page.keyboard.press('End')
+  await expect(page.getByRole('tab', { name: 'No capture date' })).toHaveAttribute('aria-selected', 'true')
+  await expect(page.locator('.trip-pin')).toHaveCount(0)
+  await expect(page.getByText('so nothing is on the map')).toBeVisible()
+  await page.keyboard.press('Home')
+  await expect(page.getByRole('tab', { name: 'All days' })).toHaveAttribute('aria-selected', 'true')
+  await checkLayout(page)
+})

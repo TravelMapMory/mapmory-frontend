@@ -1,115 +1,291 @@
+/*
+ * Getting started as a boarding pass: a logo-blue stub with the progress, a
+ * perforated edge with punched notches, and a route of the three steps (done in
+ * green with a tick, the current one as an amber pill, the rest muted). Only
+ * the current step shows its explanation and button. On phones the stub
+ * becomes a band across the top and the perforation runs sideways.
+ */
 .guide {
+  position: relative;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
   margin: 0 0 24px;
-  padding: 16px 20px;
   background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-left: 4px solid var(--c-action);
-  border-radius: var(--r-md, 12px);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-raised);
 }
 
-.guide-head {
+/* Punched notches where the stub tears off. */
+.guide::before,
+.guide::after {
+  content: '';
+  position: absolute;
+  left: 140px;
+  width: 20px;
+  height: 20px;
+  background: var(--c-page);
+  border-radius: 50%;
+}
+
+.guide::before {
+  top: -10px;
+}
+
+.guide::after {
+  bottom: -10px;
+}
+
+.guide-stub {
+  position: relative;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  padding: 20px;
+  background: var(--c-link);
+  border-radius: var(--r-lg) 0 0 var(--r-lg);
+  color: #fff;
 }
 
-.guide-title {
+.guide-stub::after {
+  content: '';
+  position: absolute;
+  top: 14px;
+  right: 0;
+  bottom: 14px;
+  border-right: 2px dashed rgba(255, 255, 255, 0.45);
+}
+
+.guide-stub-label {
   margin: 0;
-  font-size: 18px;
+  font: 600 11px var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.85);
 }
 
-.guide-progress {
-  margin: 2px 0 0;
+.guide-stub-count {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.guide-stub-count b {
+  font: 700 38px/1 var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.guide-stub-count span {
   font-size: 13px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.guide-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 24px;
+  padding: 20px 56px 20px 24px;
+}
+
+.guide-route {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Dashed connector before every stop but the first. */
+.guide-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 12.5px var(--font-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: var(--c-text-2);
 }
 
+.guide-stop + .guide-stop::before {
+  content: '';
+  width: 40px;
+  margin-right: 5px;
+  border-top: 2px dashed rgb(46 46 108 / 0.25);
+}
+
+.guide-stop[data-state='done'] {
+  color: #15803d;
+}
+
+.guide-stop[data-state='now'] > span[aria-hidden] {
+  padding: 3px 10px;
+  background: var(--c-action);
+  border-radius: var(--r-pill);
+  color: var(--c-on-action);
+}
+
+.guide-now-title {
+  margin: 0;
+  font: 600 19px var(--font-display);
+  letter-spacing: -0.01em;
+  color: var(--c-primary);
+}
+
+.guide-now-text {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--c-text-2);
+}
+
+.guide-action {
+  min-height: 40px;
+}
+
 .guide-hide {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   display: inline-grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
-  flex: none;
+  width: 36px;
+  height: 36px;
   background: none;
   border: 0;
-  border-radius: var(--r-sm, 8px);
+  border-radius: var(--r-pill);
   color: var(--c-text-2);
   cursor: pointer;
 }
 
 .guide-hide:hover {
-  background: var(--c-page);
+  background: var(--c-surface-2);
 }
 
-.guide-steps {
-  list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
-  display: grid;
-  gap: 10px;
-}
-
-.guide-step {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.guide-mark {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  border: 2px solid var(--c-border);
-  color: var(--c-text-2);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.guide-step[data-done='true'] .guide-mark {
-  background: var(--c-mint-bg, #d1fae5);
-  border-color: #15803d;
+/* The finished ticket: a passport-style stamp in the corner the close button used. */
+.guide-stamp {
+  position: absolute;
+  top: 16px;
+  right: 18px;
+  padding: 4px 10px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  outline: 1px solid currentColor;
+  outline-offset: 2px;
+  font: 700 11px var(--font-mono);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   color: #15803d;
+  transform: rotate(-6deg);
+  pointer-events: none;
 }
 
-.guide-text {
-  flex: 1;
-  min-width: 0;
+@media (prefers-reduced-motion: no-preference) {
+  .guide-stamp {
+    animation: guide-stamp-in 420ms cubic-bezier(0.2, 0.9, 0.3, 1.25) 150ms backwards;
+  }
 }
 
-.guide-step-title {
-  margin: 0;
-  font-weight: 600;
+@keyframes guide-stamp-in {
+  from {
+    opacity: 0;
+    transform: rotate(-6deg) scale(1.6);
+  }
 }
 
-.guide-step[data-done='true'] .guide-step-title {
-  color: var(--c-text-2);
-  text-decoration: line-through;
-}
-
-.guide-step-text {
-  margin: 0;
-  font-size: 13px;
-  color: var(--c-text-2);
-}
-
-.guide-action {
-  flex: none;
-}
-
-@media (max-width: 600px) {
+/*
+ * Phones keep the ticket: a narrow stub with the count, the perforation and
+ * notches, and a compact route where done steps shrink to their tick.
+ */
+@media (max-width: 640px) {
   .guide {
-    padding: 14px 16px;
+    grid-template-columns: 76px minmax(0, 1fr);
   }
 
-  .guide-step {
-    flex-wrap: wrap;
+  .guide::before,
+  .guide::after {
+    left: 66px;
+  }
+
+  .guide-stub {
+    align-items: center;
+    padding: 16px 8px;
+    text-align: center;
+  }
+
+  .guide-stub::after {
+    top: 12px;
+    bottom: 12px;
+  }
+
+  .guide-stub-label {
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+  }
+
+  .guide-stub-count {
+    align-items: center;
+  }
+
+  .guide-stub-count b {
+    font-size: 28px;
+  }
+
+  .guide-stub-count span {
+    font-size: 12px;
+  }
+
+  .guide-main {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 16px 40px 16px 18px;
+  }
+
+  .guide-route {
+    gap: 6px;
+  }
+
+  .guide-stop {
+    font-size: 11px;
+  }
+
+  .guide-stop + .guide-stop::before {
+    width: 14px;
+    margin-right: 2px;
+  }
+
+  /* Done steps keep only their tick; the label stays for screen readers. */
+  .guide-stop[data-state='done'] > span[aria-hidden] {
+    display: none;
+  }
+
+  .guide-now-title {
+    font-size: 17px;
+  }
+
+  .guide-now-text {
+    font-size: 13px;
+    line-height: 1.45;
   }
 
   .guide-action {
-    margin-left: 40px;
+    justify-self: start;
+    min-height: 44px;
+    margin-top: 4px;
+  }
+
+  .guide-hide {
+    top: 6px;
+    right: 4px;
+  }
+
+  .guide-stamp {
+    top: 14px;
+    right: 12px;
+    padding: 3px 7px;
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
   }
 }

@@ -39,7 +39,9 @@ test('a new owner gets a getting-started guide that ticks itself off and can be 
   await boot(page, { scenario: 'empty' })
   const guide = page.getByRole('region', { name: 'Getting started' })
   await expect(guide).toContainText('0 of 3 done')
-  await expect(guide.getByRole('button', { name: 'Choose photos' })).toBeDisabled()
+  // Only the current step offers its action; uploading waits until a trip exists.
+  await expect(guide.getByRole('heading', { name: 'Create a trip' })).toBeVisible()
+  await expect(guide.getByRole('button', { name: 'Choose photos' })).toHaveCount(0)
   await checkLayout(page)
 
   await guide.getByRole('button', { name: 'Start a trip' }).click()
@@ -49,6 +51,7 @@ test('a new owner gets a getting-started guide that ticks itself off and can be 
   await page.getByRole('button', { name: 'Dashboard' }).first().click()
   await expect(guide).toContainText('1 of 3 done')
   await expect(guide.getByText('Create a trip (done)')).toBeAttached()
+  await expect(guide.getByRole('button', { name: 'Choose photos' })).toBeEnabled()
 
   await guide.getByRole('button', { name: 'Hide the getting started guide' }).click()
   await expect(guide).toHaveCount(0)
@@ -67,11 +70,11 @@ test('the guide shows only what is left, and Review places opens the trip that n
   await expect(page.getByRole('heading', { name: 'Rome with family', exact: true })).toBeVisible()
 })
 
-test('checking one photo place completes onboarding even when other photos need review', async ({ page }) => {
+test('checking one photo place completes onboarding even when other photos need review, and Done closes the finished guide', async ({ page }) => {
   await boot(page)
   const guide = page.getByRole('region', { name: 'Getting started' })
   await expect(guide).toContainText('2 of 3 done')
-  await expect(guide).toContainText('Review or confirm the place of one photo')
+  await expect(guide).toContainText('Confirm where one photo was taken')
   await guide.getByRole('button', { name: 'Review places' }).click()
   await page.getByRole('button', { name: 'Review next' }).click()
   await page.getByRole('button', { name: 'Confirm Pantheon, Rome', exact: true }).click()
@@ -79,8 +82,16 @@ test('checking one photo place completes onboarding even when other photos need 
   await expect(page.locator('.trip-saved')).toHaveText('Location saved: Pantheon, Rome.')
   await expect.poll(() => page.evaluate(() => localStorage.getItem('mapmory.guide.places-reviewed.demo'))).toBe('1')
   await page.getByRole('button', { name: 'Dashboard' }).first().click()
-  await expect(page.getByRole('region', { name: 'Getting started' })).toHaveCount(0)
+  // The finished guide stays until it is closed, so the owner sees onboarding is complete.
+  await expect(guide).toContainText('3 of 3 done')
+  await expect(guide.getByRole('heading', { name: 'You’re all set' })).toBeVisible()
+  await expect(guide.getByText('Check the places (done)')).toBeAttached()
+  await expect(guide.getByRole('button', { name: 'Hide the getting started guide' })).toHaveCount(0)
+  await checkLayout(page)
+  await guide.getByRole('button', { name: 'Done', exact: true }).click()
+  await expect(guide).toHaveCount(0)
   await page.reload()
+  await expect(page.getByRole('heading', { name: 'Dashboard', exact: true })).toBeVisible()
   await expect(page.getByRole('region', { name: 'Getting started' })).toHaveCount(0)
 })
 

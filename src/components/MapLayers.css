@@ -1,0 +1,117 @@
+/*
+ * Layers button over the map's bottom-left corner. Leaflet panes go up to
+ * z-index 700 inside an isolated map, so overlays at 500 sit above the tiles.
+ */
+.map-layers {
+  position: absolute;
+  z-index: 500;
+  bottom: 24px;
+  left: 16px;
+}
+
+.map-layers-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: 50%;
+  box-shadow: var(--shadow-float);
+  color: var(--c-primary);
+  transition:
+    background-color var(--dur) var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+.map-layers-button:hover {
+  background: var(--c-surface-2);
+}
+
+.map-layers-button:active {
+  transform: scale(0.96);
+}
+
+.map-layers-button[aria-expanded='true'] {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+}
+
+/* The "Minimal" basemap: Leaflet puts the TileLayer className on its layer div, so only tiles turn grey. */
+.basemap-grey {
+  filter: grayscale(1) brightness(1.06) contrast(0.92);
+}
+
+/* Opens upwards from the button, so it never covers the zoom control or the attribution. */
+.map-layers-panel {
+  position: absolute;
+  bottom: calc(100% + 10px);
+  left: 0;
+  display: grid;
+  grid-template-columns: repeat(2, 84px);
+  gap: 10px;
+  padding: 12px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-float);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .map-layers-panel {
+    transform-origin: bottom left;
+    animation: map-layers-in 200ms var(--ease-out) both;
+  }
+}
+
+@keyframes map-layers-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+}
+
+.map-layers-option {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--c-text-2);
+  text-align: center;
+}
+
+.map-layers-option img {
+  display: block;
+  width: 84px;
+  height: 64px;
+  object-fit: cover;
+  background: var(--c-page);
+  border: 2px solid transparent;
+  border-radius: var(--r-sm);
+  box-shadow: 0 0 0 1px var(--c-border);
+  transition: box-shadow var(--dur) var(--ease-out);
+}
+
+.map-layers-option img[data-desaturate='true'] {
+  filter: grayscale(1) brightness(1.06) contrast(0.92);
+}
+
+.map-layers-option:hover img {
+  box-shadow: 0 0 0 1px var(--c-text-2);
+}
+
+.map-layers-option[aria-pressed='true'] {
+  color: var(--c-link);
+}
+
+.map-layers-option[aria-pressed='true'] img {
+  border-color: var(--c-surface);
+  box-shadow: 0 0 0 2px var(--c-link);
+}

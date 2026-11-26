@@ -3,7 +3,7 @@ import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet'
 import { useMemo, useState } from 'react'
 import { Copy, MapPin } from 'lucide-react'
 import PlaceSearch from './PlaceSearch'
-import { TILES } from '../mapTiles'
+import { ANIMATE_ZOOM, TILES } from '../mapTiles'
 import './LocationPicker.css'
 
 export interface LatLng {
@@ -99,11 +99,11 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
         </p>
         <MapContainer
           ref={setMap}
-          className={TILES.desaturate ? 'lpick-map lpick-map--grey' : 'lpick-map'}
+          className="lpick-map"
           center={[start.lat, start.lng]}
           zoom={initial || previous ? 12 : 2}
           worldCopyJump
-          zoomAnimation={false}
+          zoomAnimation={ANIMATE_ZOOM}
         >
           <TileLayer url={TILES.url} attribution={TILES.attribution} />
           <ClickToPlace onPlace={(position) => place(position, 'Pin dropped on the map')} />

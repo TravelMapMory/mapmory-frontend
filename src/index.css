@@ -1,4 +1,5 @@
 @import './tokens.css';
+@import './motion.css';
 
 html,
 body,
@@ -11,7 +12,52 @@ body {
   background: var(--c-page);
   color: var(--c-text);
   font-family: var(--font);
+  font-feature-settings: 'ss01', 'cv11';
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/*
+ * Background: a faint map grid behind every screen, like graph paper under a
+ * route plan. Cards, photos and maps stay solid on top of it.
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--c-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--c-grid) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position: -1px -1px;
+}
+
+/* Display type: headings use Bricolage Grotesque, tightly tracked. */
+h1,
+h2 {
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  letter-spacing: -0.02em;
+}
+
+h3 {
+  letter-spacing: -0.01em;
+}
+
+/* Screens ease in when they mount, so navigation reads as a state change. */
+@media (prefers-reduced-motion: no-preference) {
+  main > * {
+    animation: screen-in 360ms var(--ease-out) backwards;
+  }
+}
+
+@keyframes screen-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
 }
 
 button {
@@ -28,13 +74,22 @@ button {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  min-height: 36px;
-  padding: 0 14px;
+  min-height: 38px;
+  padding: 0 16px;
   border: 1px solid transparent;
-  border-radius: var(--r-sm);
+  border-radius: var(--r-pill);
   font-size: 14px;
   font-weight: 600;
   white-space: nowrap;
+  transition:
+    background-color var(--dur) var(--ease-out),
+    border-color var(--dur) var(--ease-out),
+    color var(--dur) var(--ease-out),
+    transform 120ms var(--ease-out);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.98);
 }
 
 .btn-primary {
@@ -44,25 +99,27 @@ button {
 
 .btn-action {
   background: var(--c-action);
-  color: #fff;
+  border-color: rgba(33, 25, 76, 0.14);
+  color: var(--c-on-action);
 }
 
 .btn-secondary {
   background: var(--c-surface);
-  border-color: var(--c-border);
+  border-color: var(--c-border-strong);
   color: var(--c-primary);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: #22355a;
+  background: var(--c-primary-hover);
 }
 
 .btn-action:hover:not(:disabled) {
-  background: #2760b8;
+  background: var(--c-action-hover);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: var(--c-page);
+  background: var(--c-surface-2);
+  border-color: var(--c-text-2);
 }
 
 .btn:disabled {
@@ -72,7 +129,11 @@ button {
 
 :focus-visible {
   outline: 2px solid var(--c-focus);
-  outline-offset: 2px;
+  outline-offset: 3px;
+}
+
+::selection {
+  background: var(--c-accent-strong);
 }
 
 .visually-hidden {
@@ -86,12 +147,12 @@ button {
 
 /* Destructive actions: deleting a trip or the account, revoking a link. */
 .btn-danger {
-  background: #b42318;
+  background: var(--c-danger);
   color: #fff;
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: #912018;
+  background: #7f0e2d;
 }
 
 /* Keyboard users can jump past the header straight to the page content. */
