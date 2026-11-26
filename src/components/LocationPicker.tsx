@@ -3,6 +3,7 @@ import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet'
 import { useMemo, useState } from 'react'
 import { Copy, MapPin } from 'lucide-react'
 import PlaceSearch from './PlaceSearch'
+import type { Place, LocationPatch } from '../api/types'
 import { TILES } from '../mapTiles'
 import './LocationPicker.css'
 
@@ -11,13 +12,15 @@ export interface LatLng {
   lng: number
 }
 
+type SelectedPlace = NonNullable<Extract<LocationPatch, { lat: number }>['selected_place']>
+
 export interface LocationPickerProps {
   /** Where the pin starts: the photo's current location, if it has one. */
   initial: LatLng | null
   /** The previous photo in the trip that has a location, for "Same place as previous photo". */
-  previous: (LatLng & { label: string }) | null
+  previous: (LatLng & { label: string; selected_place?: SelectedPlace }) | null
   saving: boolean
-  onSave: (position: LatLng) => void
+  onSave: (position: Extract<LocationPatch, { lat: number }>) => void
 }
 
 const PIN = divIcon({
@@ -48,8 +51,11 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
   const [map, setMap] = useState<LeafletMap | null>(null)
   const [pin, setPin] = useState<LatLng | null>(initial)
   const [source, setSource] = useState<string | null>(initial ? 'Current location' : null)
+  const [selected, setSelected] = useState<SelectedPlace | null>(null)
 
-  function place(position: LatLng, label: string, zoom?: number) {
+  function place(position: LatLng, label: string, zoom?: number, candidate?: SelectedPlace) {
+    // Dropping or dragging a pin clears an earlier named search selection.
+    setSelected(candidate ?? null)
     const next = { lat: round(position.lat), lng: round(position.lng) }
     setPin(next)
     setSource(label)
@@ -64,6 +70,7 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
       dragend: (event: { target: LeafletMarker }) => {
         const at = event.target.getLatLng()
         setPin({ lat: round(at.lat), lng: round(at.lng) })
+        setSelected(null)
         setSource('Pin moved on the map')
       },
     }),
@@ -79,13 +86,15 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
         placeholder="Search a place, district or street"
         showLabel
         autoFocus
-        onSelect={(found) => place(found, found.label, found.zoom)}
+        onSelect={(found: Place) => place(found, found.label, found.zoom, {
+          name: found.name, kind: found.kind, city: found.city, country: found.country,
+        })}
       />
       {previous ? (
         <button
           type="button"
           className="btn btn-secondary lpick-previous"
-          onClick={() => place(previous, `Same place as previous photo (${previous.label})`, 13)}
+          onClick={() => place(previous, `Same place as previous photo (${previous.label})`, 13, previous.selected_place)}
         >
           <Copy size={14} aria-hidden />
           Same place as previous photo
@@ -121,7 +130,9 @@ export default function LocationPicker({ initial, previous, saving, onSave }: Lo
         )}
       </p>
       <div>
-        <button type="button" className="btn btn-primary" disabled={!pin || saving} onClick={() => pin && onSave(pin)}>
+        <button type="button" className="btn btn-primary" disabled={!pin || saving} onClick={() => pin && onSave(selected
+          ? { ...pin, selected_place: selected }
+          : pin)}>
           {saving ? 'Saving…' : 'Save location'}
         </button>
       </div>

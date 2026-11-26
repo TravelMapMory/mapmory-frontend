@@ -1,7 +1,7 @@
 import { ApiError } from './api/http'
 import { NotFoundError } from './api/mock'
 import NotFoundScreen from './NotFoundScreen'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react'
 import {
   ArrowLeft,
   CircleAlert,
@@ -24,7 +24,7 @@ import { loadPages, mergePage, type FetchPage } from './api/paging'
 import LoadMore from './components/LoadMore'
 import { useLoadMore } from './useLoadMore'
 import type { LocationPatch, Photo, TripDetail } from './api/types'
-import LocationPicker, { type LatLng } from './components/LocationPicker'
+import LocationPicker from './components/LocationPicker'
 import PhotoViewer, { viewerImage } from './components/PhotoViewer'
 import TripDetailsForm from './components/TripDetailsForm'
 import ShareSettings from './components/ShareSettings'
@@ -201,7 +201,7 @@ function CorrectionPanel({
   onCancel,
 }: {
   photo: Photo
-  previous: (LatLng & { label: string }) | null
+  previous: ComponentProps<typeof LocationPicker>['previous']
   onSave: (patch: LocationPatch) => Promise<void>
   onCancel: () => void
 }) {
@@ -299,11 +299,27 @@ function CorrectionPanel({
 }
 
 /** The closest earlier photo in capture order that has a location, for "Same place as previous photo". */
-function previousLocated(photos: Photo[], photo: Photo): (LatLng & { label: string }) | null {
+function previousLocated(photos: Photo[], photo: Photo): ComponentProps<typeof LocationPicker>['previous'] {
   const index = photos.findIndex((p) => p.id === photo.id)
   for (let i = index - 1; i >= 0; i--) {
     const p = photos[i]
-    if (p.lat !== null && p.lng !== null) return { lat: p.lat, lng: p.lng, label: p.place_name ?? 'previous photo' }
+    if (p.lat !== null && p.lng !== null) {
+      // Reusing a photo's location also reuses its confirmed label. Sending
+      // coordinates alone would reverse-geocode and potentially lose the name.
+      const selected_place = p.place_name
+        ? { name: p.place_name, kind: 'amenity' as const, city: p.city, country: p.country ?? '' }
+        : p.city
+          ? { name: p.city, kind: 'city' as const, city: p.city, country: p.country ?? '' }
+          : p.country
+            ? { name: p.country, kind: 'country' as const, city: null, country: p.country }
+            : undefined
+      return {
+        lat: p.lat,
+        lng: p.lng,
+        label: photoPlaceName(p) ?? 'previous photo',
+        selected_place,
+      }
+    }
   }
   return null
 }

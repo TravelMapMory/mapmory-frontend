@@ -609,11 +609,15 @@ const COUNTRIES: Place[] = [
   country('Australia', -25, 134, 4),
 ]
 
+const DEMO_NAMED_PLACES: Place[] = [
+  { id: 'demo-taffa', name: 'Täffä', label: 'Täffä, Espoo, Finland', kind: 'amenity', lat: 60.184, lng: 24.828, zoom: 17, city: 'Espoo', country: 'Finland' },
+]
+
 export async function mockSearchPlaces(q: string, signal?: AbortSignal): Promise<Place[]> {
   await beforeOperation('searchPlaces', signal)
   const needle = q.trim().toLowerCase()
   if (needle.length < 2) return delay([], 0, signal)
-  const all = [...COUNTRIES, ...CITIES]
+  const all = [...COUNTRIES, ...CITIES, ...DEMO_NAMED_PLACES]
   const starts = all.filter((p) => p.name.toLowerCase().startsWith(needle))
   const contains = all.filter((p) => !starts.includes(p) && p.label.toLowerCase().includes(needle))
   return delay([...starts, ...contains].slice(0, 6), 200, signal)
@@ -677,11 +681,26 @@ export async function mockPatchLocation(id: string, patch: LocationPatch, signal
     next = { ...current, label_status: 'confirmed' }
   } else {
     const labels = resolveLabels(patch.lat, patch.lng)
+    if (patch.selected_place) {
+      const selected = patch.selected_place
+      if (selected.country) labels.country = selected.country
+      if (selected.city) labels.city = selected.city
+      if (selected.kind === 'country') {
+        labels.country = selected.name
+        labels.city = null
+        labels.place_name = null
+      } else if (selected.kind === 'city') {
+        labels.city = selected.name
+        labels.place_name = null
+      } else {
+        labels.place_name = selected.name
+      }
+    }
     next = {
       ...current,
       ...labels,
       // The owner chose this spot, so a label found for it is not a mere suggestion.
-      label_status: labels.place_name ? 'confirmed' : 'pending',
+      label_status: patch.selected_place || labels.place_name ? 'confirmed' : 'pending',
       state: current.state === 'needs-location' ? 'ready' : current.state,
       // The EXIF pair stays as imported, so the adapter reports this position as manual.
       lat: patch.lat,

@@ -154,7 +154,10 @@ export interface Place {
  * resolves their place labels) or acceptance of the suggested label.
  * Capture time is never part of a correction (doc 3.3).
  */
-export type LocationPatch = { lat: number; lng: number } | { confirm_label: true }
+/** Optional explicit choice from place search; no provider identity is asserted. */
+export type LocationPatch =
+  | { lat: number; lng: number; selected_place?: Pick<Place, 'name' | 'kind' | 'country'> & { city: string | null } }
+  | { confirm_label: true }
 
 /**
  * One file of an upload batch as the browser tracks it (doc 4.1, 7.2):
