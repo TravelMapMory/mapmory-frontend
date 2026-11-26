@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import { Copy, Globe, ImageOff, Link2, Plus } from 'lucide-react'
+import { Copy, Flag, Globe, ImageOff, Link2, Plus } from 'lucide-react'
 import { createShare, listShares, listTripPhotos, revokeShare } from '../api/client'
 import { loadAllPages } from '../api/paging'
 import type { Photo, Share, ShareMode, TripDetail } from '../api/types'
@@ -19,7 +19,7 @@ function shareable(photos: Photo[]): Photo[] {
   return photos.filter((p) => (p.state === 'ready' || p.state === 'needs-location') && p.display_url)
 }
 
-/** One active share: its address to copy, and Revoke behind confirmation. */
+/** One active share: its address to copy, Revoke behind confirmation, and why it is off the public map while reported. */
 function ShareRow({
   share,
   focusOnMount,
@@ -78,6 +78,15 @@ function ShareRow({
           {plural(share.photo_ids.length, 'photo')} · created {formatUploaded(share.created_at)}
         </p>
       </div>
+      {share.under_review ? (
+        <p className="share-review">
+          <Flag size={14} aria-hidden />
+          <span>
+            <strong>Under review.</strong> Someone reported this share, so it is hidden from the public map until the
+            MapMory team reviews it. Its link still works for people you send it to.
+          </span>
+        </p>
+      ) : null}
       <div className="share-link-row">
         <label htmlFor={fieldId} className="visually-hidden">
           Link to {share.title}

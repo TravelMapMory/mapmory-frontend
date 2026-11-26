@@ -183,6 +183,8 @@ export interface Share {
   url: string
   created_at: string
   revoked_at: string | null
+  /** Someone reported this public share: it is hidden from the public map until the team reviews it. */
+  under_review: boolean
 }
 
 /** `POST /api/trips/{id}/shares` body. */

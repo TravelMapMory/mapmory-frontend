@@ -21,7 +21,8 @@ async function openShare(page: Page, trip: string) {
 test('owner shares chosen photos by link and a signed-out recipient sees only those, by city', async ({ page }) => {
   await boot(page)
   await openShare(page, 'Rome with family')
-  await expect(page.getByText('This trip has no active shares.')).toBeVisible()
+  // The trip's existing public share is listed; the owner adds a link next to it.
+  await expect(page.getByRole('listitem', { name: 'The Colosseum in the morning' })).toBeVisible()
   await page.getByRole('button', { name: 'New share' }).click()
   await expect(page.getByText('3 of 3 photos selected')).toBeVisible()
   await page.getByRole('checkbox', { name: 'Pantheon, Rome' }).uncheck()
@@ -85,6 +86,17 @@ test('revoked and unknown links say so instead of showing photos', async ({ page
   await expect(page).toHaveURL(/\/$/)
 })
 
+test('a reported public share tells its owner why it left the public map', async ({ page }) => {
+  await boot(page)
+  await openShare(page, 'Europe by rail')
+  const reported = page.getByRole('listitem', { name: 'Trevi Fountain at dusk' })
+  await expect(reported.getByText('Under review.')).toBeVisible()
+  await expect(reported).toContainText('hidden from the public map until the MapMory team reviews it')
+  await expect(page.getByRole('listitem', { name: 'Paris and Berlin highlights' }).getByText('Under review.')).toHaveCount(0)
+  await expect(page.getByRole('listitem', { name: 'Highlights from Europe by rail' }).getByText('Under review.')).toHaveCount(0)
+  await checkLayout(page)
+})
+
 test('owner revokes a link after confirming, and the link stops working at once', async ({ page }) => {
   await boot(page)
   await openShare(page, 'Europe by rail')
@@ -97,7 +109,8 @@ test('owner revokes a link after confirming, and the link stops working at once'
   await link.getByRole('button', { name: 'Revoke share' }).click()
   await expect(link).toHaveCount(0)
   await expect(page.locator('.share-message')).toContainText('New visits are blocked')
-  await expect(page.getByText('This trip has no active shares.')).toBeVisible()
+  // The trip's public shares stay; only the revoked link is gone.
+  await expect(page.getByRole('listitem', { name: 'Paris and Berlin highlights' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Sharing' })).toBeFocused()
 
   await visit(page, 'http://127.0.0.1/s/demo-europe')
@@ -193,5 +206,6 @@ test('share preview explains privacy and warns only for selected suggested place
   await expect(page.locator('.share-preview-notice')).toHaveCount(0)
   await expect(page.getByText('Detailed place names, exact GPS coordinates, and original photo metadata stay private.', { exact: false })).toBeVisible()
   await page.getByRole('button', { name: 'Cancel' }).click()
-  await expect(page.getByText('This trip has no active shares.')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'New share' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Review your share' })).toHaveCount(0)
 })

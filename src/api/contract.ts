@@ -200,6 +200,8 @@ export interface ApiShare {
   token: string
   created_at: string
   revoked_at: string | null
+  /** True while a report on this public share is unresolved; it is then hidden from the public map. */
+  under_review: boolean
 }
 
 /** `ShareList`, GET /api/trips/{id}/shares. */

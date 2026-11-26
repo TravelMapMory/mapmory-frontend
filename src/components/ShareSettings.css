@@ -371,7 +371,8 @@
 }
 .share-preview-photo .share-pick-empty { display: grid; }
 
-.share-preview-notice {
+.share-preview-notice,
+.share-review {
   margin: 0;
   padding: 10px 12px;
   border: 1px solid #ead9b7;
@@ -380,4 +381,17 @@
   color: #614719;
   font-size: 13px;
   line-height: 1.5;
+}
+
+/* A reported public share: the notice style, with its flag beside the text. */
+.share-review {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  margin-top: 8px;
+}
+
+.share-review svg {
+  flex: none;
+  margin-top: 2px;
 }

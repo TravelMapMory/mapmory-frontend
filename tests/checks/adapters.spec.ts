@@ -278,10 +278,12 @@ test('a share turns its token into the recipient address and drops the raw token
     token: 'abcdefghijklmnopqrstuv',
     created_at: '2026-11-22T20:00:00Z',
     revoked_at: null,
+    under_review: true,
   }
   const result = toShare(share, 'https://mapmory.app')
   expect(result.url).toBe('https://mapmory.app/s/abcdefghijklmnopqrstuv')
   expect(result.mode).toBe('public')
+  expect(result.under_review).toBe(true)
   expect(result.photo_ids).toEqual(['p1', 'p2'])
   expect('token' in result).toBe(false)
 })
