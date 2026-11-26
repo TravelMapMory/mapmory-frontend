@@ -1,6 +1,7 @@
-import { LayoutGrid, MapIcon, MapPin } from 'lucide-react'
+import { LayoutGrid, MapIcon } from 'lucide-react'
 import AccountMenu from './AccountMenu'
 import './Header.css'
+import BrandMark from './BrandMark'
 
 // The two main owner views (doc 3.1). 
 export type Screen = 'dashboard' | 'map'
@@ -26,9 +27,7 @@ export default function Header({ current, onNavigate, onSignOut, onDeleteAccount
   return (
     <header className="hdr">
       <div className="hdr-brand">
-        <span className="hdr-logo">
-          <MapPin size={18} strokeWidth={2.6667} aria-hidden />
-        </span>
+        <BrandMark />
         <strong className="hdr-name">MapMory</strong>
       </div>
       <nav aria-label="Main">

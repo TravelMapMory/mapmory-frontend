@@ -1,5 +1,5 @@
 import { test, expect } from './fixtures'
-import { boot, openMap, failNext, checkLayout } from './helpers'
+import { boot, dashboard, openMap, failNext, checkLayout } from './helpers'
 
 for (const [query, count] of [['Paris', 2], ['France', 2], ['Europe by rail', 7], ['  rOmE  ', 3], ['zzzz', 0]] as const) {
   test(`photo filter matches ${query} and clears`, async ({ page }) => {
@@ -184,4 +184,78 @@ test('zoom and pan move the map without changing the collection filter', async (
   await expect.poll(async () => (await pin.boundingBox())!.x).not.toBe(at!.x)
   await expect(page.locator('.mp-count')).toHaveText('2 photos on the map')
   await expect(page.getByRole('searchbox', { name: 'Filter my photos' })).toHaveValue('Paris')
+})
+
+test('the layers button picks a basemap, closes on Escape or an outside click, and keeps the choice', async ({ page }) => {
+  await boot(page)
+  await openMap(page)
+  const layers = page.getByRole('button', { name: /^Map style/ })
+  const styles = page.getByRole('group', { name: 'Map style' })
+  await expect(layers).toHaveAccessibleName('Map style: Map')
+  await expect(layers).toHaveAttribute('aria-expanded', 'false')
+
+  await layers.click()
+  await expect(layers).toHaveAttribute('aria-expanded', 'true')
+  await expect(styles.getByRole('button')).toHaveText(['Map', 'Minimal', 'Terrain', 'Satellite'])
+  await expect(styles.getByRole('button', { name: 'Map', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await page.keyboard.press('Escape')
+  await expect(styles).toHaveCount(0)
+  await expect(layers).toBeFocused()
+
+  await layers.click()
+  await page.locator('.mp-count').click()
+  await expect(styles).toHaveCount(0)
+
+  await layers.click()
+  await styles.getByRole('button', { name: 'Minimal', exact: true }).click()
+  await expect(page.locator('.leaflet-layer.basemap-grey')).toHaveCount(1)
+
+  await layers.click()
+  await styles.getByRole('button', { name: 'Terrain', exact: true }).click()
+  await expect(page.locator('.leaflet-layer.basemap-grey')).toHaveCount(0)
+  await expect(styles).toHaveCount(0)
+  await expect(layers).toBeFocused()
+  await expect(layers).toHaveAccessibleName('Map style: Terrain')
+  await expect(page.locator('.leaflet-tile-pane img').first()).toHaveAttribute('src', /opentopomap/)
+
+  // The choice is kept when the owner leaves the map and comes back.
+  await dashboard(page)
+  await openMap(page)
+  await expect(page.getByRole('button', { name: /^Map style/ })).toHaveAccessibleName('Map style: Terrain')
+  await checkLayout(page)
+})
+
+
+test.describe('with motion on', () => {
+  test.use({ contextOptions: { reducedMotion: 'no-preference' } })
+
+  test('switching between My photos and Public never pushes the page past its settled height, so no scrollbar flashes', async ({ page }) => {
+    await boot(page)
+    await openMap(page)
+    const modes = page.getByRole('navigation', { name: 'Map mode' })
+    for (const name of ['Public', 'My photos']) {
+      const { before, worst, settled } = await modes.getByRole('button', { name, exact: true }).evaluate(async (button) => {
+        const overflow = () => {
+          const body = document.querySelector('.app-body')
+          return body ? body.scrollHeight - body.clientHeight : 0
+        }
+        const before = overflow()
+        let worst = 0
+        const start = performance.now()
+        ;(button as HTMLButtonElement).click()
+        await new Promise<void>((resolve) => {
+          const tick = () => {
+            worst = Math.max(worst, overflow())
+            if (performance.now() - start < 700) requestAnimationFrame(tick)
+            else resolve()
+          }
+          tick()
+        })
+        await new Promise((resolve) => setTimeout(resolve, 600))
+        return { before, worst, settled: overflow() }
+      })
+      // Phone and tablet map pages scroll by design; only overflow beyond both settled screens would flash.
+      expect(worst, `overflow while switching to ${name}`).toBeLessThanOrEqual(Math.max(before, settled))
+    }
+  })
 })

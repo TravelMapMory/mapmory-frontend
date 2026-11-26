@@ -1,6 +1,7 @@
-import { MapPin, MapPinOff } from 'lucide-react'
+import { MapPinOff } from 'lucide-react'
 import './LandingScreen.css'
 import './NotFoundScreen.css'
+import BrandMark from './components/BrandMark'
 
 export interface NotFoundScreenProps {
   signedIn: boolean
@@ -17,9 +18,7 @@ export default function NotFoundScreen({ signedIn, onHome, embedded = false }: N
       {!embedded ? (
         <header className="land-hdr">
         <div className="land-brand">
-          <span className="land-logo">
-            <MapPin size={18} strokeWidth={2.6667} aria-hidden />
-          </span>
+          <BrandMark />
           <strong className="land-name">MapMory</strong>
         </div>
         </header>

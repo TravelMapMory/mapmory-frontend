@@ -1,10 +1,12 @@
 /*
  * Styles for LandingScreen.tsx. The top bar mirrors Header.css so signing in
- * does not shift the brand.
+ * does not shift the brand. Features are a three-cell bento: a tall upload
+ * tile with a photo stack, a navy map tile with photo pins on a route, and a
+ * sky share tile. The map grid behind the page comes from index.css.
  */
 .land {
   min-height: 100%;
-  background: var(--c-page);
+  background: radial-gradient(1100px 460px at 88% -12%, rgba(65, 176, 245, 0.16), transparent 70%);
 }
 
 .land-hdr {
@@ -14,7 +16,6 @@
   gap: 16px;
   height: 64px;
   padding: 0 48px;
-  background: var(--c-surface);
   border-bottom: 1px solid var(--c-border);
 }
 .land-brand {
@@ -22,45 +23,40 @@
   align-items: center;
   gap: 10px;
 }
-.land-logo {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 32px;
-  background: var(--c-primary);
-  border-radius: var(--r-xs);
-  color: #fff;
-}
 .land-name {
-  font-size: 18px;
+  font-family: var(--font-display);
+  font-size: 20px;
   font-weight: 700;
+  letter-spacing: -0.03em;
   color: var(--c-primary);
 }
 
 .land-body {
-  max-width: 1120px;
+  max-width: 1180px;
   margin: 0 auto;
-  padding: 56px 48px 64px;
+  padding: 64px 48px 80px;
 }
 
 .land-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 48px;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+  gap: 56px;
   align-items: center;
 }
 .land-title {
-  margin: 0 0 16px;
-  font-size: 40px;
+  max-width: 15ch;
+  margin: 0 0 20px;
+  font-size: 56px;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
   color: var(--c-primary);
+  text-wrap: balance;
 }
 .land-lead {
-  margin: 0 0 28px;
-  font-size: 16px;
+  max-width: 46ch;
+  margin: 0 0 32px;
+  font-size: 17px;
   line-height: 1.6;
   color: var(--c-text-2);
 }
@@ -68,11 +64,11 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 12px 16px;
 }
 .land-cta {
-  min-height: 44px;
-  padding: 0 22px;
+  min-height: 48px;
+  padding: 0 24px;
   font-size: 15px;
 }
 .land-note {
@@ -89,65 +85,229 @@
 .land-hero-img {
   display: block;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 5 / 4;
   object-fit: cover;
-  border-radius: var(--r-lg);
+  border-radius: 28px;
   box-shadow: var(--shadow-float);
 }
 .land-credit {
-  margin-top: 8px;
+  margin-top: 10px;
   font-size: 12px;
   color: var(--c-text-2);
 }
 
+@media (prefers-reduced-motion: no-preference) {
+  .land-hero-text > * {
+    animation: land-rise 640ms var(--ease-out) both;
+  }
+  .land-hero-text > :nth-child(2) {
+    animation-delay: 80ms;
+  }
+  .land-hero-text > :nth-child(3) {
+    animation-delay: 160ms;
+  }
+  .land-hero-figure {
+    animation: land-rise 820ms 120ms var(--ease-out) both;
+  }
+}
+
+@keyframes land-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
 .land-features {
-  margin-top: 64px;
+  margin-top: 88px;
 }
 .land-feature-list {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 16px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .land-feature {
-  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  padding: 28px;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--r-md);
+  border-radius: var(--r-lg);
 }
+.land-feature[data-variant='upload'] {
+  grid-row: span 2;
+  display: flex;
+  flex-direction: column;
+}
+.land-feature[data-variant='map'] {
+  min-height: 220px;
+  padding-right: 200px;
+  background: var(--c-primary);
+  border-color: transparent;
+  color: #fff;
+}
+.land-feature[data-variant='share'] {
+  background: var(--c-accent);
+  border-color: var(--c-accent-strong);
+}
+
 .land-feature-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: 14px;
+  width: 42px;
+  height: 42px;
+  margin-bottom: 18px;
   background: var(--c-accent);
   border-radius: var(--r-sm);
-  color: var(--c-primary);
+  color: var(--c-link);
+}
+.land-feature[data-variant='map'] .land-feature-icon {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.land-feature[data-variant='share'] .land-feature-icon {
+  background: var(--c-surface);
 }
 .land-feature-title {
-  margin: 0 0 6px;
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--c-text);
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--c-primary);
+}
+.land-feature[data-variant='map'] .land-feature-title {
+  color: #fff;
 }
 .land-feature-text {
+  max-width: 44ch;
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.55;
   color: var(--c-text-2);
+}
+.land-feature[data-variant='map'] .land-feature-text {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* Upload tile: three demo photos fanned out like a fresh upload. */
+.land-stack {
+  position: relative;
+  flex: none;
+  height: 270px;
+  margin-top: auto;
+  padding-top: 28px;
+}
+.land-stack-photo {
+  position: absolute;
+  bottom: 0;
+  height: 230px;
+  aspect-ratio: 4 / 5;
+  object-fit: cover;
+  border: 7px solid var(--c-surface);
+  border-bottom-width: 26px;
+  border-radius: 6px;
+  box-shadow: var(--shadow-float);
+  transition: transform 420ms var(--ease-out);
+}
+.land-stack-photo:nth-child(1) {
+  left: 2%;
+  transform: rotate(-7deg);
+}
+.land-stack-photo:nth-child(2) {
+  left: calc(50% - 92px);
+  z-index: 1;
+  transform: translateY(-14px) rotate(2deg);
+}
+.land-stack-photo:nth-child(3) {
+  right: 2%;
+  transform: rotate(8deg);
+}
+.land-feature[data-variant='upload']:hover .land-stack-photo:nth-child(1) {
+  transform: translateX(-8px) rotate(-10deg);
+}
+.land-feature[data-variant='upload']:hover .land-stack-photo:nth-child(3) {
+  transform: translateX(8px) rotate(11deg);
+}
+
+/* Map tile: the same photos as round pins, like the owner map. */
+.land-pins {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: 200px;
+}
+/* The route between the pins, drawn as a dashed travel line. */
+.land-route {
+  position: absolute;
+  inset: 0;
+  width: 200px;
+  height: 220px;
+}
+
+.land-route path {
+  fill: none;
+  stroke: var(--c-sky);
+  stroke-width: 2;
+  stroke-dasharray: 5 6;
+  stroke-linecap: round;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .land-route path {
+    animation: land-route-dash 1.6s linear infinite;
+  }
+}
+
+@keyframes land-route-dash {
+  to {
+    stroke-dashoffset: -22;
+  }
+}
+
+.land-pin {
+  position: absolute;
+  width: 58px;
+  height: 58px;
+  object-fit: cover;
+  border: 3px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.22);
+}
+.land-pin:nth-of-type(1) {
+  top: 34px;
+  left: 28px;
+}
+.land-pin:nth-of-type(2) {
+  top: 96px;
+  left: 108px;
+  width: 70px;
+  height: 70px;
+}
+.land-pin:nth-of-type(3) {
+  top: 150px;
+  left: 36px;
+  width: 48px;
+  height: 48px;
 }
 
 @media (max-width: 900px) {
   .land-hero {
     grid-template-columns: 1fr;
-    gap: 32px;
+    gap: 36px;
+  }
+  .land-title {
+    font-size: 44px;
   }
   .land-feature-list {
     grid-template-columns: 1fr;
+  }
+  .land-feature[data-variant='upload'] {
+    grid-row: auto;
   }
 }
 
@@ -159,10 +319,47 @@
     padding: 32px 16px 48px;
   }
   .land-title {
-    font-size: 28px;
+    font-size: 36px;
   }
   .land-features {
-    margin-top: 40px;
+    margin-top: 48px;
+  }
+  .land-feature {
+    padding: 22px;
+  }
+  .land-feature[data-variant='map'] {
+    min-height: 0;
+    padding-right: 22px;
+    padding-bottom: 150px;
+  }
+  .land-pins {
+    inset: auto 0 0 0;
+    width: auto;
+    height: 140px;
+  }
+  .land-pin:nth-of-type(1) {
+    top: 30px;
+    left: 22px;
+  }
+  .land-pin:nth-of-type(2) {
+    top: 20px;
+    left: 108px;
+  }
+  .land-pin:nth-of-type(3) {
+    top: 64px;
+    left: 196px;
+  }
+  .land-stack {
+    height: 210px;
+  }
+  .land-stack-photo {
+    height: 170px;
+  }
+  .land-route {
+    display: none;
+  }
+  .land-stack-photo:nth-child(2) {
+    left: calc(50% - 68px);
   }
 }
 
@@ -184,7 +381,7 @@
 
 .land-delete-notice {
   padding: 12px 16px;
-  border: 1px solid var(--c-border, #aaa);
-  border-radius: 8px;
-  background: var(--c-surface, #fff);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  background: var(--c-surface);
 }

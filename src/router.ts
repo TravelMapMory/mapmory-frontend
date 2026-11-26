@@ -1,4 +1,5 @@
 import { useMemo, useSyncExternalStore } from 'react'
+import { flushSync } from 'react-dom'
 
 /*
  * A small History API router. Every screen has an address, so Back/Forward,
@@ -115,13 +116,28 @@ function snapshot() {
   return window.location.pathname + window.location.search
 }
 
+/**
+ * Re-renders subscribers for a new address. Where the browser has view
+ * transitions and the viewer welcomes motion, the change runs inside one, so
+ * screens cross-fade (styles in motion.css); otherwise it is instant.
+ */
+function notify() {
+  const update = () => listeners.forEach((listener) => listener())
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  if (typeof document.startViewTransition !== 'function' || reduce) {
+    update()
+    return
+  }
+  document.startViewTransition(() => flushSync(update))
+}
+
 /** Opens a page. `replace` swaps the current history entry, e.g. for redirects. */
 export function navigate(route: Route, { replace = false } = {}) {
   const href = routeHref(route)
   if (href === snapshot()) return
   if (replace) window.history.replaceState(null, '', href)
   else window.history.pushState(null, '', href)
-  listeners.forEach((listener) => listener())
+  notify()
 }
 
 /** The current route; re-renders on navigate() and on Back/Forward. Stable until the address changes. */

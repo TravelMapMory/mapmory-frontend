@@ -39,6 +39,13 @@ test('empty Dashboard with the getting-started guide', async ({ page }) => {
   await expectAccessible(page, 'empty dashboard with guide')
 })
 
+test('Dashboard with the finished getting-started guide', async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('mapmory.guide.places-reviewed.demo', '1'))
+  await boot(page)
+  await expect(page.getByRole('region', { name: 'Getting started' })).toContainText('3 of 3 done')
+  await expectAccessible(page, 'dashboard with finished guide')
+})
+
 test('trip page with upload, sharing and delete confirmation open', async ({ page }) => {
   await boot(page)
   await openTrip(page, 'Rome with family')

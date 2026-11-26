@@ -6,15 +6,15 @@
   max-width: 1104px;
   margin: 16px auto 0;
   padding: 14px 20px;
-  background: #eef4fd;
-  border: 1px solid #c8daf6;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   border-radius: var(--r-md, 12px);
 }
 
 .verify-icon {
   flex: none;
   margin-top: 2px;
-  color: var(--c-action);
+  color: var(--c-link);
 }
 
 .verify-text {
@@ -54,7 +54,7 @@
 }
 
 .verify--done {
-  background: var(--c-mint-bg, #d1fae5);
+  background: var(--c-success-bg);
   border-color: #9fdcc0;
 }
 
@@ -74,7 +74,7 @@
   max-width: min(440px, calc(100vw - 32px));
   margin: 0;
   padding: 10px 12px;
-  box-shadow: 0 10px 30px rgba(21, 34, 56, 0.18);
+  box-shadow: 0 10px 30px rgba(33, 25, 76, 0.18);
 }
 
 .verify--floating .verify-icon {

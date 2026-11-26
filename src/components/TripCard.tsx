@@ -13,8 +13,9 @@ export interface TripCardProps {
 }
 
 /**
- * A Dashboard trip card: cover, private/public status, title, dates, places
- * and photo counts, with Open trip and Show on map.
+ * A Dashboard trip card, drawn as a travel ticket: cover, a tear line, then
+ * title, dates, the route of cities in capture order and photo counts, with
+ * Open trip and Show on map.
  *
  * Photos without GPS count towards the total but not towards places, so the
  * card says how many are unlocated instead of letting the numbers disagree
@@ -41,15 +42,17 @@ export default function TripCard({ trip, onShowOnMap, onOpen }: TripCardProps) {
         </span>
       </div>
 
+      <div className="trip-card-tear" aria-hidden="true" />
+
       <div className="trip-card-body">
         <h3 className="trip-card-title" id={titleId}>
           {trip.title}
         </h3>
-        {dates ? <p className="trip-card-meta">{dates}</p> : null}
+        {dates ? <p className="trip-card-meta trip-card-date">{dates}</p> : null}
 
         <p className="trip-card-places">
           <MapPin size={14} aria-hidden />
-          {trip.cities.length > 0 ? trip.cities.join(' · ') : 'No places yet'}
+          {trip.cities.length > 0 ? trip.cities.join(' → ') : 'No places yet'}
         </p>
 
         <p className="trip-card-meta">

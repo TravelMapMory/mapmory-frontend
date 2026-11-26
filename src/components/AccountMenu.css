@@ -62,7 +62,7 @@
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--r-md, 12px);
-  box-shadow: 0 10px 30px rgba(21, 34, 56, 0.16);
+  box-shadow: 0 10px 30px rgba(33, 25, 76, 0.16);
 }
 
 .acct-who {

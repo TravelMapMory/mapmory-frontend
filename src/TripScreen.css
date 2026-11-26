@@ -25,7 +25,7 @@
   border: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--c-action);
+  color: var(--c-link);
 }
 
 .trip-back:hover {
@@ -60,9 +60,12 @@
 
 .trip-title {
   margin: 0;
-  font-size: 28px;
+  font-size: 44px;
   font-weight: 700;
-  line-height: 34px;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  color: var(--c-primary);
+  text-wrap: balance;
 }
 
 .trip-meta,
@@ -70,6 +73,12 @@
   margin: 0;
   font-size: 14px;
   color: var(--c-text-2);
+}
+
+.trip-meta {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 0.01em;
 }
 
 .trip-notes {
@@ -87,7 +96,7 @@
   border: 0;
   font-size: 14px;
   font-weight: 600;
-  color: var(--c-action);
+  color: var(--c-link);
 }
 
 .trip-edit-open:hover {
@@ -106,13 +115,15 @@
 
 .trip-h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 700;
+  color: var(--c-primary);
 }
 
 .trip-caption {
   margin: 0;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
   color: var(--c-text-2);
 }
 
@@ -172,7 +183,7 @@
   gap: 20px;
   padding: 20px;
   background: var(--c-surface);
-  border: 2px solid var(--c-action);
+  border: 2px solid var(--c-link);
   border-radius: var(--r-md);
 }
 
@@ -239,10 +250,10 @@
 
 .trip-toggle {
   display: inline-flex;
-  padding: 3px;
+  padding: 4px;
   background: var(--c-surface);
   border: 1px solid var(--c-border);
-  border-radius: var(--r-sm);
+  border-radius: var(--r-pill);
 }
 
 .trip-toggle button {
@@ -253,7 +264,7 @@
   padding: 0 12px;
   background: none;
   border: 0;
-  border-radius: var(--r-xs);
+  border-radius: var(--r-pill);
   font-size: 14px;
   font-weight: 600;
   color: var(--c-text-2);
@@ -266,8 +277,8 @@
 
 .trip-gallery {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 18px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -284,10 +295,27 @@
   background: var(--c-surface);
   border: 1px solid var(--c-border);
   border-radius: var(--r-md);
+  box-shadow: var(--shadow-raised);
+  transition: box-shadow 320ms var(--ease-out);
+}
+
+.trip-tile:hover {
+  box-shadow: var(--shadow-float);
 }
 
 .trip-tile-img {
   position: relative;
+  overflow: hidden;
+  margin: 8px 8px 0;
+  border-radius: 12px;
+}
+
+.trip-tile-img img {
+  transition: transform 600ms var(--ease-out);
+}
+
+.trip-tile:hover .trip-tile-img img {
+  transform: scale(1.04);
 }
 
 .trip-tile-img img,
@@ -331,13 +359,14 @@
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
-  padding: 10px 12px 12px;
+  padding: 12px 14px 14px;
 }
 
 .trip-tile-place {
   margin: 0;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .trip-action {
@@ -353,7 +382,7 @@
   padding: 2px 8px;
   border-radius: var(--r-pill);
   background: var(--c-surface);
-  box-shadow: 0 1px 3px rgba(21, 34, 56, 0.2);
+  box-shadow: 0 1px 3px rgba(33, 25, 76, 0.2);
   font-size: 12px;
   font-weight: 600;
   line-height: 18px;
@@ -368,76 +397,316 @@
 }
 
 .trip-status[data-tone='info'] {
-  color: var(--c-action);
+  color: var(--c-link);
 }
 
+/*
+ * Journey (direction C): the day list beside a map of the route. Day tabs sit
+ * above the list; rows with a location carry a number that matches their pin.
+ * Below 900px the map moves above the list.
+ */
 .trip-journey {
+  display: grid;
+  grid-template-columns: minmax(0, 440px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.trip-journey-list {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 14px;
+  min-width: 0;
+}
+
+/* Day tabs scroll sideways; the fade on the right says there are more. */
+.trip-days {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 6px;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 88%, transparent);
+  mask-image: linear-gradient(90deg, #000 88%, transparent);
+}
+
+.trip-days::-webkit-scrollbar {
+  display: none;
+}
+
+.trip-days-tab {
+  display: grid;
+  flex: none;
+  place-items: center;
+  align-content: center;
+  width: 58px;
+  height: 60px;
+  padding: 0;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-raised);
+  color: var(--c-primary);
+  scroll-snap-align: start;
+  transition:
+    background-color var(--dur) var(--ease-out),
+    color var(--dur) var(--ease-out);
+}
+
+.trip-days-tab small {
+  font: 500 11px var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-2);
+}
+
+.trip-days-tab b {
+  font: 600 20px/1.1 var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.trip-days-tab:hover {
+  border-color: var(--c-border-strong);
+}
+
+.trip-days-tab[aria-selected='true'] {
+  background: var(--c-primary);
+  border-color: var(--c-primary);
+  color: #fff;
+}
+
+.trip-days-tab[aria-selected='true'] small {
+  color: #c9cbe8;
+}
+
+.trip-journey-panel {
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-raised);
+  padding: 4px 16px 8px;
+}
+
+.trip-journey-summary {
+  margin: 10px 0 4px;
+  font: 500 12px var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-text-2);
+}
+
+.trip-journey-days {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .trip-day-title {
-  margin: 0 0 8px;
-  font-size: 16px;
+  margin: 0;
+  padding: 14px 0 6px;
+  font-size: 14px;
   font-weight: 600;
+  color: var(--c-primary);
+}
+
+.trip-day + .trip-day .trip-day-title {
+  border-top: 1px solid var(--c-border);
 }
 
 .trip-rows {
-  display: flex;
-  flex-direction: column;
   margin: 0;
   padding: 0;
   list-style: none;
-  background: var(--c-surface);
-  border: 1px solid var(--c-border);
-  border-radius: var(--r-md);
 }
 
 .trip-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 28px 52px minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  padding: 10px 14px;
+  gap: 12px;
+  margin: 0 -16px;
+  padding: 8px 16px;
+  transition: background-color var(--dur) var(--ease-out);
 }
 
-.trip-row + .trip-row {
-  border-top: 1px solid var(--c-border);
+/*
+ * The whole located row selects its stop: the number button's click area is
+ * stretched over the row, and the photo and action buttons sit above it.
+ */
+.trip-row {
+  position: relative;
+}
+
+.trip-row[data-located] {
+  cursor: pointer;
+}
+
+.trip-row .trip-stop:not(.trip-stop--none)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+.trip-row .trip-view,
+.trip-row .trip-action {
+  position: relative;
+  z-index: 1;
+}
+
+.trip-row[data-hovered] {
+  background: var(--c-surface-2);
+}
+
+.trip-row[data-selected] {
+  background: var(--c-accent);
+}
+
+.trip-row[data-hovered] .trip-stop:not([aria-pressed='true']) {
+  background: var(--c-accent);
+}
+
+/* The stop number, matching the pin on the map; a button that shows that pin. */
+.trip-stop {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: var(--c-surface);
+  border: 1.5px solid var(--c-primary);
+  border-radius: 50%;
+  font: 600 12px var(--font-mono);
+  color: var(--c-primary);
+}
+
+.trip-stop[aria-pressed='true'] {
+  background: var(--c-primary);
+  color: #fff;
+}
+
+.trip-stop--none {
+  border: 1.5px dashed var(--c-border-strong);
+  color: var(--c-text-2);
+}
+
+/* The time follows the place, in the ticket voice. */
+.trip-row .trip-caption {
+  font-size: 12.5px;
+  color: var(--c-text-2);
 }
 
 .trip-row-thumb {
   flex: none;
-  width: 64px;
+  width: 52px;
 }
 
 .trip-row-thumb img,
 .trip-row-thumb .trip-thumb-empty {
   display: block;
-  width: 64px;
-  height: 64px;
+  width: 52px;
+  height: 52px;
   object-fit: cover;
   border-radius: var(--r-xs);
 }
 
 .trip-row-text {
   display: flex;
-  flex: 1;
   flex-direction: column;
   align-items: flex-start;
   gap: 2px;
   min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .trip-row .trip-status {
+  margin-top: 2px;
   box-shadow: none;
   border: 1px solid var(--c-border);
 }
 
 .trip-row .trip-action {
   margin-top: 0;
+}
+
+.trip-journey-map {
+  position: sticky;
+  top: 16px;
+  isolation: isolate;
+  height: min(640px, calc(100dvh - 140px));
+  min-height: 420px;
+  overflow: hidden;
+  border: 1px solid var(--c-border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-raised);
+}
+
+.trip-journey-canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.trip-journey-nomap {
+  position: absolute;
+  z-index: 500;
+  top: 16px;
+  left: 50%;
+  max-width: calc(100% - 32px);
+  margin: 0;
+  padding: 8px 14px;
+  background: var(--c-surface);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-float);
+  font-size: 13px;
+  transform: translateX(-50%);
+}
+
+/* Route pins: numbered navy stops, the selected one in the logo coral. */
+.trip-pin-icon {
+  background: none;
+  border: 0;
+}
+
+.trip-pin {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  background: var(--c-primary);
+  border: 2px solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 2px 6px rgba(33, 25, 76, 0.35);
+  font: 600 12px var(--font-mono);
+  color: #fff;
+  transition: transform 200ms var(--ease-out);
+}
+
+.trip-pin[data-hovered] {
+  transform: scale(1.15);
+  box-shadow: 0 0 0 4px rgba(249, 100, 78, 0.35), 0 2px 6px rgba(33, 25, 76, 0.35);
+}
+
+.trip-pin[data-selected] {
+  background: var(--c-coral);
+  transform: scale(1.25);
+}
+
+.trip-route {
+  stroke: var(--c-primary);
+}
+
+@media (max-width: 900px) {
+  .trip-journey {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trip-journey-map {
+    order: -1;
+    position: relative;
+    top: auto;
+    height: 260px;
+    min-height: 0;
+  }
 }
 
 .trip-empty {
@@ -479,13 +748,27 @@
     width: 120px;
   }
 
+  /* On a phone the photo's action drops under its text. */
   .trip-row {
-    flex-wrap: wrap;
+    grid-template-columns: 28px 52px minmax(0, 1fr);
+  }
+
+  .trip-row .trip-action {
+    grid-column: 3;
+    justify-self: start;
   }
 }
 
+/* Deleting is rare and destructive: a quiet text-weight button, red only on intent. */
 .trip-delete-open {
-  color: #b42318;
+  background: transparent;
+  border-color: transparent;
+  color: var(--c-danger);
+}
+
+.trip-delete-open:hover:not(:disabled) {
+  background: #fdecea;
+  border-color: transparent;
 }
 
 .trip-delete {
@@ -493,8 +776,8 @@
   padding: 14px 16px;
   background: var(--c-surface);
   border: 1px solid #f3c1bd;
-  border-left: 4px solid #b42318;
-  border-radius: var(--r-md, 12px);
+  border-left: 4px solid var(--c-danger);
+  border-radius: var(--r-md);
   display: flex;
   flex-direction: column;
   gap: 10px;

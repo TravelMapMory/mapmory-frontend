@@ -1,7 +1,9 @@
 import { ApiError } from './api/http'
 import { NotFoundError } from './api/mock'
 import NotFoundScreen from './NotFoundScreen'
-import { useCallback, useEffect, useRef, useState, type ComponentProps } from 'react'
+import { useCallback, useEffect, useId, useMemo, useRef, useState, type ComponentProps, type KeyboardEvent } from 'react'
+import { MapContainer, Marker, Polyline, TileLayer, ZoomControl } from 'react-leaflet'
+import { divIcon, latLngBounds, type DivIcon, type Map as LeafletMap } from 'leaflet'
 import {
   ArrowLeft,
   CircleAlert,
@@ -33,6 +35,8 @@ import VisibilityBadge from './components/VisibilityBadge'
 import { formatCaptured, formatDateRange, plural, zoneNote } from './format'
 import { captureDay, captureTime, sortByCapture } from './photoOrder'
 import { photoLocationLabel, photoPlaceName, suggestedPhotoPlaceName } from './photoLocation'
+import MapLayers from './components/MapLayers'
+import { ANIMATE_ZOOM, BASEMAPS, useBasemap } from './mapTiles'
 import './TripScreen.css'
 
 export interface TripScreenProps {
@@ -392,45 +396,257 @@ function journeyDays(photos: Photo[]): [string, Photo[]][] {
   return [...days].sort(([a], [b]) => (a === 'undated' ? 1 : b === 'undated' ? -1 : a.localeCompare(b)))
 }
 
-/** Journey log (doc 3.2): the trip day by day, in capture order. */
+const tabWeekday = new Intl.DateTimeFormat('en-GB', { weekday: 'short', timeZone: 'UTC' })
+
+/** One stop on the Journey map: a photo with a location, numbered in route order. */
+interface Stop {
+  photo: Photo
+  n: number
+  lat: number
+  lng: number
+}
+
+const stopIcons = new Map<string, DivIcon>()
+
+/** The numbered pin for a Journey stop: coral when selected, ringed when its row is hovered; cached per state. */
+function stopIcon(n: number, selected: boolean, hovered: boolean): DivIcon {
+  const key = `${n}:${selected}:${hovered}`
+  let icon = stopIcons.get(key)
+  if (!icon) {
+    icon = divIcon({
+      className: 'trip-pin-icon',
+      html: `<span class="trip-pin"${selected ? ' data-selected="true"' : ''}${hovered ? ' data-hovered="true"' : ''}>${n}</span>`,
+      iconSize: [30, 30],
+      iconAnchor: [15, 15],
+    })
+    stopIcons.set(key, icon)
+  }
+  return icon
+}
+
+/**
+ * Journey (doc 3.2): the trip day by day in capture order, beside a map of the
+ * route (direction C, after Google Maps Timeline and Wanderlog). A strip of day
+ * tabs filters both the list and the map; each photo with a location is a
+ * numbered stop matching its pin, and choosing either one highlights the other.
+ */
 function Journey({ photos, onCorrect, onView }: PhotoListProps) {
-  const ordered = journeyDays(photos)
+  const ordered = useMemo(() => journeyDays(photos), [photos])
+  const [tab, setTab] = useState('all')
+  const [selected, setSelected] = useState<string | null>(null)
+  const [hovered, setHovered] = useState<string | null>(null)
+  const [map, setMap] = useState<LeafletMap | null>(null)
+  const [basemap, setBasemap] = useBasemap()
+  const tiles = BASEMAPS[basemap]
+  const ids = useId()
+  const rows = useRef(new Map<string, HTMLLIElement>())
+
   // Days count from the trip's first day, so a day without photos still advances the number.
   const first = ordered[0]?.[0]
   const dayNumber = (day: string) =>
     first && first !== 'undated' ? Math.round((Date.parse(day) - Date.parse(first)) / 86_400_000) + 1 : 1
+  const dayTitle = (day: string) =>
+    day === 'undated' ? 'No capture date' : `Day ${dayNumber(day)} · ${dayHeading.format(new Date(`${day}T00:00:00Z`))}`
+
+  const tabs = ['all', ...ordered.map(([day]) => day)]
+  const active = tabs.includes(tab) ? tab : 'all'
+  const visible = useMemo(() => (active === 'all' ? ordered : ordered.filter(([day]) => day === active)), [ordered, active])
+  const stops = useMemo(() => {
+    const result: Stop[] = []
+    for (const [, list] of visible) {
+      for (const photo of list) {
+        if (photo.lat !== null && photo.lng !== null) result.push({ photo, n: result.length + 1, lat: photo.lat, lng: photo.lng })
+      }
+    }
+    return result
+  }, [visible])
+  const stopOf = new Map(stops.map((stop) => [stop.photo.id, stop]))
+  const shown = visible.reduce((count, [, list]) => count + list.length, 0)
+
+  // Frame the visible route whenever the day or its photos change.
+  useEffect(() => {
+    if (!map || stops.length === 0) return
+    map.fitBounds(latLngBounds(stops.map((stop): [number, number] => [stop.lat, stop.lng])), { padding: [48, 48], maxZoom: 13, animate: ANIMATE_ZOOM })
+  }, [map, stops])
+
+  /** Opens a day (or all days) and clears the selection, which belonged to the previous view. */
+  function openTab(next: string) {
+    setTab(next)
+    setSelected(null)
+  }
+
+  /** The tablist's arrow keys, Home and End move between days and open them (WAI-ARIA tabs). */
+  function onTabKey(event: KeyboardEvent<HTMLButtonElement>) {
+    const index = tabs.indexOf(active)
+    const moves: Record<string, number> = { ArrowRight: index + 1, ArrowLeft: index - 1, Home: 0, End: tabs.length - 1 }
+    if (!(event.key in moves)) return
+    event.preventDefault()
+    const next = tabs[(moves[event.key] + tabs.length) % tabs.length]
+    openTab(next)
+    document.getElementById(`${ids}-tab-${next}`)?.focus()
+  }
+
+  /** Selects a stop from the list and brings its pin into view. */
+  function showStop(stop: Stop) {
+    setSelected(stop.photo.id)
+    map?.flyTo([stop.lat, stop.lng], Math.max(map.getZoom(), 12), { animate: ANIMATE_ZOOM, duration: 0.6 })
+  }
+
+  /** Selects a stop from its pin and scrolls its row into view. */
+  function pickPin(stop: Stop) {
+    setSelected(stop.photo.id)
+    rows.current.get(stop.photo.id)?.scrollIntoView({ block: 'nearest', behavior: ANIMATE_ZOOM ? 'smooth' : 'auto' })
+  }
 
   return (
-    <ol className="trip-journey">
-      {ordered.map(([day, list]) => (
-        <li key={day} className="trip-day">
-          <h3 className="trip-day-title">
-            {day === 'undated' ? 'No capture date' : `Day ${dayNumber(day)} · ${dayHeading.format(new Date(`${day}T00:00:00Z`))}`}
-          </h3>
-          <ul className="trip-rows">
-            {list.map((photo) => {
-              const status = photoStatus(photo)
-              return (
-                <li key={photo.id} className="trip-row">
-                  <div className="trip-row-thumb">
-                    <ViewableThumb photo={photo} onView={onView} />
-                  </div>
-                  <div className="trip-row-text">
-                    <p className="trip-tile-place">{photoLocationLabel(photo)}</p>
-                    <p className="trip-caption">
-                      {captureTime(photo)?.slice(11, 16) ?? 'Time unknown'}
-                      {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
-                    </p>
-                    {status ? <StatusBadge status={status} /> : null}
-                  </div>
-                  <PhotoActions photo={photo} onCorrect={onCorrect} />
-                </li>
-              )
-            })}
-          </ul>
-        </li>
-      ))}
-    </ol>
+    <div className="trip-journey">
+      <div className="trip-journey-list">
+        <div className="trip-days" role="tablist" aria-label="Trip days">
+          {tabs.map((day) => (
+            <button
+              key={day}
+              id={`${ids}-tab-${day}`}
+              type="button"
+              role="tab"
+              className="trip-days-tab"
+              aria-selected={day === active}
+              aria-controls={`${ids}-panel`}
+              aria-label={day === 'all' ? 'All days' : dayTitle(day)}
+              tabIndex={day === active ? 0 : -1}
+              onClick={() => openTab(day)}
+              onKeyDown={onTabKey}
+            >
+              {day === 'all' ? (
+                <>
+                  <small>All</small>
+                  <b>{ordered.filter(([d]) => d !== 'undated').length}</b>
+                </>
+              ) : day === 'undated' ? (
+                <>
+                  <small>No</small>
+                  <b>date</b>
+                </>
+              ) : (
+                <>
+                  <small>{tabWeekday.format(new Date(`${day}T00:00:00Z`))}</small>
+                  <b>{new Date(`${day}T00:00:00Z`).getUTCDate()}</b>
+                </>
+              )}
+            </button>
+          ))}
+        </div>
+
+        <div id={`${ids}-panel`} role="tabpanel" aria-labelledby={`${ids}-tab-${active}`} className="trip-journey-panel">
+          <p className="trip-journey-summary">
+            {stops.length} of {plural(shown, 'photo')} on the map
+          </p>
+          <ol className="trip-journey-days">
+            {visible.map(([day, list]) => (
+              <li key={day} className="trip-day" data-undated={day === 'undated' || undefined}>
+                <h3 className="trip-day-title">{dayTitle(day)}</h3>
+                <ul className="trip-rows">
+                  {list.map((photo) => {
+                    const status = photoStatus(photo)
+                    const stop = stopOf.get(photo.id)
+                    return (
+                      <li
+                        key={photo.id}
+                        ref={(element) => {
+                          if (element) rows.current.set(photo.id, element)
+                          else rows.current.delete(photo.id)
+                        }}
+                        className="trip-row"
+                        data-selected={selected === photo.id || undefined}
+                        data-hovered={hovered === photo.id || undefined}
+                        data-located={stop ? true : undefined}
+                        onMouseEnter={() => setHovered(stop ? photo.id : null)}
+                        onMouseLeave={() => setHovered(null)}
+                      >
+                        {stop ? (
+                          <button
+                            type="button"
+                            className="trip-stop"
+                            aria-label={`Show ${photoLocationLabel(photo)} on the map`}
+                            aria-pressed={selected === photo.id}
+                            onClick={() => showStop(stop)}
+                            onFocus={() => setHovered(photo.id)}
+                            onBlur={() => setHovered(null)}
+                          >
+                            {stop.n}
+                          </button>
+                        ) : (
+                          <span className="trip-stop trip-stop--none" title="Not on the map">
+                            <MapPinOff size={14} aria-hidden />
+                            <span className="visually-hidden">Not on the map</span>
+                          </span>
+                        )}
+                        <div className="trip-row-thumb">
+                          <ViewableThumb photo={photo} onView={onView} />
+                        </div>
+                        <div className="trip-row-text">
+                          <p className="trip-tile-place">{photoLocationLabel(photo)}</p>
+                          <p className="trip-caption">
+                            {captureTime(photo)?.slice(11, 16) ?? 'Time unknown'}
+                            {zoneNote(photo.capture_time_local, photo.capture_utc_offset)}
+                          </p>
+                          {status ? <StatusBadge status={status} /> : null}
+                        </div>
+                        <PhotoActions photo={photo} onCorrect={onCorrect} />
+                      </li>
+                    )
+                  })}
+                </ul>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </div>
+
+      <div className="trip-journey-map">
+        <MapContainer
+          ref={setMap}
+          className="trip-journey-canvas"
+          center={[48, 10]}
+          zoom={4}
+          zoomControl={false}
+          worldCopyJump
+          zoomAnimation={ANIMATE_ZOOM}
+        >
+          <TileLayer
+            key={basemap}
+            className={tiles.desaturate ? 'basemap-grey' : undefined}
+            url={tiles.url}
+            attribution={tiles.attribution}
+            maxNativeZoom={tiles.maxNativeZoom}
+            maxZoom={19}
+          />
+          <ZoomControl position="bottomright" />
+          {stops.length > 1 ? (
+            <Polyline
+              positions={stops.map((stop): [number, number] => [stop.lat, stop.lng])}
+              pathOptions={{ className: 'trip-route', color: '#2e2e6c', weight: 2.5, opacity: 0.7, dashArray: '2 8', lineCap: 'round' }}
+            />
+          ) : null}
+          {stops.map((stop) => (
+            <Marker
+              key={stop.photo.id}
+              position={[stop.lat, stop.lng]}
+              icon={stopIcon(stop.n, selected === stop.photo.id, hovered === stop.photo.id)}
+              title={`${stop.n}. ${photoLocationLabel(stop.photo)}`}
+              alt={`${stop.n}. ${photoLocationLabel(stop.photo)}`}
+              zIndexOffset={selected === stop.photo.id ? 1000 : hovered === stop.photo.id ? 500 : 0}
+              eventHandlers={{
+                click: () => pickPin(stop),
+                mouseover: () => setHovered(stop.photo.id),
+                mouseout: () => setHovered(null),
+              }}
+            />
+          ))}
+        </MapContainer>
+        <MapLayers value={basemap} onChange={setBasemap} />
+        {stops.length === 0 ? <p className="trip-journey-nomap">No photo here has a location yet, so nothing is on the map.</p> : null}
+      </div>
+    </div>
   )
 }
 
@@ -579,7 +795,7 @@ export default function TripScreen({ tripId, initialFiles, onBack, onShowOnMap, 
           </span>
           <h1 className="trip-title">{trip.title}</h1>
           <p className="trip-meta">
-            {[dates, plural(trip.photo_count, 'photo'), trip.cities.length > 0 ? trip.cities.join(' · ') : null]
+            {[dates, plural(trip.photo_count, 'photo'), trip.cities.length > 0 ? trip.cities.join(' → ') : null]
               .filter(Boolean)
               .join('  ·  ')}
           </p>

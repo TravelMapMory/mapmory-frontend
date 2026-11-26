@@ -1,5 +1,5 @@
-import { MapPin } from 'lucide-react'
 import '../LandingScreen.css'
+import BrandMark from './BrandMark'
 
 export interface PublicHeaderProps {
   /** The brand returns to the landing page. */
@@ -15,9 +15,7 @@ export default function PublicHeader({ onHome, onSignIn }: PublicHeaderProps) {
   return (
     <header className="land-hdr">
       <button type="button" className="land-brand land-brand-btn" onClick={onHome} aria-label="MapMory home">
-        <span className="land-logo">
-          <MapPin size={18} strokeWidth={2.6667} aria-hidden />
-        </span>
+        <BrandMark />
         <strong className="land-name">MapMory</strong>
       </button>
       <button type="button" className="btn btn-secondary" onClick={onSignIn}>

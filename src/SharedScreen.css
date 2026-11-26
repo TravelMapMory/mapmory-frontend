@@ -71,15 +71,18 @@
   gap: 6px;
 }
 
+/* Positions the layers button over the shared map. */
+.shared-map-frame {
+  position: relative;
+  isolation: isolate;
+}
+
 .shared-map {
   height: 360px;
   border: 1px solid var(--c-border);
   border-radius: var(--r-md);
 }
 
-.shared-map--grey .leaflet-tile-pane {
-  filter: grayscale(1) brightness(1.06) contrast(0.92);
-}
 
 .shared-photos {
   display: flex;

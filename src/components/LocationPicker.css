@@ -32,9 +32,6 @@
   cursor: crosshair;
 }
 
-.lpick-map--grey .leaflet-tile-pane {
-  filter: grayscale(1) brightness(1.06) contrast(0.92);
-}
 
 .lpick-pin {
   background: transparent;
@@ -50,7 +47,7 @@
   border: 4px solid #fff;
   border-radius: 50%;
   background: var(--c-action);
-  box-shadow: 0 0 0 2px var(--c-action), var(--shadow-raised);
+  box-shadow: 0 0 0 2px var(--c-primary), var(--shadow-raised);
 }
 
 .lpick-chosen {
