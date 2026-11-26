@@ -158,3 +158,29 @@ test('a photo can be deleted with the keyboard alone', async ({ page }) => {
   await page.keyboard.press('Enter')
   await expect(viewer(page).locator('.viewer-place')).toHaveText('Pantheon, Rome')
 })
+
+test('the viewer never draws its caption over the controls, even on a short screen', async ({ page }) => {
+  await boot(page)
+  await openTrip(page, 'Rome with family')
+  const size = page.viewportSize()!
+  // The project's own screen, then a short laptop and a short phone-sized window.
+  for (const height of [size.height, 560, 480]) {
+    await page.setViewportSize({ width: size.width, height })
+    // The first photo, and the scanned print without a capture time or location.
+    for (const which of ['first', 'last'] as const) {
+      await page.locator('.trip-view')[which]().click()
+      const parts = ['.viewer-figure img', '.viewer-caption', '.viewer-nav', '.viewer-delete', '.viewer-shortcuts']
+      const boxes = []
+      for (const part of parts) boxes.push((await viewer(page).locator(part).boundingBox())!)
+      for (let i = 1; i < boxes.length; i++) {
+        expect(boxes[i].y, `${parts[i]} starts below ${parts[i - 1]} at ${size.width}x${height}`).toBeGreaterThanOrEqual(
+          boxes[i - 1].y + boxes[i - 1].height - 0.5,
+        )
+      }
+      expect(boxes.at(-1)!.y + boxes.at(-1)!.height).toBeLessThanOrEqual(height)
+      await page.keyboard.press('Escape')
+      await expect(viewer(page)).toHaveCount(0)
+    }
+  }
+})
+
