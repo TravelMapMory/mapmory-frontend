@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronLeft, ChevronRight, X } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Trash2, X } from 'lucide-react'
 import type { Photo } from '../api/types'
 import { formatCaptured, zoneNote } from '../format'
 import type { MoreState } from './LoadMore'
 import { viewerPosition } from './viewerPosition'
 import { photoLocationLabel, photoPlaceName } from '../photoLocation'
+import DeletePhotoConfirm from './DeletePhotoConfirm'
 import './PhotoViewer.css'
 
 export interface PhotoViewerProps {
@@ -17,6 +18,12 @@ export interface PhotoViewerProps {
   hasMore?: boolean
   moreState?: MoreState
   onLoadMore?: () => void
+  /**
+   * The owner's trip passes this to offer Delete photo (frontend #59). It
+   * resolves once the photo is deleted; the viewer then shows the next photo,
+   * or the previous one, and closes after the last.
+   */
+  onDelete?: (photo: Photo) => Promise<void>
 }
 
 /** The large image for a photo: the display rendition, else its thumbnail. */
@@ -62,17 +69,22 @@ export default function PhotoViewer({
   hasMore = false,
   moreState = 'idle',
   onLoadMore,
+  onDelete,
 }: PhotoViewerProps) {
   // Follow the photo, not its position: pages and refreshes can shift the list.
   const [currentId, setCurrentId] = useState(startId)
   // Next was pressed at the end of the loaded photos; move on once the next page arrives.
   const [advancePending, setAdvancePending] = useState(false)
   const ref = useRef<HTMLDialogElement>(null)
+  // The delete question is open for the current photo.
+  const [confirming, setConfirming] = useState(false)
+  const deleteButton = useRef<HTMLButtonElement>(null)
+  const refocusDelete = useRef(false)
   const { index, missing, hasPrev, hasNext } = viewerPosition(photos, currentId)
   const canLoadMore = !missing && !hasNext && hasMore && Boolean(onLoadMore)
 
   function step(delta: -1 | 1) {
-    if (missing) return
+    if (missing || confirming) return
     if (delta === -1 && hasPrev) setCurrentId(photos[index - 1].id)
     else if (delta === 1 && hasNext) setCurrentId(photos[index + 1].id)
     else if (delta === 1 && canLoadMore && moreState !== 'loading') {
@@ -104,6 +116,32 @@ export default function PhotoViewer({
     }
   }, [])
 
+  // After the delete question closes, focus goes back to Delete photo (or the
+  // same button for the photo shown next), never to the page behind.
+  useEffect(() => {
+    if (confirming || !refocusDelete.current) return
+    refocusDelete.current = false
+    deleteButton.current?.focus()
+  }, [confirming])
+
+  function closeQuestion() {
+    refocusDelete.current = true
+    setConfirming(false)
+  }
+
+  async function deleteCurrent(target: Photo) {
+    // Decide where to go before the list changes: the next photo, else the previous one.
+    const at = photos.findIndex((p) => p.id === target.id)
+    const neighbour = photos[at + 1] ?? photos[at - 1] ?? null
+    await onDelete?.(target)
+    if (!neighbour) {
+      onClose()
+      return
+    }
+    setCurrentId(neighbour.id)
+    closeQuestion()
+  }
+
   // Arrows page from anywhere while the viewer is open, even if focus has left its buttons.
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
@@ -125,9 +163,11 @@ export default function PhotoViewer({
       className="viewer"
       aria-labelledby="viewer-place"
       onCancel={(event) => {
-        // Escape: let React close the dialog by unmounting it.
+        // Escape: let React close the dialog by unmounting it. With the delete
+        // question open, Escape only closes the question.
         event.preventDefault()
-        onClose()
+        if (confirming) closeQuestion()
+        else onClose()
       }}
       onClick={(event) => {
         // A click on the backdrop lands on the dialog itself.
@@ -162,7 +202,16 @@ export default function PhotoViewer({
           </div>
         )}
 
-        {photo ? (
+        {photo && onDelete && confirming ? (
+          <DeletePhotoConfirm
+            key={photo.id}
+            place={place}
+            onConfirm={() => deleteCurrent(photo)}
+            onCancel={closeQuestion}
+          />
+        ) : null}
+
+        {photo && !confirming ? (
           <div className="viewer-nav">
             {/* aria-disabled, not disabled, so the button keeps focus at the first or last photo. */}
             <button type="button" className="viewer-step" onClick={() => step(-1)} aria-disabled={!hasPrev}>
@@ -184,6 +233,17 @@ export default function PhotoViewer({
               <ChevronRight size={18} aria-hidden />
             </button>
           </div>
+        ) : null}
+        {photo && onDelete && !confirming ? (
+          <button
+            ref={deleteButton}
+            type="button"
+            className="viewer-delete"
+            onClick={() => setConfirming(true)}
+          >
+            <Trash2 size={16} aria-hidden />
+            Delete photo
+          </button>
         ) : null}
         {photo && canLoadMore && moreState === 'error' ? (
           <p className="viewer-more-error" role="alert">

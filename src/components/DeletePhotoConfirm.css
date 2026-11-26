@@ -1,0 +1,39 @@
+.photo-delete {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 14px 16px;
+  background: var(--c-surface, #fff);
+  border: 1px solid #f3c1bd;
+  border-left: 4px solid #b42318;
+  border-radius: var(--r-md, 12px);
+  color: var(--c-text, #1a2433);
+  text-align: left;
+}
+
+.photo-delete p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.photo-delete-title {
+  font-weight: 700;
+}
+
+.photo-delete-error {
+  color: #b42318;
+}
+
+.photo-delete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.photo-delete .btn[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.7;
+}

@@ -1111,6 +1111,26 @@ export async function mockDeleteTrip(id: string): Promise<void> {
   return delay(undefined)
 }
 
+/**
+ * DELETE /api/photos/{id}: one photo goes, like the backend. Shares stop
+ * including it; the trip's cover falls back to its first remaining photo.
+ * A photo still uploading or processing is busy (409 photo_busy).
+ */
+export async function mockDeletePhoto(id: string): Promise<void> {
+  await beforeOperation('deletePhoto')
+  const index = photos.findIndex((p) => p.id === id)
+  if (index < 0) throw new NotFoundError('Photo')
+  const photo = photos[index]
+  if (photo.state === 'pending' || photo.state === 'uploading' || photo.state === 'processing') {
+    throw new ApiError(409, 'photo_busy', 'the photo is still uploading or processing; try again in a few minutes')
+  }
+  photos.splice(index, 1)
+  for (const trip of trips) if (trip.cover_photo_id === id) trip.cover_photo_id = null
+  for (const share of shares) share.photo_ids = share.photo_ids.filter((photoId) => photoId !== id)
+  saveShares()
+  return delay(undefined)
+}
+
 /** DELETE /api/me: every trip, photo and share of the demo owner goes. */
 export async function mockDeleteAccount(): Promise<void> {
   await beforeOperation('deleteAccount')

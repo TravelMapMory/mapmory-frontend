@@ -263,3 +263,24 @@ test('provider failure is returned without falling back to mock search', async (
     code: 'provider_unavailable',
   })
 })
+
+test('photo deletion sends an authorised DELETE for that photo only', async ({ page }) => {
+  const calls: { method: string; path: string; authorization: string | undefined }[] = []
+  await page.route('**/api/photos/**', async (route) => {
+    calls.push({
+      method: route.request().method(),
+      path: new URL(route.request().url()).pathname,
+      authorization: route.request().headers().authorization,
+    })
+    await route.fulfill({ status: 204 })
+  })
+
+  await page.evaluate(async () => {
+    const bridgeUrl = '/tests/support/liveClientTestBridge.ts'
+    const { deletePhoto, setTokenProvider } = await import(/* @vite-ignore */ bridgeUrl)
+    setTokenProvider(async () => 'test-token')
+    await deletePhoto('photo/1')
+  })
+
+  expect(calls).toEqual([{ method: 'DELETE', path: '/api/photos/photo%2F1', authorization: 'Bearer test-token' }])
+})
