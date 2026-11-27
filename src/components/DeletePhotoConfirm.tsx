@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
+import type { KeyboardEvent } from 'react'
 import { deletePhotoError } from '../photoDeletion'
 import './DeletePhotoConfirm.css'
 
@@ -38,19 +39,16 @@ export default function DeletePhotoConfirm({ place, onConfirm, onCancel }: Delet
     }
   }
 
+  function onEscape(event: KeyboardEvent<HTMLButtonElement>) {
+    if (event.key !== 'Escape') return
+    // The question owns Escape while its buttons have focus; the viewer stays open.
+    event.stopPropagation()
+    event.preventDefault()
+    if (!deleting) onCancel()
+  }
+
   return (
-    <div
-      className="photo-delete"
-      role="group"
-      aria-labelledby={titleId}
-      onKeyDown={(event) => {
-        if (event.key !== 'Escape') return
-        // Escape cancels this question only, not the viewer around it.
-        event.stopPropagation()
-        event.preventDefault()
-        if (!deleting) onCancel()
-      }}
-    >
+    <div className="photo-delete" role="group" aria-labelledby={titleId}>
       <p id={titleId} className="photo-delete-title">
         Delete this photo?
       </p>
@@ -64,10 +62,10 @@ export default function DeletePhotoConfirm({ place, onConfirm, onCancel }: Delet
         </p>
       ) : null}
       <div className="photo-delete-actions">
-        <button type="button" className="btn btn-danger" onClick={() => void confirm()} aria-disabled={deleting}>
+        <button type="button" className="btn btn-danger" onClick={() => void confirm()} onKeyDown={onEscape} aria-disabled={deleting}>
           {deleting ? 'Deleting…' : 'Yes, delete photo'}
         </button>
-        <button ref={keep} type="button" className="btn btn-secondary" onClick={onCancel} disabled={deleting}>
+        <button ref={keep} type="button" className="btn btn-secondary" onClick={onCancel} onKeyDown={onEscape} disabled={deleting}>
           Keep photo
         </button>
       </div>

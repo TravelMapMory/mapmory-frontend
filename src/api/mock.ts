@@ -500,18 +500,18 @@ export async function mockMapPhotos(query: MapPhotoQuery, signal?: AbortSignal):
   return delay({ items: hits.slice(0, MAP_LIMIT), truncated: hits.length > MAP_LIMIT }, 150, signal)
 }
 
-function city(name: string, country: string, lat: number, lng: number): Place {
+function city(name: string, countryName: string, lat: number, lng: number): Place {
   return {
     id: `city-${name.toLowerCase().replace(/\W+/g, '-')}`,
     name,
     // A city-state ("Vatican City") is not labelled twice.
-    label: name === country ? name : `${name}, ${country}`,
+    label: name === countryName ? name : `${name}, ${countryName}`,
     kind: 'city',
     lat,
     lng,
     zoom: 12,
     city: name,
-    country,
+    country: countryName,
   }
 }
 
@@ -1120,8 +1120,8 @@ export async function mockDeletePhoto(id: string): Promise<void> {
   await beforeOperation('deletePhoto')
   const index = photos.findIndex((p) => p.id === id)
   if (index < 0) throw new NotFoundError('Photo')
-  const photo = photos[index]
-  if (photo.state === 'pending' || photo.state === 'uploading' || photo.state === 'processing') {
+  const targetPhoto = photos[index]
+  if (targetPhoto.state === 'pending' || targetPhoto.state === 'uploading' || targetPhoto.state === 'processing') {
     throw new ApiError(409, 'photo_busy', 'the photo is still uploading or processing; try again in a few minutes')
   }
   photos.splice(index, 1)
