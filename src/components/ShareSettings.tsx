@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Copy, Flag, Globe, ImageOff, Link2, Plus } from 'lucide-react'
 import { createShare, listShares, listTripPhotos, revokeShare } from '../api/client'
+import { ApiError } from '../api/http'
+import { currentAccount, firebaseEnabled, refreshVerification, resendVerification } from '../auth'
 import { loadAllPages } from '../api/paging'
 import type { Photo, Share, ShareMode, TripDetail } from '../api/types'
 import { formatUploaded, plural } from '../format'
@@ -143,10 +145,40 @@ function NewShareForm({
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(photos.slice(0, 500).map((p) => p.id)))
   const [saving, setSaving] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [verificationRequired, setVerificationRequired] = useState(() => firebaseEnabled && !currentAccount()?.emailVerified)
+  const [verificationMessage, setVerificationMessage] = useState('')
+  const [verificationBusy, setVerificationBusy] = useState(false)
   const [step, setStep] = useState<'configure' | 'preview'>('configure')
   const formHeading = useRef<HTMLHeadingElement>(null)
   const ids = useId()
   const selectedPhotos = photos.filter((photo) => chosen.has(photo.id))
+
+  async function checkVerification() {
+    setVerificationBusy(true)
+    setVerificationMessage('')
+    try {
+      const verified = await refreshVerification()
+      setVerificationRequired(!verified)
+      setVerificationMessage(verified ? 'Email verified. You can now publish publicly.' : 'Your email is not verified yet. Check your inbox, then try again.')
+    } catch {
+      setVerificationMessage('Could not check verification. Try again.')
+    } finally {
+      setVerificationBusy(false)
+    }
+  }
+
+  async function sendVerificationAgain() {
+    setVerificationBusy(true)
+    setVerificationMessage('')
+    try {
+      await resendVerification()
+      setVerificationMessage('Verification email sent. Check your inbox.')
+    } catch {
+      setVerificationMessage('Verification email could not be sent. Try again.')
+    } finally {
+      setVerificationBusy(false)
+    }
+  }
 
   function toggle(id: string) {
     setChosen((current) => {
@@ -159,13 +191,13 @@ function NewShareForm({
 
   function submit(event: FormEvent) {
     event.preventDefault()
-    if (!title.trim() || chosen.size === 0 || chosen.size > 500) return
+    if (!title.trim() || chosen.size === 0 || chosen.size > 500 || (mode === 'public' && verificationRequired)) return
     setFailed(false)
     setStep('preview')
   }
 
   async function publish() {
-    if (saving || !title.trim() || selectedPhotos.length === 0 || selectedPhotos.length > 500) return
+    if (saving || !title.trim() || selectedPhotos.length === 0 || selectedPhotos.length > 500 || (mode === 'public' && verificationRequired)) return
     setSaving(true)
     setFailed(false)
     try {
@@ -177,8 +209,14 @@ function NewShareForm({
         photo_ids: selectedPhotos.map((photo) => photo.id),
       })
       onCreated(share)
-    } catch {
-      setFailed(true)
+    } catch (error) {
+      if (error instanceof ApiError && error.code === 'email_not_verified') {
+        setVerificationRequired(true)
+        setStep('configure')
+        setVerificationMessage('Verify your email address before publishing publicly.')
+      } else {
+        setFailed(true)
+      }
     } finally {
       setSaving(false)
     }
@@ -294,6 +332,16 @@ function NewShareForm({
         </span>
       </p>
 
+      {mode === 'public' && verificationRequired ? (
+        <div className="share-error" role="status">
+          <p>Verify your email address before publishing publicly. You can still create a link-only share.</p>
+          <div className="share-form-actions">
+            <button type="button" className="btn btn-secondary" disabled={verificationBusy} onClick={() => void sendVerificationAgain()}>Resend verification email</button>
+            <button type="button" className="btn btn-secondary" disabled={verificationBusy} onClick={() => void checkVerification()}>I've verified my email</button>
+          </div>
+          {verificationMessage ? <p role="status">{verificationMessage}</p> : null}
+        </div>
+      ) : null}
       {chosen.size === 0 ? <p className="share-caption">Select at least one photo to create a share.</p> : null}
       {photos.length > 500 ? <p className="share-caption">A share can contain up to 500 photos.</p> : null}
       {failed ? (
@@ -302,7 +350,7 @@ function NewShareForm({
         </p>
       ) : null}
       <div className="share-form-actions">
-        <button type="submit" className="btn btn-primary" disabled={saving || chosen.size === 0 || !title.trim()}>
+        <button type="submit" className="btn btn-primary" disabled={saving || chosen.size === 0 || !title.trim() || (mode === 'public' && verificationRequired)}>
           Preview share
         </button>
         <button type="button" className="btn btn-secondary" onClick={onCancel} disabled={saving}>
