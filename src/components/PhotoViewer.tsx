@@ -157,7 +157,7 @@ export default function PhotoViewer({
 
   return (
     // The backdrop click is a mouse shortcut; Escape (onCancel) and the Close button are its keyboard equivalents.
-    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events
+    // oxlint-disable-next-line jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions
     <dialog
       ref={ref}
       className="viewer"

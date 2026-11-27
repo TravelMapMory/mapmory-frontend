@@ -100,9 +100,6 @@ function DeleteTripConfirm({
       className="trip-delete"
       role="group"
       aria-label="Delete this trip?"
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && !deleting) onCancel()
-      }}
     >
       <p>
         Delete <strong>{trip.title}</strong> and its {plural(trip.photo_count, 'photo')}? Its share links and public
@@ -114,10 +111,35 @@ function DeleteTripConfirm({
         </p>
       ) : null}
       <div className="trip-delete-actions">
-        <button type="button" className="btn btn-danger" onClick={() => void confirm()} disabled={deleting}>
+        <button
+          type="button"
+          className="btn btn-danger"
+          onClick={() => void confirm()}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && !deleting) {
+              event.stopPropagation()
+              event.preventDefault()
+              onCancel()
+            }
+          }}
+          disabled={deleting}
+        >
           {deleting ? 'Deleting…' : 'Yes, delete trip'}
         </button>
-        <button ref={keep} type="button" className="btn btn-secondary" onClick={onCancel} disabled={deleting}>
+        <button
+          ref={keep}
+          type="button"
+          className="btn btn-secondary"
+          onClick={onCancel}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape' && !deleting) {
+              event.stopPropagation()
+              event.preventDefault()
+              onCancel()
+            }
+          }}
+          disabled={deleting}
+        >
           Keep trip
         </button>
       </div>
@@ -269,6 +291,8 @@ function CorrectionPanel({
 
   useEffect(() => {
     ref.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+    // Re-scroll if the correction target changes while this panel stays mounted.
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies
   }, [photo.id])
 
   async function save(patch: LocationPatch) {
@@ -287,6 +311,8 @@ function CorrectionPanel({
   const located = photo.lat !== null && photo.lng !== null
 
   return (
+    // Escape is handled by the correction group so it works from the search input or map controls.
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <section
       ref={ref}
       className="trip-correct"
@@ -604,6 +630,8 @@ function Journey({ photos, onCorrect, onView, onDelete }: PhotoListProps) {
                     const status = photoStatus(photo)
                     const stop = stopOf.get(photo.id)
                     return (
+                      // Pointer hover on the entire row synchronizes the map-marker highlight.
+                      // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
                       <li
                         key={photo.id}
                         ref={(element) => {
