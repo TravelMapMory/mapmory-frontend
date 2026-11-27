@@ -124,3 +124,8 @@
     padding: 4px;
   }
 }
+
+.acct-edit { display: grid; gap: 8px; padding: 8px; min-width: 250px; }
+.acct-edit label { font-size: 13px; font-weight: 600; }
+.acct-edit input { width: 100%; box-sizing: border-box; padding: 8px; border: 1px solid var(--c-border); border-radius: 6px; font: inherit; }
+.acct-edit-actions { display: flex; justify-content: flex-end; gap: 8px; }

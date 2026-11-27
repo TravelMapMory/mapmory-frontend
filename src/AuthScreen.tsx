@@ -1,6 +1,6 @@
 import { useId, useState, type FormEvent } from 'react'
 import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
-import { authErrorMessage, firebaseEnabled, logIn, signUp } from './auth'
+import { authErrorMessage, firebaseEnabled, logIn, requestPasswordReset, signUp } from './auth'
 import './LandingScreen.css'
 import './AuthScreen.css'
 import BrandMark from './components/BrandMark'
@@ -29,6 +29,10 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [emailInput, setEmailInput] = useState('')
+  const [resetSent, setResetSent] = useState(false)
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -48,8 +52,28 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
     }
   }
 
+  async function sendReset(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      await requestPasswordReset(resetEmail)
+      setResetSent(true)
+    } catch (failure) {
+      const code = typeof failure === 'object' && failure && 'code' in failure ? String(failure.code) : ''
+      // Do not disclose whether the address is registered, even with older Firebase settings.
+      if (code === 'auth/user-not-found') setResetSent(true)
+      else setError(authErrorMessage(failure))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function switchMode() {
     setError('')
+    setResetOpen(false)
+    setResetSent(false)
     onModeChange(signup ? 'login' : 'signup')
   }
 
@@ -69,25 +93,37 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
       <main id="main" tabIndex={-1} className="auth-body">
         <section className="auth-card" aria-labelledby={`${id}-title`}>
           <h1 id={`${id}-title`} className="auth-title">
-            {title}
+            {resetOpen && !signup ? 'Reset your password' : title}
           </h1>
           <p className="auth-sub">
             {signup ? 'Start pinning your trip photos. Everything stays private until you share it.' : 'Welcome back.'}
           </p>
 
-          <form className="auth-form" onSubmit={submit}>
+          {!signup && resetOpen && firebaseEnabled ? (
+            <form className="auth-form" onSubmit={sendReset}>
+              <p className="auth-hint">Enter your email address to request a password-reset link.</p>
+              <div className="auth-field">
+                <label htmlFor={`${id}-reset-email`}>Email</label>
+                <input id={`${id}-reset-email`} type="email" autoComplete="email" required value={resetEmail} onChange={(event) => setResetEmail(event.target.value)} />
+              </div>
+              {error ? <p className="auth-error" role="alert">{error}</p> : null}
+              {resetSent ? <p role="status" className="auth-hint">If an account exists for this address, a password-reset email has been sent. Check your inbox and spam folder.</p> : null}
+              <button type="submit" className="btn btn-action auth-submit" disabled={busy}>{busy ? 'Please wait…' : 'Send reset link'}</button>
+              <button type="button" className="auth-link" onClick={() => { setResetOpen(false); setError(''); setResetSent(false) }}>Back to log in</button>
+            </form>
+          ) : <form className="auth-form" onSubmit={submit}>
             {signup ? (
               <div className="auth-field">
-                <label htmlFor={`${id}-name`}>Name</label>
+                <label htmlFor={`${id}-name`}>Name (optional)</label>
                 <input id={`${id}-name`} name="name" type="text" autoComplete="name" />
               </div>
             ) : null}
             <div className="auth-field">
-              <label htmlFor={`${id}-email`}>Email</label>
-              <input id={`${id}-email`} name="email" type="email" autoComplete="email" required={firebaseEnabled} />
+              <label htmlFor={`${id}-email`}>Email{signup ? <><span className="auth-required" aria-hidden="true"> *</span><span className="visually-hidden"> (required)</span></> : null}</label>
+              <input id={`${id}-email`} name="email" type="email" autoComplete="email" required={firebaseEnabled} value={emailInput} onChange={(event) => setEmailInput(event.target.value)} />
             </div>
             <div className="auth-field">
-              <label htmlFor={`${id}-password`}>Password</label>
+              <label htmlFor={`${id}-password`}>Password{signup ? <><span className="auth-required" aria-hidden="true"> *</span><span className="visually-hidden"> (required)</span></> : null}</label>
               <div className="auth-password">
                 <input
                   id={`${id}-password`}
@@ -127,7 +163,10 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
                 What happens to your data is explained in the <PrivacyLink>privacy policy</PrivacyLink>.
               </p>
             ) : null}
-          </form>
+          </form>}
+          {!signup && !resetOpen && firebaseEnabled ? (
+            <p className="auth-switch"><button type="button" className="auth-link" onClick={() => { setResetEmail(emailInput); setError(''); setResetOpen(true) }}>Forgot password?</button></p>
+          ) : null}
 
           <p className="auth-switch">
             {signup ? 'Already have an account?' : 'New to MapMory?'}{' '}

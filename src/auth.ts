@@ -14,6 +14,7 @@ import {
   reauthenticateWithCredential,
   onAuthStateChanged,
   sendEmailVerification,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   type User,
   signOut,
@@ -21,6 +22,7 @@ import {
   type Auth,
 } from 'firebase/auth'
 import { setTokenProvider } from './api/http'
+import { normalizeDisplayName } from './accountProfile'
 
 export { authErrorMessage } from './authErrors'
 
@@ -115,6 +117,23 @@ export async function refreshVerification(): Promise<boolean> {
   // A fresh ID token carries email_verified to the backend too.
   await user.getIdToken(true)
   return user.emailVerified
+}
+
+/** Update the Firebase profile; never persist the unsaved draft in the UI. */
+export async function changeDisplayName(value: string): Promise<Account> {
+  const user = firebaseAuth().currentUser
+  if (!user) throw new Error('Not signed in')
+  await updateProfile(user, { displayName: normalizeDisplayName(value) })
+  const account = currentAccount()
+  if (!account) throw new Error('Session ended while updating your profile.')
+  return account
+}
+
+/** Firebase handles account recovery. The UI always shows an account-neutral confirmation. */
+export async function requestPasswordReset(email: string): Promise<void> {
+  const address = email.trim()
+  if (!address) throw new Error('Enter your email address.')
+  await sendPasswordResetEmail(firebaseAuth(), address)
 }
 
 export async function logIn(email: string, password: string): Promise<void> {

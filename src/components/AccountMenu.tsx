@@ -1,5 +1,5 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { ChevronDown, FileText, LogOut, UserX } from 'lucide-react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { ChevronDown, FileText, LogOut, Pencil, UserX } from 'lucide-react'
 import './AccountMenu.css'
 
 export interface AccountMenuProps {
@@ -10,6 +10,7 @@ export interface AccountMenuProps {
   onSignOut: () => void
   onDeleteAccount: () => void
   onPrivacy: () => void
+  onUpdateName?: (value: string) => Promise<void>
 }
 
 /** Up to two initials for the avatar: "Kristian Lalev" gives "KL", "ana@x.fi" gives "A". */
@@ -23,8 +24,12 @@ function initials(name: string): string {
  * one stray click away. A disclosure button: Escape or a click outside closes
  * it, and Escape returns focus to the button.
  */
-export default function AccountMenu({ name, detail, onSignOut, onDeleteAccount, onPrivacy }: AccountMenuProps) {
+export default function AccountMenu({ name, detail, onSignOut, onDeleteAccount, onPrivacy, onUpdateName }: AccountMenuProps) {
   const [open, setOpen] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [draftName, setDraftName] = useState(name)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
   const root = useRef<HTMLDivElement>(null)
   const button = useRef<HTMLButtonElement>(null)
   const firstItem = useRef<HTMLButtonElement>(null)
@@ -48,6 +53,23 @@ export default function AccountMenu({ name, detail, onSignOut, onDeleteAccount, 
       document.removeEventListener('keydown', escape)
     }
   }, [open])
+
+  async function saveName(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!onUpdateName || saving) return
+    setSaving(true)
+    setSaveError('')
+    try {
+      await onUpdateName(draftName)
+      setEditing(false)
+      setOpen(false)
+    } catch (failure) {
+      setSaveError(failure instanceof Error && (failure.message === 'Enter a display name.' || failure.message === 'Use 80 characters or fewer.')
+        ? failure.message : 'Could not save your name. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <div className="acct" ref={root}>
@@ -74,7 +96,18 @@ export default function AccountMenu({ name, detail, onSignOut, onDeleteAccount, 
             <p className="acct-who-name">{name}</p>
             {detail && detail !== name ? <p className="acct-who-detail">{detail}</p> : null}
           </div>
-          <ul className="acct-items">
+          {editing ? (
+            <form className="acct-edit" onSubmit={saveName}>
+              <label htmlFor={`${menuId}-name`}>Display name</label>
+              <input id={`${menuId}-name`} value={draftName} maxLength={160} onChange={(event) => setDraftName(event.target.value)} autoComplete="off" required />
+              {saveError ? <p role="alert" className="auth-error">{saveError}</p> : null}
+              <div className="acct-edit-actions">
+                <button type="button" className="btn btn-secondary" onClick={() => { setEditing(false); setSaveError('') }} disabled={saving}>Cancel</button>
+                <button type="submit" className="btn btn-action" disabled={saving}>{saving ? 'Saving…' : 'Save name'}</button>
+              </div>
+            </form>
+          ) : <ul className="acct-items">
+            {onUpdateName ? <li><button type="button" className="acct-item" onClick={() => { setDraftName(name); setSaveError(''); setEditing(true) }}><Pencil size={16} aria-hidden /> Edit display name</button></li> : null}
             <li>
               <button
                 ref={firstItem}
@@ -115,7 +148,7 @@ export default function AccountMenu({ name, detail, onSignOut, onDeleteAccount, 
                 Delete account…
               </button>
             </li>
-          </ul>
+          </ul>}
         </div>
       ) : null}
     </div>

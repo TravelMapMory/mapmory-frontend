@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Header, { type Screen } from './components/Header'
 import DashboardScreen from './DashboardScreen'
 import AuthScreen from './AuthScreen'
-import { currentAccount, deleteSignIn, firebaseEnabled, logOut, reauthenticateForDeletion, watchSignedIn, type Account } from './auth'
+import { changeDisplayName, currentAccount, deleteSignIn, firebaseEnabled, logOut, reauthenticateForDeletion, watchSignedIn, type Account } from './auth'
 import VerifyEmailBanner from './components/VerifyEmailBanner'
 import { completeAccountDeletion } from './accountDeletion'
 import LandingScreen from './LandingScreen'
@@ -245,6 +245,7 @@ export default function App() {
         onSignOut={signOut}
         onDeleteAccount={() => setDeletingAccount(true)}
         onPrivacy={() => navigate({ name: 'privacy' })}
+        onUpdateName={firebaseEnabled ? async (name) => { const updated = await changeDisplayName(name); setAccount(updated) } : undefined}
         account={account ? { name: account.name, email: account.email } : { name: 'Demo account' }}
       />
       {account && !account.emailVerified ? (
