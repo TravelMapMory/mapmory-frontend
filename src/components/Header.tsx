@@ -16,6 +16,7 @@ export interface HeaderProps {
   onDeleteAccount?: () => void
   /** Opens the privacy policy from the account menu. */
   onPrivacy?: () => void
+  onUpdateName?: (value: string) => Promise<void>
   /** The signed-in owner, for the account menu. */
   account?: { name: string; email?: string }
 }
@@ -26,7 +27,7 @@ const TABS: { id: Screen; label: string; icon: typeof MapIcon }[] = [
 
 // The navigation bar shared by Dashboard and Map (doc 4): the brand on the leading edge and the two views as tabs
 
-export default function Header({ current, onNavigate, onSignOut, onDeleteAccount, onPrivacy, account }: HeaderProps) {
+export default function Header({ current, onNavigate, onSignOut, onDeleteAccount, onPrivacy, onUpdateName, account }: HeaderProps) {
   return (
     <header className="hdr">
       <div className="hdr-brand">
@@ -57,6 +58,7 @@ export default function Header({ current, onNavigate, onSignOut, onDeleteAccount
           onSignOut={onSignOut}
           onDeleteAccount={onDeleteAccount}
           onPrivacy={onPrivacy}
+          onUpdateName={onUpdateName}
         />
       ) : null}
     </header>
