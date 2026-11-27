@@ -18,9 +18,9 @@ export default function PrivacyScreen() {
         <ul>
           <li>MapMory is a student project. Your photos and trips are private until you share them.</li>
           <li>We keep your original photos, the place and time stored in them, and the trip text you type.</li>
-          <li>Google&rsquo;s sign-in service (Firebase) handles your email address and password. Our database does not store them.</li>
+          <li>Firebase Authentication handles your email address, password, display name and account recovery. Our application database stores your Firebase account ID, not your password.</li>
           <li>The exact position of a photo is sent to Geoapify to find the city name. Shares show only approximate positions.</li>
-          <li>The map in your browser loads from outside services. They can see your IP address.</li>
+          <li>Map tiles load from external providers, including Geoapify when configured. Those providers can receive your IP address and the map area you view.</li>
           <li>You can delete a trip, or your whole account, in the app.</li>
         </ul>
       </section>
@@ -32,13 +32,13 @@ export default function PrivacyScreen() {
           It is not a company.
         </p>
         <p>
-          To ask a question about privacy, open an issue on our <a href={ISSUES_URL}>GitHub issue tracker</a>.
+          For general feedback, open an issue on our <a href={ISSUES_URL}>GitHub issue tracker</a>. Do not use the public issue tracker to request access to personal data or discuss private account information. A private privacy-contact channel is not currently listed on this page.
         </p>
         <p className="pp-warn">
           <strong>Issues are public.</strong> Do not post personal data, photos, locations or share links in an issue. If you want
           your data removed, you can do it yourself in the app (see &ldquo;Deleting your data&rdquo;).
         </p>
-        <p>If someone else&rsquo;s public share shows you, use Report on that share page.</p>
+        <p>If someone else&rsquo;s public share shows you, use Report on that share page. For requests about your personal data that cannot be completed in the app, a private contact channel is needed; do not include sensitive information in public issues.</p>
       </section>
 
       <section aria-labelledby="pp-data">
@@ -49,17 +49,19 @@ export default function PrivacyScreen() {
         <ul>
           <li>
             When you sign up, your email address, password and optional name go to Firebase Authentication, a Google service.
-            Firebase sends you the email to confirm your address.
+            Firebase handles email verification and password-reset emails. You can later change your display name through the account menu.
           </li>
           <li>
-            With each request our server receives a sign-in token from Firebase. The token includes your email address, but the server
-            uses only your account ID from it. It stores that ID to tie your data to your Firebase account. It does not store your email address or name.
+            For authenticated API requests, our server validates a Firebase ID token and uses its account ID to identify your records.
+            It also checks the token&rsquo;s verified-email claim when you publish a new public share. Our application database
+            does not store your password or Firebase display name.
           </li>
         </ul>
 
         <h3>Your photos</h3>
         <ul>
-          <li>You upload JPEG or PNG files up to 25 MB. They go from your browser straight to Google Cloud Storage.</li>
+          <li>You upload JPEG or PNG files up to 25 MB. In the deployed application, uploads go from your browser to Google Cloud Storage
+            through temporary upload links; local development can use a filesystem storage adapter instead.</li>
           <li>
             The original file is kept exactly as you uploaded it, including any location, time and camera details inside it.
             We never show or share the original. Unless you share them, only you can see your photos in the app.
@@ -72,7 +74,7 @@ export default function PrivacyScreen() {
             Our server also makes one display copy, at most 2048 pixels on its longest side, with no location or camera details inside it.
             This copy is what you and the people you share with see.
           </li>
-          <li>The file name never reaches our server. Your browser keeps it (see &ldquo;Browser storage&rdquo;).</li>
+          <li>The original file name is kept in browser-side upload records for retries; the API associates uploads with generated file IDs rather than relying on the original name (see &ldquo;Browser storage&rdquo;).</li>
         </ul>
 
         <h3>Your trips and places</h3>
@@ -89,6 +91,10 @@ export default function PrivacyScreen() {
 
         <h3>Sharing and reports</h3>
         <ul>
+          <li>
+            A new public share requires a verified email address; private link sharing does not. This requirement applies to new public shares,
+            not retroactively to shares created before the rule was introduced.
+          </li>
           <li>
             A share stores the photos you picked (up to 500 from one trip), its title and description, its type (link or public),
             a secret token for the link and the dates it was created and revoked.
@@ -107,12 +113,12 @@ export default function PrivacyScreen() {
         <h2 id="pp-processors">Who processes data for us</h2>
         <ul>
           <li>
-            <strong>Google Firebase Authentication</strong> handles sign-in: your email address, password, name and sign-in tokens.
+            <strong>Google Firebase Authentication</strong> handles sign-in, email verification, password recovery, profile display names and sign-in tokens.
           </li>
           <li>
             <strong>Google Cloud</strong> runs our website and API on a virtual machine in Finland (europe-north1) and stores your
             photo files in a Cloud Storage bucket in the same region. The server may keep logs with IP addresses and the addresses of
-            pages requested. Our log storage uses Google Cloud&rsquo;s default setting, which keeps entries for 30 days.
+            pages requested. Log retention depends on the Google Cloud configuration; a confirmed retention period is not currently stated here.
           </li>
           <li>
             <strong>Supabase</strong> hosts our PostgreSQL database in Ireland (eu-west-1). It holds your trips, photo details,
@@ -137,7 +143,7 @@ export default function PrivacyScreen() {
         <p>Your browser talks to these directly. Each one can see your IP address and that the request came from mapmory.app.</p>
         <ul>
           <li>
-            <strong>Map tiles.</strong> The &ldquo;Map&rdquo; and &ldquo;Minimal&rdquo; styles load from OpenStreetMap (tile.openstreetmap.org),
+            <strong>Map tiles.</strong> The &ldquo;Map&rdquo; and &ldquo;Minimal&rdquo; styles load from Geoapify (maps.geoapify.com) when a browser key is configured, or OpenStreetMap (tile.openstreetmap.org) otherwise;
             &ldquo;Terrain&rdquo; from OpenTopoMap (opentopomap.org) and &ldquo;Satellite&rdquo; from Esri (server.arcgisonline.com).
             A tile request reveals the map area and zoom level you are looking at. The layers menu also loads one small preview tile
             from each of these services.
@@ -149,7 +155,7 @@ export default function PrivacyScreen() {
             <strong>Google sign-in servers</strong> (googleapis.com) are contacted when you sign up, log in, stay signed in or delete your account.
           </li>
         </ul>
-        <p>Fonts, scripts and the app&rsquo;s own pictures are served from mapmory.app itself. Your browser does not contact Geoapify.</p>
+        <p>Fonts, scripts and the app&rsquo;s own pictures are served from mapmory.app itself. Geoapify place searches and location resolution go through our server, but Geoapify map tiles are requested directly by your browser when that map provider is configured.</p>
       </section>
 
       <section aria-labelledby="pp-sharing">
@@ -160,7 +166,7 @@ export default function PrivacyScreen() {
             <strong>Link share:</strong> anyone who has the link can open it. Treat the link like a key.
           </li>
           <li>
-            <strong>Public share:</strong> it also appears on the public map and has a public page, for anyone, without signing in.
+            <strong>Public share:</strong> publishing a new public share requires a verified email address. A public share appears on the public map and has a public page, for anyone, without signing in.
             Nobody reviews a public share before it goes live.
           </li>
           <li>
@@ -201,7 +207,7 @@ export default function PrivacyScreen() {
         </p>
         <h3>What can remain</h3>
         <ul>
-          <li>Cloud Storage keeps deleted files recoverable for 7 days (its soft-delete setting) before it deletes them.</li>
+          <li>Cloud Storage may retain deleted files temporarily under its soft-delete configuration. The exact retention period depends on the bucket configuration.</li>
           <li>
             Logs, and backups kept by Google Cloud, Supabase or Firebase, can hold data for a while. We have not set our own retention
             period for them and make no promise about them.
@@ -213,12 +219,12 @@ export default function PrivacyScreen() {
       <section aria-labelledby="pp-storage">
         <h2 id="pp-storage">Browser storage</h2>
         <p>
-          MapMory sets no cookies and uses no analytics or advertising tools. It keeps the following in your browser. You can clear it
+          MapMory does not intentionally set first-party tracking cookies or use its own analytics or advertising tools. External authentication and map providers may handle browser data under their own policies. It keeps the following in your browser. You can clear it
           in your browser&rsquo;s site settings.
         </p>
         <ul>
           <li>
-            <strong>Sign-in session</strong> (IndexedDB, set by Firebase): <code>firebaseLocalStorageDb</code> holds who you are signed in as and your sign-in tokens, and{' '}
+            <strong>Sign-in session</strong> (browser storage managed by Firebase, including IndexedDB): <code>firebaseLocalStorageDb</code> holds who you are signed in as and your sign-in tokens, and{' '}
             <code>firebase-heartbeat-database</code> holds the Firebase SDK version and date.
           </li>
           <li>
@@ -235,9 +241,27 @@ export default function PrivacyScreen() {
             whether you have reviewed a place and whether you hid the getting-started guide.
           </li>
           <li>
+            In demonstration mode, <code>mapmory.mock.shares</code> (local storage) stores demonstration share data and <code>mapmory.signedIn</code>
+            (session storage) remembers the demonstration sign-in state. These are not live-account records.
+          </li>
+          <li>
             <code>mapmory.publicMapView</code> (session storage): where you last looked on the public map, until you close the tab.
           </li>
         </ul>
+      </section>
+
+      <section aria-labelledby="pp-rights">
+        <h2 id="pp-rights">Your privacy questions and rights</h2>
+        <p>
+          You can view and delete much of your own content directly in MapMory. Depending on the applicable law, you may also
+          have rights to request access, correction, erasure, restriction or a copy of personal data, and to object to certain
+          processing. The app does not currently offer a dedicated form for these requests. Do not send sensitive account
+          details through the public GitHub issue tracker.
+        </p>
+        <p>
+          We have not yet published a private contact method for additional privacy requests. Please do not include personal
+          information in a public GitHub issue. This contact information will need to be added to the policy.
+        </p>
       </section>
 
       <section aria-labelledby="pp-changes">
