@@ -119,11 +119,11 @@ export default function AuthScreen({ mode, onModeChange, onSignedIn, onBack }: A
               </div>
             ) : null}
             <div className="auth-field">
-              <label htmlFor={`${id}-email`}>Email{signup ? <><span className="auth-required" aria-hidden="true"> *</span><span className="visually-hidden"> (required)</span></> : null}</label>
+              <label htmlFor={`${id}-email`} className={signup ? "auth-required" : undefined}>Email</label>
               <input id={`${id}-email`} name="email" type="email" autoComplete="email" required={firebaseEnabled} value={emailInput} onChange={(event) => setEmailInput(event.target.value)} />
             </div>
             <div className="auth-field">
-              <label htmlFor={`${id}-password`}>Password{signup ? <><span className="auth-required" aria-hidden="true"> *</span><span className="visually-hidden"> (required)</span></> : null}</label>
+              <label htmlFor={`${id}-password`} className={signup ? "auth-required" : undefined}>Password</label>
               <div className="auth-password">
                 <input
                   id={`${id}-password`}
