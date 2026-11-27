@@ -4,8 +4,8 @@ This procedure validates actual Firebase/PostgreSQL/photo-storage/sharing integr
 
 ## Setup
 
-1. Use a **disposable development PostgreSQL database** and **disposable Firebase accounts**. The automated test creates trip/photo/share records; it does not delete them. Apply backend Goose migrations through `00007`.
-2. In the backend, enable `MAPMORY_ENABLE_DB_USER_RESOLUTION=true`, set `DATABASE_URL`, and choose working `MAPMORY_PHOTO_STORAGE=local` (separate local-storage backend branch) or configured GCS. Set `FIREBASE_PROJECT_ID` and matching Firebase credentials. Start `go run ./cmd/server`.
+1. Use a **disposable development PostgreSQL database** and **disposable Firebase accounts**. The automated test creates trip/photo/share records; it does not delete them. Apply all backend Goose migrations (currently through `00009`).
+2. In the backend, enable `MAPMORY_ENABLE_DB_USER_RESOLUTION=true`, set `DATABASE_URL`, and choose working `MAPMORY_PHOTO_STORAGE=local` (built into the backend) or configured GCS. Set `FIREBASE_PROJECT_ID` and matching Firebase credentials. Start `go run ./cmd/server`.
 3. In frontend `.env.local`, configure `VITE_API_URL=http://127.0.0.1:8080` and a matching Firebase web app (`VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`). Restart Vite.
 4. Get a short-lived Firebase **user ID token** using the existing backend `scripts/firebase-id-token.sh` helper. Do not commit, print into a public log or paste it into chat. Export the token in the test shell; shell history should not contain token values. Use a second test account token for the optional cross-account check.
 
@@ -40,18 +40,18 @@ Run `npm run dev` and use the actual live frontend (not acceptance-test mode):
 - [ ] In **Sharing**, select only intended photos, choose an audience, and inspect the pre-publication preview. Back to edit and verify selections persist.
 - [ ] Create a link share, copy the URL, open it in a private browser without signing in, and inspect the selected image and approximate map position.
 - [ ] Revoke it and refresh the anonymous recipient page: it should show the revoked state.
-- [ ] Publish a public share, browse `/map/public` near its approximate location and open its public detail; revoke and refresh. A crowded or truncated cluster response can omit a newly added share, so check the API detail response if necessary.
+- [ ] After verifying the owner email address, publish a public share, browse `/map/public` near its approximate location and open its public detail; revoke and refresh. A crowded or truncated cluster response can omit a newly added share, so check the API detail response if necessary.
 - [ ] Repeat the recipient flow in mobile viewport/device and check keyboard focus/escape navigation.
 
 ## Troubleshooting
 
 | Symptom | Likely cause / check |
 |---|---|
-| Signed PUT fails | The local storage branch is not running, signed URL points to wrong host, content-type or byte size differs, or the URL expired |
+| Signed PUT fails | The local storage adapter is not configured, signed URL points to wrong host, content-type or byte size differs, or the URL expired |
 | Upload completes but display image fails | Storage signer, local file permissions, URL expiry or browser CORS |
 | 401 on owner endpoints | Expired/incorrect Firebase ID token or mismatched Firebase project/emulator |
 | 404 on `/api/users/me` or unsigned trip listing succeeds | Database mode is disabled; this is not the real persisted API |
-| Sharing endpoint absent | Backend PR #58 not present or migration 00007 missing |
+| Sharing endpoint absent | Backend storage not configured, database mode disabled, or required migrations missing |
 | Place search unavailable | `GEOAPIFY_API_KEY` not configured or provider unavailable |
 | New share not on public map | Wrong viewport, share not public, cluster result truncated or public backend mode unavailable |
 
