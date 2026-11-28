@@ -34,13 +34,19 @@ Copy `.env.example` to `.env.local` (ignored by Git). The following are the appl
 
 All four core Firebase Web variables must be configured together for real sign-in. **Every `VITE_*` setting is embedded in the browser bundle**: do not put database URLs, server-side Geoapify keys, ID tokens, passwords or service-account credentials in this file. Vite settings are resolved at *build time*, not container startup.
 
-### Development modes
+### Development scenarios
 
-| Mode | Frontend | Other services |
+| Scenario | What it tests | External services |
 | --- | --- | --- |
-| Mock (default) | Empty `VITE_API_URL` and `VITE_FIREBASE_API_KEY` | None |
-| Persistent live | `VITE_API_URL` plus Firebase Web configuration | Go API, PostgreSQL with migrations, Firebase Admin initialization and local or GCS photo storage |
-| Live with Auth emulator | Above plus `VITE_FIREBASE_AUTH_EMULATOR_URL` | Backend with matching Firebase project and emulator host |
+| **A. Mock UI** | Interface with sample data (default) | None |
+| **B. Auth UI with mock data** | Firebase sign-in screens | Local Firebase Auth emulator; no backend |
+| **C. Full local (recommended)** | Persistent upload → correct → share | Go API, PostgreSQL, local photo storage and Auth emulator; optional Geoapify key |
+| **D. Real Firebase** | Full local app with real development authentication | Same as C, using team development Firebase + authorized backend ADC |
+| **E. GCS integration** | Real signed cloud uploads | Same as C or D, plus a private development GCS bucket and signing permissions |
+| **F. Tests** | Automated test suites | Depends on suite; some live tests skip without configured infrastructure |
+
+See the [scenario-by-scenario setup guide](docs/environment-setup.md) and its [external-services table](docs/environment-setup.md#external-services-for-a-full-setup) for configuration sources and exact commands. **Scenario C is the recommended full local workflow.** For automatic labels and place search, set the **backend** `GEOAPIFY_API_KEY`; the optional frontend `VITE_GEOAPIFY_KEY` only selects map tiles.
+
 
 In live mode, the backend enforces ownership using the verified Firebase ID token; the browser never supplies a trusted PostgreSQL user UUID. Unverified users may manage private trips and link shares, but public publication requires email verification.
 
@@ -70,7 +76,7 @@ npm run test:acceptance      # Desktop, tablet and phone mock-mode tests
 npm run test:boundaries      # Mock/live isolation; no real backend required
 ```
 
-`npm run test:acceptance:ui` opens the interactive runner. `npm run test:integration` exercises a **real** Go API with disposable Firebase accounts and a migrated test database; it needs `MAPMORY_TEST_API_URL`, `MAPMORY_TEST_ID_TOKEN` and `MAPMORY_TEST_OTHER_ID_TOKEN` in the test runner environment. Missing live credentials cause applicable integration tests to skip. Never commit tokens. See [Acceptance coverage](tests/docs/acceptance-coverage.md), [API modes](docs/api-modes.md) and [Coding conventions](docs/coding-conventions.md).
+`npm run test:acceptance:ui` opens the interactive runner. `npm run test:integration` exercises a **real** Go API with disposable Firebase accounts and a migrated test database; it needs `MAPMORY_TEST_API_URL`, `MAPMORY_TEST_ID_TOKEN` and `MAPMORY_TEST_OTHER_ID_TOKEN` in the test runner environment. Missing live credentials cause applicable integration tests to skip; **check the Playwright report**, because a successful command exit with skipped cases does not establish that live integration was exercised. Never commit tokens. See [Acceptance coverage](tests/docs/acceptance-coverage.md), [API modes](docs/api-modes.md) and [Coding conventions](docs/coding-conventions.md).
 
 The browser suites do not replace end-to-end testing against real Firebase, PostgreSQL, photo storage and mobile devices.
 
