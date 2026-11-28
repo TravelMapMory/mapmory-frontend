@@ -16,7 +16,7 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open <http://localhost:5173>. `.env.local` is ignored by Git. Restart Vite after changing its variables.
+Open <http://localhost:5173>. The default `.env.example` leaves `VITE_API_URL` and `VITE_FIREBASE_API_KEY` empty, so this starts in standalone mock mode. `.env.local` is ignored by Git. Restart Vite after changing its variables.
 
 ## Configuration matrix
 
@@ -93,7 +93,7 @@ VITE_FIREBASE_AUTH_EMULATOR_URL=http://127.0.0.1:9099
 
 Restart Vite. This exercises the real Firebase client code against the emulator, but trips and photos remain mocked. The emulator's verification links can be inspected through its local out-of-band codes endpoint; they are not sent as real emails.
 
-For **full live integration with the emulator**, also set `VITE_API_URL` to the Go API origin and configure the backend to use the **same** Firebase project and emulator host (`FIREBASE_PROJECT_ID=demo-mapmory` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`) together with working PostgreSQL and photo storage. Do not mix emulator-issued tokens with a production Firebase project. Never set `VITE_FIREBASE_AUTH_EMULATOR_URL` in a deployed build.
+For **full live integration with the emulator**, also set `VITE_API_URL` to the Go API origin and configure the backend to use the **same** Firebase project and emulator host (`FIREBASE_PROJECT_ID=demo-mapmory` and `FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099`) together with working PostgreSQL and photo storage. Use the normal Vite development origin on port **5173** for this workflow. The backend's local signed-photo storage permits CORS from `5173`, `5174`, and `4173`, **not** from the auth-only test origin `5180`. Do not mix emulator-issued tokens with a production Firebase project. Never set `VITE_FIREBASE_AUTH_EMULATOR_URL` in a deployed build.
 
 ## Testing
 
@@ -108,13 +108,27 @@ npm run test:acceptance
 npm run test:boundaries
 ```
 
-For the Firebase emulator browser test, start the emulator as above and a separate Vite server configured for the emulator on port 5180, then run:
+For the **authentication-only** Firebase emulator browser test, start the emulator as above. In a separate terminal, launch a mock-data Vite app on port `5180` (these command-line values override any local `.env.local` settings):
+
+```bash
+VITE_API_URL= \
+VITE_FIREBASE_API_KEY=demo-api-key \
+VITE_FIREBASE_AUTH_DOMAIN=localhost \
+VITE_FIREBASE_PROJECT_ID=demo-mapmory \
+VITE_FIREBASE_APP_ID=demo \
+VITE_FIREBASE_AUTH_EMULATOR_URL=http://127.0.0.1:9099 \
+npx vite --host localhost --port 5180 --strictPort
+```
+
+In another terminal, run:
 
 ```bash
 MAPMORY_TEST_FIREBASE_APP_URL=http://localhost:5180 \
 MAPMORY_TEST_FIREBASE_EMULATOR_URL=http://127.0.0.1:9099 \
 npx playwright test --project=integration tests/integration/firebase-emulator.spec.ts
 ```
+
+This test uses **mock trips and photos** and needs no backend. Port `5180` is not allowed by the local signed-photo storage CORS policy; use `5173` for full live upload testing instead.
 
 For **real backend integration tests**, configure a disposable backend and provide the test runner with `MAPMORY_TEST_API_URL`, `MAPMORY_TEST_ID_TOKEN`, and, for cross-account checks, `MAPMORY_TEST_OTHER_ID_TOKEN`. These are **test-runner environment variables**, not `VITE_*` frontend settings. Obtain fresh tokens through the backend's documented local helper and load them securely; do not commit or log them. Then run:
 
@@ -132,7 +146,7 @@ Some integration tests skip when the required environment variables are absent. 
 | Live pages fail instead of showing sample data | Expected when the configured API is unavailable: check the Go API, proxy target, database mode, and migrations. |
 | 401 from owner endpoints | Ensure Firebase Web and backend project IDs match, the ID token is current, and both use the same Auth emulator when enabled. |
 | Firebase emulator connection fails | Check the emulator port, `VITE_FIREBASE_AUTH_EMULATOR_URL`, and whether the emulator process is running. |
-| Upload or display-image request fails | Check backend photo storage, signed-URL expiry, content type, storage endpoint, and CORS for cross-origin signed URLs. |
+| Upload or display-image request fails | Check backend photo storage, signed-URL expiry, content type, and CORS. For local photo storage, use Vite port `5173` (`5174`/`4173` also allowed); port `5180` is auth-only. |
 | Place search or labels unavailable | Check the backend's Geoapify configuration; `VITE_GEOAPIFY_KEY` only controls browser map tiles. |
 | Integration tests report “skipped” | Set the required `MAPMORY_TEST_*` variables in the test shell and use disposable accounts and infrastructure. |
 | Environment change has no effect in a deployed build | `VITE_*` settings are bundled at build time; rebuild the frontend image. |
