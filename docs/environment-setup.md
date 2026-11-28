@@ -22,13 +22,13 @@ For **C–E**, configure the backend and external dependencies **before** starti
 | Service | Needed for | Where configuration belongs | Can you skip it? |
 | --- | --- | --- | --- |
 | **Firebase Authentication** | Real account sign-in and API ID tokens | Frontend `.env.local`: four `VITE_FIREBASE_*` Web app settings; backend `.env`: matching `FIREBASE_PROJECT_ID`. For C, use the Auth emulator on both sides. | No for C–E; choose emulator (C) or development Firebase project (D). |
-| **PostgreSQL** | Persistent trips, users, photo metadata and sharing | Backend `DATABASE_URL`; apply Goose migrations | No for C–E. |
+| **PostgreSQL** | Persistent trips, users, photo metadata and sharing | Backend `DATABASE_URL`; apply Goose migrations | No for C–E; local Docker is the default. Supabase is an optional managed PostgreSQL host for authorized development, **not required** for local setup. |
 | **Photo storage** | Signed uploads and image display | Backend `MAPMORY_PHOTO_STORAGE=local` or `gcs` | No; local filesystem is sufficient for C/D, private GCS bucket is needed only for E. |
 | **Geoapify geocoding** | Automatic place labels and place search | **Backend only:** `GEOAPIFY_API_KEY` | Yes for basic upload; **no** if testing the complete geographic workflow. Obtain a project API key in the Geoapify dashboard. |
 | **Geoapify map tiles** | Optional branded browser basemap | **Frontend only:** `VITE_GEOAPIFY_KEY` | Yes; fallback basemaps work without it. It is browser-visible, unlike backend `GEOAPIFY_API_KEY`. |
 | **Google Cloud ADC / GCS IAM** | Real Firebase Admin initialization (D) or signed GCS storage (E) | Developer/cloud identity, not frontend Vite variables | Not needed for the default emulator + local-storage workflow C. |
 
-**Recommended for newcomers:** Use **C** for ordinary end-to-end development. Use **D** only when verifying the team's real development Firebase integration, and **E** only to test GCS. For automatic labels and place search in C or D, obtain and set the backend Geoapify key; leaving it blank is supported but does not exercise those features.
+**Recommended for newcomers:** Use **C** for ordinary end-to-end development. Authorized team members may use **D** with `mapmory-development`; external contributors can use their own Firebase development project by configuring matching frontend and backend project IDs and their own backend credentials. Use **E** only to test GCS. For automatic labels and place search in C or D, obtain and set the backend Geoapify key; leaving it blank is supported but does not exercise those features. Supabase is used for deployment but is not needed in a local setup.
 
 ## Prerequisites and config files
 
@@ -139,10 +139,10 @@ This is the most self-contained **end-to-end** development scenario: persistent 
 
 ## Scenario D — Full local stack with real Firebase
 
-Use the team's shared Firebase development project, but keep PostgreSQL and photo storage local.
+Use a **real Firebase development project** while keeping PostgreSQL and photo storage local. The example uses the team's `mapmory-development` project and requires granted access. External contributors can use their **own** Firebase project; substitute its project ID and Web app configuration below, and configure the backend to verify the same project using their own Admin credentials/ADC.
 
-1. Follow [backend scenario D](https://github.com/TravelMapMory/mapmory-backend/blob/main/docs/environment-setup.md#scenario-d--full-local-stack-with-real-firebase), including keyless ADC and `FIREBASE_PROJECT_ID=mapmory-development`; ensure its emulator host is **unset**.
-2. In **frontend `.env.local`**, use the actual Firebase Web app identifiers supplied by the team administrator (the placeholders below are **not valid values**):
+1. Follow [backend scenario D](https://github.com/TravelMapMory/mapmory-backend/blob/main/docs/environment-setup.md#scenario-d--full-local-stack-with-real-firebase), including appropriate ADC and a `FIREBASE_PROJECT_ID` matching the frontend. The documented impersonation identity is **team-only**; ensure the emulator host is **unset**.
+2. In **frontend `.env.local`**, use the Firebase Web app identifiers from your chosen development project (from the team administrator or your own Firebase Console). The placeholders below are **not valid values**; replace `mapmory-development` too if using your own project:
 
    ```dotenv
    VITE_API_URL=http://127.0.0.1:8080
